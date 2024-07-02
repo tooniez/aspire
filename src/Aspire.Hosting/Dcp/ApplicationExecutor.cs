@@ -3,6 +3,7 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Data;
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
@@ -63,6 +64,7 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
                                           IKubernetesService kubernetesService,
                                           IEnumerable<IDistributedApplicationLifecycleHook> lifecycleHooks,
                                           IConfiguration configuration,
+                                          DistributedApplicationOptions distributedApplicationOptions,
                                           IOptions<DcpOptions> options,
                                           DistributedApplicationExecutionContext executionContext,
                                           ResourceNotificationService notificationService,
@@ -76,6 +78,7 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
     private readonly Dictionary<string, IResource> _applicationModel = model.Resources.ToDictionary(r => r.Name);
     private readonly ILookup<IResource?, IResourceWithParent> _parentChildLookup = GetParentChildLookup(model);
     private readonly IDistributedApplicationLifecycleHook[] _lifecycleHooks = lifecycleHooks.ToArray();
+    private readonly DistributedApplicationOptions _distributedApplicationOptions = distributedApplicationOptions;
     private readonly IOptions<DcpOptions> _options = options;
     private readonly DistributedApplicationExecutionContext _executionContext = executionContext;
     private readonly List<AppResource> _appResources = [];
@@ -685,7 +688,7 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
 
                 if (ep.EndpointAnnotation.FromLaunchProfile &&
                     appModelResource is ProjectResource p &&
-                    p.GetEffectiveLaunchProfile() is LaunchProfile profile &&
+                    p.GetEffectiveLaunchProfile()?.LaunchProfile is LaunchProfile profile &&
                     profile.LaunchUrl is string launchUrl)
                 {
                     // Concat the launch url from the launch profile to the urls with IsFromLaunchProfile set to true
@@ -1063,6 +1066,11 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
                     ];
                 }
 
+                if (!string.IsNullOrEmpty(_distributedApplicationOptions.Configuration))
+                {
+                    exeSpec.Args.AddRange(new [] {"-c", _distributedApplicationOptions.Configuration});
+                }
+
                 // We pretty much always want to suppress the normal launch profile handling
                 // because the settings from the profile will override the ambient environment settings, which is not what we want
                 // (the ambient environment settings for service processes come from the application model
@@ -1071,7 +1079,7 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
                 // and the environment variables/application URLs inside CreateExecutableAsync().
                 exeSpec.Args.Add("--no-launch-profile");
 
-                var launchProfile = project.GetEffectiveLaunchProfile();
+                var launchProfile = project.GetEffectiveLaunchProfile()?.LaunchProfile;
                 if (launchProfile is not null && !string.IsNullOrWhiteSpace(launchProfile.CommandLineArgs))
                 {
                     var cmdArgs = CommandLineArgsParser.Parse(launchProfile.CommandLineArgs);
@@ -1411,6 +1419,8 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
         var dcpContainerResource = (Container)cr.DcpResource;
         var modelContainerResource = cr.ModelResource;
 
+        await ApplyBuildArgumentsAsync(dcpContainerResource, modelContainerResource, cancellationToken).ConfigureAwait(false);
+
         var config = new Dictionary<string, object>();
 
         dcpContainerResource.Spec.Env = [];
@@ -1563,6 +1573,83 @@ internal sealed class ApplicationExecutor(ILogger<ApplicationExecutor> logger,
         }
 
         await kubernetesService.CreateAsync(dcpContainerResource, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task ApplyBuildArgumentsAsync(Container dcpContainerResource, IResource modelContainerResource, CancellationToken cancellationToken)
+    {
+        if (modelContainerResource.Annotations.OfType<DockerfileBuildAnnotation>().SingleOrDefault() is { } dockerfileBuildAnnotation)
+        {
+            var dcpBuildArgs = new List<EnvVar>();
+
+            foreach (var buildArgument in dockerfileBuildAnnotation.BuildArguments)
+            {
+                var valueString = buildArgument.Value switch
+                {
+                    string stringValue => stringValue,
+                    IValueProvider valueProvider => await valueProvider.GetValueAsync(cancellationToken).ConfigureAwait(false),
+                    bool boolValue => boolValue ? "true" : "false",
+                    _ => buildArgument.Value.ToString()
+                };
+
+                var dcpBuildArg = new EnvVar()
+                {
+                    Name = buildArgument.Key,
+                    Value = valueString
+                };
+
+                dcpBuildArgs.Add(dcpBuildArg);
+            }
+
+            dcpContainerResource.Spec.Build = new()
+            {
+                Context = dockerfileBuildAnnotation.ContextPath,
+                Dockerfile = dockerfileBuildAnnotation.DockerfilePath,
+                Stage = dockerfileBuildAnnotation.Stage,
+                Args = dcpBuildArgs
+            };
+
+            var dcpBuildSecrets = new List<BuildContextSecret>();
+
+            foreach (var buildSecret in dockerfileBuildAnnotation.BuildSecrets)
+            {
+                var valueString = buildSecret.Value switch
+                {
+                    FileInfo filePath => filePath.FullName,
+                    IValueProvider valueProvider => await valueProvider.GetValueAsync(cancellationToken).ConfigureAwait(false),
+                    _ => throw new InvalidOperationException("Build secret can only be a parameter or a file.")
+                };
+
+                if (buildSecret.Value is FileInfo)
+                {
+                    var dcpBuildSecret = new BuildContextSecret
+                    {
+                        Id = buildSecret.Key,
+                        Type = "file",
+                        Source = valueString
+                    };
+                    dcpBuildSecrets.Add(dcpBuildSecret);
+                }
+                else
+                {
+                    var dcpBuildSecret = new BuildContextSecret
+                    {
+                      Id = buildSecret.Key,
+                      Type = "env",
+                      Value = valueString
+                    };
+                    dcpBuildSecrets.Add(dcpBuildSecret);
+                }
+            }
+
+            dcpContainerResource.Spec.Build = new()
+            {
+                Context = dockerfileBuildAnnotation.ContextPath,
+                Dockerfile = dockerfileBuildAnnotation.DockerfilePath,
+                Stage = dockerfileBuildAnnotation.Stage,
+                Args = dcpBuildArgs,
+                Secrets = dcpBuildSecrets
+            };
+        }
     }
 
     private void AddServicesProducedInfo(IResource modelResource, IAnnotationHolder dcpResource, AppResource appResource)

@@ -138,10 +138,11 @@ internal sealed class DashboardLifecycleHook(IConfiguration configuration,
             // Options should have been validated these should not be null
 
             Debug.Assert(options.DashboardUrl is not null, "DashboardUrl should not be null");
-            Debug.Assert(options.OtlpEndpointUrl is not null, "OtlpEndpointUrl should not be null");
+            Debug.Assert(options.OtlpGrpcEndpointUrl is not null || options.OtlpHttpEndpointUrl is not null, "OtlpGrpcEndpointUrl and OtlpHttpEndpointUrl should not both be null");
 
             var dashboardUrls = options.DashboardUrl;
-            var otlpEndpointUrl = options.OtlpEndpointUrl;
+            var otlpGrpcEndpointUrl = options.OtlpGrpcEndpointUrl;
+            var otlpHttpEndpointUrl = options.OtlpHttpEndpointUrl;
 
             var environment = options.AspNetCoreEnvironment;
             var browserToken = options.DashboardToken;
@@ -152,7 +153,14 @@ internal sealed class DashboardLifecycleHook(IConfiguration configuration,
             context.EnvironmentVariables["ASPNETCORE_ENVIRONMENT"] = environment;
             context.EnvironmentVariables[DashboardConfigNames.DashboardFrontendUrlName.EnvVarName] = dashboardUrls;
             context.EnvironmentVariables[DashboardConfigNames.ResourceServiceUrlName.EnvVarName] = resourceServiceUrl;
-            context.EnvironmentVariables[DashboardConfigNames.DashboardOtlpUrlName.EnvVarName] = otlpEndpointUrl;
+            if (otlpGrpcEndpointUrl != null)
+            {
+                context.EnvironmentVariables[DashboardConfigNames.DashboardOtlpGrpcUrlName.EnvVarName] = otlpGrpcEndpointUrl;
+            }
+            if (otlpHttpEndpointUrl != null)
+            {
+                context.EnvironmentVariables[DashboardConfigNames.DashboardOtlpHttpUrlName.EnvVarName] = otlpHttpEndpointUrl;
+            }
 
             // Configure frontend browser token
             if (!string.IsNullOrEmpty(browserToken))
@@ -215,7 +223,7 @@ internal sealed class DashboardLifecycleHook(IConfiguration configuration,
 
         try
         {
-            await foreach (var notification in resourceNotificationService.WatchAsync(cancellationToken))
+            await foreach (var notification in resourceNotificationService.WatchAsync(cancellationToken).ConfigureAwait(false))
             {
                 // Track all dashboard resources and start watching their logs.
                 // TODO: In the future when resources can restart, we should handle purging the taskCache.
