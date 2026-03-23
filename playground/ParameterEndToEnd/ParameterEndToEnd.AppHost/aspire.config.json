@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "ParameterEndToEnd.AppHost.csproj"
+  }
+}
