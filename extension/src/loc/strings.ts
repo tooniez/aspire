@@ -62,6 +62,7 @@ export const resourcesGroupLabel = vscode.l10n.t('Resources');
 export const resourceStateLabel = (name: string, state: string) => vscode.l10n.t('{0} — {1}', name, state);
 export const noCommandsAvailable = vscode.l10n.t('No commands available for this resource.');
 export const selectCommandPlaceholder = vscode.l10n.t('Select a command to execute');
+export const selectDashboardPlaceholder = vscode.l10n.t('Select a dashboard to open');
 export const workspaceAppHostLabel = vscode.l10n.t('Workspace apphost');
 export const resourceCountDescription = (count: number) => vscode.l10n.t('({0} resources)', count);
 export const tooltipType = (type: string) => vscode.l10n.t('Type: {0}', type);

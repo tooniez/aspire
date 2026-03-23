@@ -10,6 +10,7 @@ import {
     resourceStateLabel,
     noCommandsAvailable,
     selectCommandPlaceholder,
+    selectDashboardPlaceholder,
     workspaceAppHostLabel,
     resourceCountDescription,
     tooltipType,
@@ -395,7 +396,7 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
 
     // ── Commands ──
 
-    openDashboard(element?: TreeElement): void {
+    async openDashboard(element?: TreeElement): Promise<void> {
         let url: string | null = null;
 
         if (element instanceof AppHostItem) {
@@ -403,17 +404,31 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
         }
 
         if (element instanceof WorkspaceResourcesItem) {
-            url = element.dashboardUrl;
+            url = getBaseDashboardUrl(element.dashboardUrl);
         }
 
         if (!url) {
             if (this._repository.viewMode === 'workspace') {
                 const resources = [...this._repository.workspaceResources];
-                url = resources.find(r => r.dashboardUrl)?.dashboardUrl ?? null;
+                const resourceUrl = resources.find(r => r.dashboardUrl)?.dashboardUrl ?? null;
+                url = getBaseDashboardUrl(resourceUrl);
             } else {
-                const appHosts = this._repository.appHosts;
-                if (appHosts.length > 0) {
+                const appHosts = this._repository.appHosts.filter(a => a.dashboardUrl);
+                if (appHosts.length === 1) {
                     url = appHosts[0].dashboardUrl;
+                } else if (appHosts.length > 1) {
+                    const items = appHosts.map(a => ({
+                        label: shortenPath(a.appHostPath),
+                        description: pidDescription(a.appHostPid),
+                        dashboardUrl: a.dashboardUrl!,
+                    }));
+                    const selected = await vscode.window.showQuickPick(items, {
+                        placeHolder: selectDashboardPlaceholder,
+                    });
+                    if (!selected) {
+                        return;
+                    }
+                    url = selected.dashboardUrl;
                 }
             }
         }
@@ -530,4 +545,19 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
     private _findAppHostForResource(element: ResourceItem): AppHostDisplayInfo | undefined {
         return this._repository.appHosts.find(a => a.appHostPid === element.appHostPid);
     }
+}
+
+/**
+ * Strips the resource-specific path suffix from a resource dashboard URL
+ * to return the base dashboard URL.
+ *
+ * Resource dashboard URLs are constructed by appending `/?resource=name` to the
+ * base URL (e.g. `http://localhost:18888/login?t=token/?resource=myservice`).
+ */
+function getBaseDashboardUrl(resourceDashboardUrl: string | null): string | null {
+    if (!resourceDashboardUrl) {
+        return null;
+    }
+    const idx = resourceDashboardUrl.indexOf('/?resource=');
+    return idx >= 0 ? resourceDashboardUrl.substring(0, idx) : resourceDashboardUrl;
 }

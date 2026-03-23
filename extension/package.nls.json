@@ -124,7 +124,7 @@
   "views.runningAppHosts.globalWelcome": "No running Aspire apphosts detected on this machine.\n[Refresh](command:aspire-vscode.refreshRunningAppHosts)",
   "views.runningAppHosts.errorWelcome": "The Aspire CLI is not installed or does not support this feature. Install or update the Aspire CLI and restart VS Code to get started.\n[Update Aspire CLI](command:aspire-vscode.updateSelf)\n[Refresh](command:aspire-vscode.refreshRunningAppHosts)",
   "command.refreshRunningAppHosts": "Refresh running apphosts",
-  "command.openDashboard": "Open Dashboard",
+  "command.openDashboard": "Open Aspire Dashboard",
   "command.stopAppHost": "Stop",
   "command.stopResource": "Stop",
   "command.startResource": "Start",
@@ -160,5 +160,6 @@
   "walkthrough.getStarted.dashboard.description": "The Aspire Dashboard shows your resources, endpoints, logs, traces, and metrics — all in one place.\n\n[Open dashboard](command:aspire-vscode.openDashboard)",
   "walkthrough.getStarted.nextSteps.title": "Next steps",
   "walkthrough.getStarted.nextSteps.description": "You're all set! Add integrations for databases, messaging, and cloud services, or deploy your app to production.\n\n[Add an integration](command:aspire-vscode.add)\n\n[Open Aspire docs](https://aspire.dev/docs/)",
-  "mcpServerDefinitionProviders.aspire.label": "Aspire"
+  "mcpServerDefinitionProviders.aspire.label": "Aspire",
+  "aspire-vscode.strings.selectDashboardPlaceholder": "Select a dashboard to open"
 }
