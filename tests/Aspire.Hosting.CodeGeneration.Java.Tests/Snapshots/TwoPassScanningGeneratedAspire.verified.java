@@ -718,24 +718,6 @@ class CSharpAppResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -746,16 +728,6 @@ class CSharpAppResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -763,6 +735,15 @@ class CSharpAppResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -1020,7 +1001,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("source", AspireClient.serializeValue(source));
         reqArgs.put("destinationPath", AspireClient.serializeValue(destinationPath));
-        return (IContainerFilesDestinationResource) getClient().invokeCapability("Aspire.Hosting/publishWithContainerFiles", reqArgs);
+        return (IContainerFilesDestinationResource) getClient().invokeCapability("Aspire.Hosting/publishWithContainerFilesFromResource", reqArgs);
     }
 
     /** Excludes the resource from the deployment manifest */
@@ -1035,7 +1016,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -1052,7 +1033,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -1079,7 +1060,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -1144,7 +1125,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -1159,7 +1140,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -1167,7 +1148,7 @@ class CSharpAppResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -1607,6 +1588,14 @@ class ConnectionStringResource extends ResourceBuilderBase {
         return (IResourceWithConnectionString) getClient().invokeCapability("Aspire.Hosting/withConnectionPropertyValue", reqArgs);
     }
 
+    /** Gets a connection property by key */
+    public ReferenceExpression getConnectionProperty(String key) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("resource", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("key", AspireClient.serializeValue(key));
+        return (ReferenceExpression) getClient().invokeCapability("Aspire.Hosting/getConnectionProperty", reqArgs);
+    }
+
     /** Customizes displayed URLs via callback */
     public IResource withUrlsCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -1672,7 +1661,7 @@ class ConnectionStringResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -1689,7 +1678,7 @@ class ConnectionStringResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -1716,7 +1705,7 @@ class ConnectionStringResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -1747,7 +1736,7 @@ class ConnectionStringResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -1755,7 +1744,7 @@ class ConnectionStringResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -2142,7 +2131,7 @@ class ContainerRegistryResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -2150,7 +2139,7 @@ class ContainerRegistryResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -2506,7 +2495,7 @@ class ContainerResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildArg", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildArg", reqArgs);
     }
 
     /** Adds a build secret from a parameter resource */
@@ -2515,7 +2504,7 @@ class ContainerResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildSecret", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildSecret", reqArgs);
     }
 
     /** Configures endpoint proxy support */
@@ -2593,24 +2582,6 @@ class ContainerResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -2621,16 +2592,6 @@ class ContainerResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -2638,6 +2599,15 @@ class ContainerResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -2901,7 +2871,7 @@ class ContainerResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -2918,7 +2888,7 @@ class ContainerResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -2945,7 +2915,7 @@ class ContainerResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -3010,7 +2980,7 @@ class ContainerResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -3025,7 +2995,7 @@ class ContainerResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -3033,7 +3003,7 @@ class ContainerResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -3608,24 +3578,6 @@ class DotnetToolResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -3636,16 +3588,6 @@ class DotnetToolResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -3653,6 +3595,15 @@ class DotnetToolResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -3916,7 +3867,7 @@ class DotnetToolResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -3933,7 +3884,7 @@ class DotnetToolResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -3960,7 +3911,7 @@ class DotnetToolResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -4025,7 +3976,7 @@ class DotnetToolResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -4040,7 +3991,7 @@ class DotnetToolResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -4048,7 +3999,7 @@ class DotnetToolResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -4656,24 +4607,6 @@ class ExecutableResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -4684,16 +4617,6 @@ class ExecutableResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -4701,6 +4624,15 @@ class ExecutableResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -4964,7 +4896,7 @@ class ExecutableResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -4981,7 +4913,7 @@ class ExecutableResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -5008,7 +4940,7 @@ class ExecutableResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -5073,7 +5005,7 @@ class ExecutableResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -5088,7 +5020,7 @@ class ExecutableResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -5096,7 +5028,7 @@ class ExecutableResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -5598,7 +5530,7 @@ class ExternalServiceResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -5606,7 +5538,7 @@ class ExternalServiceResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -6854,7 +6786,7 @@ class ParameterResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -6862,7 +6794,7 @@ class ParameterResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -7566,24 +7498,6 @@ class ProjectResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -7594,16 +7508,6 @@ class ProjectResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -7611,6 +7515,15 @@ class ProjectResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -7868,7 +7781,7 @@ class ProjectResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("source", AspireClient.serializeValue(source));
         reqArgs.put("destinationPath", AspireClient.serializeValue(destinationPath));
-        return (IContainerFilesDestinationResource) getClient().invokeCapability("Aspire.Hosting/publishWithContainerFiles", reqArgs);
+        return (IContainerFilesDestinationResource) getClient().invokeCapability("Aspire.Hosting/publishWithContainerFilesFromResource", reqArgs);
     }
 
     /** Excludes the resource from the deployment manifest */
@@ -7883,7 +7796,7 @@ class ProjectResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -7900,7 +7813,7 @@ class ProjectResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -7927,7 +7840,7 @@ class ProjectResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -7992,7 +7905,7 @@ class ProjectResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -8007,7 +7920,7 @@ class ProjectResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -8015,7 +7928,7 @@ class ProjectResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -8839,7 +8752,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildArg", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildArg", reqArgs);
     }
 
     /** Adds a build secret from a parameter resource */
@@ -8848,7 +8761,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildSecret", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildSecret", reqArgs);
     }
 
     /** Configures endpoint proxy support */
@@ -8926,24 +8839,6 @@ class TestDatabaseResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -8954,16 +8849,6 @@ class TestDatabaseResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -8971,6 +8856,15 @@ class TestDatabaseResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -9234,7 +9128,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -9251,7 +9145,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -9278,7 +9172,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -9343,7 +9237,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -9358,7 +9252,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -9366,7 +9260,7 @@ class TestDatabaseResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -9862,7 +9756,7 @@ class TestRedisResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildArg", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildArg", reqArgs);
     }
 
     /** Adds a build secret from a parameter resource */
@@ -9871,7 +9765,7 @@ class TestRedisResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildSecret", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildSecret", reqArgs);
     }
 
     /** Configures endpoint proxy support */
@@ -9949,24 +9843,6 @@ class TestRedisResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -9977,16 +9853,6 @@ class TestRedisResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -9994,6 +9860,15 @@ class TestRedisResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -10075,6 +9950,14 @@ class TestRedisResource extends ResourceBuilderBase {
             reqArgs.put("name", AspireClient.serializeValue(name));
         }
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withReference", reqArgs);
+    }
+
+    /** Gets a connection property by key */
+    public ReferenceExpression getConnectionProperty(String key) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("resource", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("key", AspireClient.serializeValue(key));
+        return (ReferenceExpression) getClient().invokeCapability("Aspire.Hosting/getConnectionProperty", reqArgs);
     }
 
     /** Adds a reference to a URI */
@@ -10275,7 +10158,7 @@ class TestRedisResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -10292,7 +10175,7 @@ class TestRedisResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -10319,7 +10202,7 @@ class TestRedisResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -10384,7 +10267,7 @@ class TestRedisResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -10399,7 +10282,7 @@ class TestRedisResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -10407,7 +10290,7 @@ class TestRedisResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -11034,7 +10917,7 @@ class TestVaultResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildArg", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildArg", reqArgs);
     }
 
     /** Adds a build secret from a parameter resource */
@@ -11043,7 +10926,7 @@ class TestVaultResource extends ResourceBuilderBase {
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("value", AspireClient.serializeValue(value));
-        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withBuildSecret", reqArgs);
+        return (ContainerResource) getClient().invokeCapability("Aspire.Hosting/withParameterBuildSecret", reqArgs);
     }
 
     /** Configures endpoint proxy support */
@@ -11121,24 +11004,6 @@ class TestVaultResource extends ResourceBuilderBase {
         return (IResource) getClient().invokeCapability("Aspire.Hosting/withRequiredCommand", reqArgs);
     }
 
-    /** Sets an environment variable */
-    public IResourceWithEnvironment withEnvironment(String name, String value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
-    }
-
-    /** Adds an environment variable with a reference expression */
-    public IResourceWithEnvironment withEnvironmentExpression(String name, ReferenceExpression value) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        reqArgs.put("name", AspireClient.serializeValue(name));
-        reqArgs.put("value", AspireClient.serializeValue(value));
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentExpression", reqArgs);
-    }
-
     /** Sets environment variables via callback */
     public IResourceWithEnvironment withEnvironmentCallback(Function<Object[], Object> callback) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -11149,16 +11014,6 @@ class TestVaultResource extends ResourceBuilderBase {
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallback", reqArgs);
     }
 
-    /** Sets environment variables via async callback */
-    public IResourceWithEnvironment withEnvironmentCallbackAsync(Function<Object[], Object> callback) {
-        Map<String, Object> reqArgs = new HashMap<>();
-        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
-        if (callback != null) {
-            reqArgs.put("callback", getClient().registerCallback(callback));
-        }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentCallbackAsync", reqArgs);
-    }
-
     /** Sets an environment variable from an endpoint reference */
     public IResourceWithEnvironment withEnvironmentEndpoint(String name, EndpointReference endpointReference) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -11166,6 +11021,15 @@ class TestVaultResource extends ResourceBuilderBase {
         reqArgs.put("name", AspireClient.serializeValue(name));
         reqArgs.put("endpointReference", AspireClient.serializeValue(endpointReference));
         return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironmentEndpoint", reqArgs);
+    }
+
+    /** Sets an environment variable on the resource */
+    public IResourceWithEnvironment withEnvironment(String name, Object value) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("name", AspireClient.serializeValue(name));
+        reqArgs.put("value", AspireClient.serializeValue(value));
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withEnvironment", reqArgs);
     }
 
     /** Sets an environment variable from a parameter resource */
@@ -11429,7 +11293,7 @@ class TestVaultResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitFor", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResource", reqArgs);
     }
 
     /** Waits for another resource with specific behavior */
@@ -11446,7 +11310,7 @@ class TestVaultResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("dependency", AspireClient.serializeValue(dependency));
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForStart", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceStart", reqArgs);
     }
 
     /** Waits for another resource to start with specific behavior */
@@ -11473,7 +11337,7 @@ class TestVaultResource extends ResourceBuilderBase {
         if (exitCode != null) {
             reqArgs.put("exitCode", AspireClient.serializeValue(exitCode));
         }
-        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForCompletion", reqArgs);
+        return (IResourceWithWaitSupport) getClient().invokeCapability("Aspire.Hosting/waitForResourceCompletion", reqArgs);
     }
 
     /** Adds a health check by key */
@@ -11538,7 +11402,7 @@ class TestVaultResource extends ResourceBuilderBase {
         if (password != null) {
             reqArgs.put("password", AspireClient.serializeValue(password));
         }
-        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withHttpsDeveloperCertificate", reqArgs);
+        return (IResourceWithEnvironment) getClient().invokeCapability("Aspire.Hosting/withParameterHttpsDeveloperCertificate", reqArgs);
     }
 
     /** Removes HTTPS certificate configuration */
@@ -11553,7 +11417,7 @@ class TestVaultResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("parent", AspireClient.serializeValue(parent));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withParentRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderParentRelationship", reqArgs);
     }
 
     /** Sets a child relationship */
@@ -11561,7 +11425,7 @@ class TestVaultResource extends ResourceBuilderBase {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
         reqArgs.put("child", AspireClient.serializeValue(child));
-        return (IResource) getClient().invokeCapability("Aspire.Hosting/withChildRelationship", reqArgs);
+        return (IResource) getClient().invokeCapability("Aspire.Hosting/withBuilderChildRelationship", reqArgs);
     }
 
     /** Sets the icon for the resource */
@@ -12013,6 +11877,11 @@ public class Aspire {
         }
         AspireClient client = new AspireClient(socketPath);
         client.connect();
+        String authToken = System.getenv("ASPIRE_REMOTE_APPHOST_TOKEN");
+        if (authToken == null || authToken.isEmpty()) {
+            throw new RuntimeException("ASPIRE_REMOTE_APPHOST_TOKEN environment variable not set. Run this application using `aspire run`.");
+        }
+        client.authenticate(authToken);
         client.onDisconnect(() -> System.exit(1));
         return client;
     }
