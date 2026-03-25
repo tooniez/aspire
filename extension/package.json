@@ -555,7 +555,7 @@
         },
         {
           "command": "aspire-vscode.copyEndpointUrl",
-          "when": "view == aspire-vscode.runningAppHosts && viewItem == endpointUrl",
+          "when": "view == aspire-vscode.runningAppHosts && viewItem =~ /^endpointUrl/",
           "group": "3_clipboard@1"
         },
         {
