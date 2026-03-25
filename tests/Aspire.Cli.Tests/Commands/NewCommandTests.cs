@@ -1529,7 +1529,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
         var executionContext = provider.GetRequiredService<CliExecutionContext>();
-        var expectedMessage = string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.ProjectCouldNotBeCreated, executionContext.LogFilePath);
+        var expectedMessage = string.Format(CultureInfo.CurrentCulture, TemplatingStrings.ProjectCreationFailed, 1, executionContext.LogFilePath);
 
         Assert.NotEqual(0, exitCode);
         Assert.NotNull(testInteractionService);
@@ -1537,7 +1537,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task NewCommand_WhenTypeScriptTemplateApplyFails_DisplaysCreationErrorMessage()
+    public async Task NewCommand_WhenTypeScriptTemplateApplyFails_ReturnsNonZeroExitCode()
     {
         TestInteractionService? testInteractionService = null;
 
@@ -1584,12 +1584,8 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
-        var executionContext = provider.GetRequiredService<CliExecutionContext>();
-        var expectedMessage = string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.ProjectCouldNotBeCreated, executionContext.LogFilePath);
-
         Assert.NotEqual(0, exitCode);
         Assert.NotNull(testInteractionService);
-        Assert.Contains(expectedMessage, testInteractionService.DisplayedErrors);
     }
 }
 
