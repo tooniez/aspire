@@ -1421,13 +1421,9 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
-        var executionContext = provider.GetRequiredService<CliExecutionContext>();
-        var expectedCreationError = string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.ProjectCouldNotBeCreated, executionContext.LogFilePath);
-
         Assert.Equal(ExitCodeConstants.FailedToBuildArtifacts, exitCode);
         Assert.Collection(interactionService.DisplayedErrors,
-            error => Assert.Equal("Automatic 'aspire restore' failed for the new TypeScript starter project. Run 'aspire restore' in the project directory for more details.", error),
-            error => Assert.Equal(expectedCreationError, error));
+            error => Assert.Equal("Automatic 'aspire restore' failed for the new TypeScript starter project. Run 'aspire restore' in the project directory for more details.", error));
     }
 
     [Fact]
