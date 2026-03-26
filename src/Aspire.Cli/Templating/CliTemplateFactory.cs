@@ -99,12 +99,17 @@ internal sealed partial class CliTemplateFactory : ITemplateFactory
 
             new CallbackTemplate(
                 KnownTemplateId.CSharpEmptyAppHost,
-                "Empty (C# AppHost)",
+                "Empty AppHost",
                 projectName => $"./{projectName}",
                 cmd => AddOptionIfMissing(cmd, _localhostTldOption),
                 ApplyEmptyAppHostTemplateAsync,
                 runtime: TemplateRuntime.Cli,
-                languageId: KnownLanguageId.CSharp,
+                supportsLanguageCallback: static languageId =>
+                    languageId.Equals(KnownLanguageId.CSharp, StringComparison.OrdinalIgnoreCase) ||
+                    languageId.Equals(KnownLanguageId.TypeScript, StringComparison.OrdinalIgnoreCase) ||
+                    languageId.Equals(KnownLanguageId.TypeScriptAlias, StringComparison.OrdinalIgnoreCase) ||
+                    languageId.Equals(KnownLanguageId.Python, StringComparison.OrdinalIgnoreCase),
+                selectableAppHostLanguages: [KnownLanguageId.CSharp, KnownLanguageId.TypeScript, KnownLanguageId.Python],
                 isEmpty: true),
 
             new CallbackTemplate(
