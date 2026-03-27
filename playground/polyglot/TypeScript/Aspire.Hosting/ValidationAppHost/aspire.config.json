@@ -1,6 +1,8 @@
 {
-  "appHostPath": "../apphost.ts",
-  "language": "typescript/nodejs",
+  "appHost": {
+    "path": "apphost.ts",
+    "language": "typescript/nodejs"
+  },
   "packages": {
     "Aspire.Hosting": "",
     "Aspire.Hosting.Testing": "",
