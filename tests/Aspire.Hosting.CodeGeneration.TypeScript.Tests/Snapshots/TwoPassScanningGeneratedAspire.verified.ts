@@ -250,6 +250,12 @@ export enum CertificateTrustScope {
     System = "System",
 }
 
+/** Enum type for CommandResultFormat */
+export enum CommandResultFormat {
+    Text = "Text",
+    Json = "Json",
+}
+
 /** Enum type for ContainerLifetime */
 export enum ContainerLifetime {
     Session = "Session",
@@ -390,6 +396,8 @@ export interface ExecuteCommandResult {
     success?: boolean;
     canceled?: boolean;
     errorMessage?: string;
+    result?: string;
+    resultFormat?: CommandResultFormat;
 }
 
 /** DTO interface for ResourceEventDto */

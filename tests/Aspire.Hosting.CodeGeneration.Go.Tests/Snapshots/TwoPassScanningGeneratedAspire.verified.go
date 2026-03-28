@@ -127,6 +127,14 @@ const (
 	EndpointPropertyTlsEnabled EndpointProperty = "TlsEnabled"
 )
 
+// CommandResultFormat represents CommandResultFormat.
+type CommandResultFormat string
+
+const (
+	CommandResultFormatText CommandResultFormat = "Text"
+	CommandResultFormatJson CommandResultFormat = "Json"
+)
+
 // UrlDisplayLocation represents UrlDisplayLocation.
 type UrlDisplayLocation string
 
@@ -235,6 +243,8 @@ type ExecuteCommandResult struct {
 	Success bool `json:"Success,omitempty"`
 	Canceled bool `json:"Canceled,omitempty"`
 	ErrorMessage string `json:"ErrorMessage,omitempty"`
+	Result string `json:"Result,omitempty"`
+	ResultFormat CommandResultFormat `json:"ResultFormat,omitempty"`
 }
 
 // ToMap converts the DTO to a map for JSON serialization.
@@ -243,6 +253,8 @@ func (d *ExecuteCommandResult) ToMap() map[string]any {
 		"Success": SerializeValue(d.Success),
 		"Canceled": SerializeValue(d.Canceled),
 		"ErrorMessage": SerializeValue(d.ErrorMessage),
+		"Result": SerializeValue(d.Result),
+		"ResultFormat": SerializeValue(d.ResultFormat),
 	}
 }
 
