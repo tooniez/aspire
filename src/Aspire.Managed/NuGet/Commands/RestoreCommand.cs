@@ -128,7 +128,6 @@ public static class RestoreCommand
         var outputPath = Path.GetFullPath(output);
         Directory.CreateDirectory(outputPath);
 
-
         var logger = new NuGetLogger(verbose);
 
         try
