@@ -1332,6 +1332,7 @@ public static class ResourceExtensions
     /// This method invokes environment variable and command-line argument callbacks to discover all references. The context resource (<paramref name="resource"/>) is not considered a dependency (even if it is transitively referenced).
     /// </para>
     /// </remarks>
+    [AspireExportIgnore(Reason = "Parameters and return type are not ATS-compatible — internal dependency discovery helper.")]
     public static Task<IReadOnlySet<IResource>> GetResourceDependenciesAsync(
         this IResource resource,
         DistributedApplicationExecutionContext executionContext,

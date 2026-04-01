@@ -440,6 +440,7 @@ public static class ResourceBuilderExtensions
     /// <param name="builder">The resource builder for a resource implementing <see cref="IResourceWithArgs"/>.</param>
     /// <param name="callback">An asynchronous callback that allows for deferred execution for computing arguments. This runs after resources have been allocated by the orchestrator and allows access to other resources to resolve computed data, e.g. connection strings, ports.</param>
     /// <returns>The <see cref="IResourceBuilder{T}"/>.</returns>
+    [AspireExportIgnore(Reason = "Polyglot app hosts use the synchronous Action<> overload via withArgsCallback.")]
     public static IResourceBuilder<T> WithArgs<T>(this IResourceBuilder<T> builder, Func<CommandLineArgsCallbackContext, Task> callback) where T : IResourceWithArgs
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -1395,6 +1396,7 @@ public static class ResourceBuilderExtensions
     /// Note that any endpoints on the resource will automatically get a corresponding URL added for them.
     /// </para>
     /// </remarks>
+    [AspireExportIgnore(Reason = "Polyglot app hosts use the synchronous Action<> overload via withUrlsCallback.")]
     public static IResourceBuilder<T> WithUrls<T>(this IResourceBuilder<T> builder, Func<ResourceUrlsCallbackContext, Task> callback)
         where T : IResource
     {
