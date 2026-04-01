@@ -289,7 +289,7 @@ public class Program
         // separate TracerProvider instances:
         // - Azure Monitor provider with filtering (only exports activities with EXTERNAL_TELEMETRY=true)
         // - Diagnostic provider for OTLP/console exporters (exports all activities, DEBUG only)
-        builder.Services.AddSingleton(new TelemetryManager(builder.Configuration, args));
+        builder.Services.AddSingleton(sp => new TelemetryManager(sp.GetRequiredService<IConfiguration>(), args));
 
         // Shared services.
         builder.Services.AddSingleton(sp =>
@@ -595,8 +595,10 @@ public class Program
                 // Write to stderr to avoid interfering with tools that parse stdout
                 var consoleEnvironment = serviceProvider.GetRequiredService<ConsoleEnvironment>();
 
+                const string telemetryUrl = "https://aka.ms/aspire/cli-telemetry";
+
                 consoleEnvironment.Error.WriteLine();
-                consoleEnvironment.Error.WriteLine(RootCommandStrings.FirstTimeUseTelemetryNotice);
+                consoleEnvironment.Error.MarkupLine(string.Format(CultureInfo.CurrentCulture, RootCommandStrings.FirstTimeUseTelemetryNotice, $"[link]{telemetryUrl}[/]"));
                 consoleEnvironment.Error.WriteLine();
             }
 
@@ -674,6 +676,9 @@ public class Program
         logger.LogInformation("Version: {Version}", AspireCliTelemetry.GetCliVersion());
         logger.LogInformation("Build ID: {BuildId}", AspireCliTelemetry.GetCliBuildId());
         logger.LogInformation("Working directory: {WorkingDirectory}", Environment.CurrentDirectory);
+        // Logging the log file path is useful so that when console logging is enabled (for example with --log-level debug),
+        // the path is written to the console logger (stderr) for easier discovery.
+        logger.LogInformation("Log file: {LogFilePath}", loggingOptions.LogFilePath);
 
         IHost? app = null;
         try
@@ -693,6 +698,10 @@ public class Program
         // Ensure dispose of app when Main exits.
         using var _ = app;
 
+        // Immediately get telemetry and telemetry manager so they are created by DI and telemetry is configured.
+        var telemetry = app.Services.GetRequiredService<AspireCliTelemetry>();
+        var telemetryManager = app.Services.GetRequiredService<TelemetryManager>();
+
         // Display first run experience if this is the first time the CLI is run on this machine
         await DisplayFirstTimeUseNoticeIfNeededAsync(app.Services, args, cts.Token);
 
@@ -702,9 +711,6 @@ public class Program
             // Disable default exception handler so we can log exceptions to telemetry.
             EnableDefaultExceptionHandler = false
         };
-
-        var telemetry = app.Services.GetRequiredService<AspireCliTelemetry>();
-        var telemetryManager = app.Services.GetRequiredService<TelemetryManager>();
 
         using var mainActivity = telemetry.StartReportedActivity(name: TelemetryConstants.Activities.Main, kind: ActivityKind.Internal);
 
@@ -807,7 +813,8 @@ public class Program
                 consoleEnvironment.Out.Profile.Width = 256; // VS code terminal will handle wrapping so set a large width here.
                 var executionContext = provider.GetRequiredService<CliExecutionContext>();
                 var hostEnvironment = provider.GetRequiredService<ICliHostEnvironment>();
-                var consoleInteractionService = new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment);
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                var consoleInteractionService = new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, loggerFactory);
                 return new ExtensionInteractionService(consoleInteractionService,
                     provider.GetRequiredService<IExtensionBackchannel>(),
                     extensionPromptEnabled);
@@ -820,7 +827,8 @@ public class Program
                 var consoleEnvironment = provider.GetRequiredService<ConsoleEnvironment>();
                 var executionContext = provider.GetRequiredService<CliExecutionContext>();
                 var hostEnvironment = provider.GetRequiredService<ICliHostEnvironment>();
-                return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment);
+                var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
+                return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, loggerFactory);
             });
         }
     }

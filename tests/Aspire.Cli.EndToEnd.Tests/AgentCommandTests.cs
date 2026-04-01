@@ -131,19 +131,17 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
         await auto.WaitAsync(500); // Small delay to ensure prompt is ready
         await auto.EnterAsync(); // Accept default workspace path
         await auto.WaitUntilAsync(
-            s => s.ContainsText("configure") || s.ContainsText("No agent environments") || s.ContainsText("omplete"),
-            timeout: TimeSpan.FromSeconds(60), description: "configure prompt, completion, or no environments message");
-
-        // If we got the configure prompt, just press Enter to accept defaults
-        // If we got complete/no-env, this Enter is harmless
+            s => s.ContainsText("skill files be installed"),
+            timeout: TimeSpan.FromSeconds(60), description: "skill location prompt");
+        await auto.EnterAsync(); // Accept default skill locations (Standard)
+        await auto.WaitUntilAsync(
+            s => s.ContainsText("skills should be installed"),
+            timeout: TimeSpan.FromSeconds(30), description: "skill selection prompt");
+        await auto.DownAsync();
+        await auto.TypeAsync(" "); // Deselect playwright-cli to avoid npm dependency in CI
         await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter);
-
-        // Debug: Show the scanner log file to diagnose what the scanner found
-        await auto.TypeAsync("cat /tmp/aspire-deprecated-scan.log 2>/dev/null || echo 'No debug log found'");
-        await auto.EnterAsync();
-        await auto.WaitUntilTextAsync("Scanning context", timeout: TimeSpan.FromSeconds(10));
-        await auto.WaitForSuccessPromptAsync(counter);
+        await auto.WaitUntilTextAsync("configuration complete", timeout: TimeSpan.FromSeconds(30));
+        await auto.WaitForSuccessPromptFailFastAsync(counter);
 
         // Step 3: Verify config was updated to new format
         // The updated config should contain "agent" and "mcp" but not "start"
@@ -197,9 +195,9 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
     }
 
     /// <summary>
-    /// Tests that aspire agent init with a .vscode folder shows the skill pre-selected
-    /// and MCP as an opt-in option, and that accepting the defaults (skill only) completes
-    /// successfully and creates the skill file.
+    /// Tests that aspire agent init with a .vscode folder shows skill location and skill selection
+    /// prompts, and that accepting the defaults (Standard location + all skills) completes
+    /// successfully and creates the skill file in the .agents/skills/ directory.
     /// </summary>
     [Fact]
     public async Task AgentInitCommand_DefaultSelection_InstallsSkillOnly()
@@ -225,21 +223,28 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
         // Create .vscode folder so the scanner detects VS Code environment
         Directory.CreateDirectory(vscodePath);
 
-        // Run aspire agent init and accept defaults (skill is pre-selected)
+        // Run aspire agent init and accept the default location, but keep only the
+        // built-in skills that do not require downloading external npm packages.
         await auto.TypeAsync("aspire agent init");
         await auto.EnterAsync();
         await auto.WaitUntilTextAsync("workspace:", timeout: TimeSpan.FromSeconds(30));
         await auto.WaitAsync(500);
         await auto.EnterAsync(); // Accept default workspace path
         await auto.WaitUntilAsync(
-            s => s.ContainsText("configure") && s.ContainsText("skill"),
-            timeout: TimeSpan.FromSeconds(60), description: "configure prompt with skill option");
-        await auto.EnterAsync(); // Accept defaults (skill pre-selected)
-        await auto.WaitUntilTextAsync("complete", timeout: TimeSpan.FromSeconds(30));
-        await auto.WaitForSuccessPromptAsync(counter);
+            s => s.ContainsText("skill files be installed"),
+            timeout: TimeSpan.FromSeconds(60), description: "skill location prompt");
+        await auto.EnterAsync(); // Accept default skill locations (Standard pre-selected)
+        await auto.WaitUntilAsync(
+            s => s.ContainsText("skills should be installed"),
+            timeout: TimeSpan.FromSeconds(30), description: "skill selection prompt");
+        await auto.DownAsync();
+        await auto.TypeAsync(" "); // Deselect playwright-cli to avoid npm dependency in CI
+        await auto.EnterAsync();
+        await auto.WaitUntilTextAsync("configuration complete", timeout: TimeSpan.FromSeconds(30));
+        await auto.WaitForSuccessPromptFailFastAsync(counter);
 
-        // Verify skill file was created
-        var skillFilePath = Path.Combine(workspace.WorkspaceRoot.FullName, ".github", "skills", "aspire", "SKILL.md");
+        // Verify skill file was created (skills are now installed at .agents/skills/ by StandardLocationAgentEnvironmentScanner)
+        var skillFilePath = Path.Combine(workspace.WorkspaceRoot.FullName, ".agents", "skills", "aspire", "SKILL.md");
         var fileContent = File.ReadAllText(skillFilePath);
         Assert.Contains("aspire start", fileContent);
 
@@ -249,4 +254,3 @@ public sealed class AgentCommandTests(ITestOutputHelper output)
         await pendingRun;
     }
 }
-

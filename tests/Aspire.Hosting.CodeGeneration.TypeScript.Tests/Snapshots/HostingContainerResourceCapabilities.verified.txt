@@ -266,20 +266,6 @@
     ]
   },
   {
-    CapabilityId: Aspire.Hosting/withArgsCallbackAsync,
-    MethodName: withArgsCallbackAsync,
-    TargetType: {
-      TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResourceWithArgs,
-      IsInterface: true
-    },
-    ExpandedTargetTypes: [
-      {
-        TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerResource,
-        IsInterface: false
-      }
-    ]
-  },
-  {
     CapabilityId: Aspire.Hosting/withBindMount,
     MethodName: withBindMount,
     TargetType: {
@@ -868,20 +854,6 @@
     ]
   },
   {
-    CapabilityId: Aspire.Hosting/withPipelineConfigurationAsync,
-    MethodName: withPipelineConfigurationAsync,
-    TargetType: {
-      TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResource,
-      IsInterface: true
-    },
-    ExpandedTargetTypes: [
-      {
-        TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerResource,
-        IsInterface: false
-      }
-    ]
-  },
-  {
     CapabilityId: Aspire.Hosting/withPipelineStepFactory,
     MethodName: withPipelineStepFactory,
     TargetType: {
@@ -1052,20 +1024,6 @@
   {
     CapabilityId: Aspire.Hosting/withUrlsCallback,
     MethodName: withUrlsCallback,
-    TargetType: {
-      TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResource,
-      IsInterface: true
-    },
-    ExpandedTargetTypes: [
-      {
-        TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerResource,
-        IsInterface: false
-      }
-    ]
-  },
-  {
-    CapabilityId: Aspire.Hosting/withUrlsCallbackAsync,
-    MethodName: withUrlsCallbackAsync,
     TargetType: {
       TypeId: Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResource,
       IsInterface: true

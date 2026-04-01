@@ -331,7 +331,7 @@ class AspireClient {
                     Object[] unwrappedArgs = args.stream()
                         .map(this::unwrapResult)
                         .toArray();
-                    result = callback.apply(unwrappedArgs);
+                    result = awaitValue(callback.apply(unwrappedArgs));
                 } else {
                     error = createError(-32601, "Callback not found: " + callbackId);
                 }
@@ -438,6 +438,13 @@ class AspireClient {
         return id;
     }
 
+    public static Object awaitValue(Object value) {
+        if (value instanceof CompletionStage<?> stage) {
+            return stage.toCompletableFuture().join();
+        }
+        return value;
+    }
+
     // Simple JSON serialization (no external dependencies)
     public static Object serializeValue(Object value) {
         if (value == null) {
@@ -451,6 +458,9 @@ class AspireClient {
         }
         if (value instanceof ReferenceExpression) {
             return ((ReferenceExpression) value).toJson();
+        }
+        if (value instanceof AspireUnion union) {
+            return serializeValue(union.getValue());
         }
         if (value instanceof Map) {
             @SuppressWarnings("unchecked")
@@ -477,6 +487,9 @@ class AspireClient {
                 result.add(serializeValue(item));
             }
             return result;
+        }
+        if (value instanceof WireValueEnum wireValueEnum) {
+            return wireValueEnum.getValue();
         }
         if (value instanceof Enum) {
             return ((Enum<?>) value).name();

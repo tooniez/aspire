@@ -28,8 +28,6 @@ namespace Aspire.Cli.Projects;
 /// </summary>
 internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGenerator
 {
-    private const string GeneratedFolderName = ".modules";
-
     private readonly IInteractionService _interactionService;
     private readonly IAppHostCliBackchannel _backchannel;
     private readonly IAppHostServerProjectFactory _appHostServerProjectFactory;
@@ -264,15 +262,17 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         // Step 3: Connect to server
         var rpcClient = await serverSession.GetRpcClientAsync(cancellationToken);
 
-        // Step 4: Install dependencies using GuestRuntime (best effort - don't block code generation)
-        await InstallDependenciesAsync(directory, rpcClient, cancellationToken);
-
-        // Step 5: Generate SDK code via RPC
+        // Step 4: Generate SDK code via RPC
+        // This must happen before dependency installation because the generated
+        // code directory (.modules) may not exist yet and dependency files reference it.
         await GenerateCodeViaRpcAsync(
             directory.FullName,
             rpcClient,
             integrations,
             cancellationToken);
+
+        // Step 5: Install dependencies using GuestRuntime (best effort - don't block code generation)
+        await InstallDependenciesAsync(directory, rpcClient, cancellationToken);
 
         return true;
     }
@@ -435,7 +435,20 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
             // Step 5: Connect to server for RPC calls
             var rpcClient = await serverSession.GetRpcClientAsync(cancellationToken);
 
-            // Step 6: Install dependencies (using GuestRuntime)
+            // Step 6: Generate SDK code via RPC if needed
+            // This must happen before dependency installation because the generated
+            // code directory (.modules) may not exist yet (e.g., freshly cloned project)
+            // and dependency files (pylock.toml, requirements.txt) reference it.
+            if (buildResult.NeedsCodeGen)
+            {
+                await GenerateCodeViaRpcAsync(
+                    directory.FullName,
+                    rpcClient,
+                    integrations,
+                    cancellationToken);
+            }
+
+            // Step 7: Install dependencies (using GuestRuntime)
             // The GuestRuntime will skip if the RuntimeSpec doesn't have InstallDependencies configured
             var installResult = await InstallDependenciesAsync(directory, rpcClient, cancellationToken);
             if (installResult != 0)
@@ -458,16 +471,6 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 return installResult;
             }
 
-            // Step 7: Generate SDK code via RPC if needed
-            if (buildResult.NeedsCodeGen)
-            {
-                await GenerateCodeViaRpcAsync(
-                    directory.FullName,
-                    rpcClient,
-                    integrations,
-                    cancellationToken);
-            }
-
             // Step 8: Execute the guest apphost
 
             // Pass the socket path, project directory, and apphost file path to the guest process
@@ -478,6 +481,12 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 ["ASPIRE_APPHOST_FILEPATH"] = appHostFile.FullName,
                 [KnownConfigNames.RemoteAppHostToken] = authenticationToken
             };
+
+            // Pass debug flag to the guest process
+            if (context.Debug)
+            {
+                environmentVariables["ASPIRE_DEBUG"] = "true";
+            }
 
             // Check if the extension should launch the guest app host (for VS Code debugging).
             // This mirrors the pattern in DotNetCliRunner.ExecuteAsync for .NET app hosts.
@@ -807,7 +816,20 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
             // Step 3: Connect to server for RPC calls
             var rpcClient = await serverSession.GetRpcClientAsync(cancellationToken);
 
-            // Step 4: Install dependencies if needed (using GuestRuntime)
+            // Step 4: Generate code via RPC if needed
+            // This must happen before dependency installation because the generated
+            // code directory (.modules) may not exist yet (e.g., freshly cloned project)
+            // and dependency files (pylock.toml, requirements.txt) reference it.
+            if (needsCodeGen)
+            {
+                await GenerateCodeViaRpcAsync(
+                    directory.FullName,
+                    rpcClient,
+                    integrations,
+                    cancellationToken);
+            }
+
+            // Step 5: Install dependencies if needed (using GuestRuntime)
             // The GuestRuntime will skip if the RuntimeSpec doesn't have InstallDependencies configured
             var installResult = await InstallDependenciesAsync(directory, rpcClient, cancellationToken);
             if (installResult != 0)
@@ -828,16 +850,6 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 }
 
                 return installResult;
-            }
-
-            // Step 5: Generate code via RPC if needed
-            if (needsCodeGen)
-            {
-                await GenerateCodeViaRpcAsync(
-                    directory.FullName,
-                    rpcClient,
-                    integrations,
-                    cancellationToken);
             }
 
             // Pass the socket path, project directory, and apphost file path to the guest process
@@ -1199,7 +1211,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         var files = await rpcClient.GenerateCodeAsync(codeGenerator, cancellationToken);
 
         // Write generated files to the output directory
-        var outputPath = Path.Combine(appPath, GeneratedFolderName);
+        var outputPath = Path.Combine(appPath, LanguageInfo.GeneratedFolderName);
         Directory.CreateDirectory(outputPath);
 
         foreach (var (fileName, content) in files)
@@ -1300,6 +1312,21 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         {
             _interactionService.DisplayError("GuestRuntime not initialized. This is a bug.");
             return ExitCodeConstants.FailedToBuildArtifacts;
+        }
+
+        var (initResult, initOutput) = await _guestRuntime.InitializeAsync(directory, cancellationToken);
+        if (initResult != 0)
+        {
+            var lines = initOutput.GetLines().ToArray();
+            if (lines.Length > 0)
+            {
+                _interactionService.DisplayLines(lines);
+            }
+            else
+            {
+                _interactionService.DisplayError($"Failed to initialize {_resolvedLanguage?.DisplayName ?? "guest"} environment.");
+            }
+            return initResult;
         }
 
         var (result, output) = await _guestRuntime.InstallDependenciesAsync(directory, cancellationToken);
