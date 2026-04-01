@@ -146,6 +146,13 @@
     <Project Path="playground/AzureFunctionsWithDts/AzureFunctionsWithDts.AppHost/AzureFunctionsWithDts.AppHost.csproj" />
     <Project Path="playground/AzureFunctionsWithDts/AzureFunctionsWithDts.Functions/AzureFunctionsWithDts.Functions.csproj" />
   </Folder>
+  <Folder Name="/playground/ProjectResourceExtensions/">
+    <Project Path="playground/ProjectResourceExtensions/ProjectResourceExtensions.AppHost/ProjectResourceExtensions.AppHost.csproj" />
+    <Project Path="playground/ProjectResourceExtensions/StandardService/StandardService.csproj" />
+    <Project Path="playground/ProjectResourceExtensions/CustomDebugService/CustomDebugService.csproj" />
+    <Project Path="playground/ProjectResourceExtensions/FakeIntegrationLibrary/FakeIntegrationLibrary.csproj" />
+    <Project Path="playground/ProjectResourceExtensions/AzureFunctionsService/AzureFunctionsService.csproj" />
+  </Folder>
   <Folder Name="/playground/AzureKusto/">
     <Project Path="playground/AzureKusto/AzureKusto.AppHost/AzureKusto.AppHost.csproj" />
     <Project Path="playground/AzureKusto/AzureKusto.Worker/AzureKusto.Worker.csproj" />
