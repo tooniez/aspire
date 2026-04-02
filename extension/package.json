@@ -19,15 +19,24 @@
     "Other"
   ],
   "keywords": [
+    "aspire",
     "dotnet",
+    "typescript",
+    "distributed",
     "orchestrator",
     "apphost"
   ],
+  "galleryBanner": {
+    "color": "#512BD4",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onDebugResolve:aspire",
     "onDebugInitialConfigurations:aspire",
     "onDebugDynamicConfigurations:aspire",
     "workspaceContains:**/*.csproj",
+    "workspaceContains:**/aspire.config.json",
+    "workspaceContains:**/.aspire/**",
     "onView:workbench.view.debug",
     "workspaceContains:**/apphost.cs",
     "workspaceContains:**/apphost.ts",
