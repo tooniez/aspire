@@ -6,6 +6,7 @@ const buildVersion = await builder.addParameterFromConfiguration("buildVersion",
 const buildSecret = await builder.addParameterFromConfiguration("buildSecret", "MyConfig:Secret", { secret: true });
 const backend = await builder.addContainer("backend", "nginx")
     .withHttpEndpoint({ name: "http", targetPort: 80 });
+const backendService = await builder.addProject("backend-service", "./src/BackendService", "http");
 const externalBackend = await builder.addExternalService("external-backend", "https://example.com");
 
 const proxy = await builder.addYarp("proxy")
@@ -65,7 +66,7 @@ await proxy.withConfiguration(async (config) => {
                 reactivationPeriod: 100_000_000,
             },
         });
-    const resourceCluster = await config.addClusterFromResource(backend);
+    const resourceCluster = await config.addClusterFromResource(backendService);
     const externalServiceCluster = await config.addClusterFromExternalService(externalBackend);
     const singleDestinationCluster = await config.addClusterWithDestination("single-destination", "https://example.net");
     const multiDestinationCluster = await config.addClusterWithDestinations("multi-destination", [
@@ -100,7 +101,7 @@ await proxy.withConfiguration(async (config) => {
         .withTransformResponseTrailerRemove("X-Remove-Trailer")
         .withTransformResponseTrailersAllowed(["X-Response-Trailer"]);
 
-    await config.addRouteFromEndpoint("/from-endpoint/{**catchall}", endpoint)
+    await config.addRoute("/from-endpoint/{**catchall}", endpoint)
         .withMatch({
             path: "/from-endpoint/{**catchall}",
             methods: ["GET", "POST"],
@@ -110,29 +111,37 @@ await proxy.withConfiguration(async (config) => {
             PathPrefix: "/endpoint",
             RequestHeadersCopy: "true",
         });
-    await config.addRouteFromResource("/from-resource/{**catchall}", backend)
+    await config.addRoute("/from-resource/{**catchall}", backendService)
         .withTransform({
             PathPrefix: "/resource",
         });
-    await config.addRouteFromExternalService("/from-external/{**catchall}", externalBackend)
+    await config.addRoute("/from-external/{**catchall}", externalBackend)
         .withTransform({
             PathPrefix: "/external",
+        });
+    await config.addRoute("/from-string/{**catchall}", "https://example.route")
+        .withTransform({
+            PathPrefix: "/string",
         });
     await config.addCatchAllRoute(endpointCluster)
         .withTransform({
             PathPrefix: "/cluster",
         });
-    await config.addCatchAllRouteFromEndpoint(endpoint)
+    await config.addCatchAllRoute(endpoint)
         .withTransform({
             PathPrefix: "/catchall-endpoint",
         });
-    await config.addCatchAllRouteFromResource(backend)
+    await config.addCatchAllRoute(backendService)
         .withTransform({
             PathPrefix: "/catchall-resource",
         });
-    await config.addCatchAllRouteFromExternalService(externalBackend)
+    await config.addCatchAllRoute(externalBackend)
         .withTransform({
             PathPrefix: "/catchall-external",
+        });
+    await config.addCatchAllRoute("https://example.catchall")
+        .withTransform({
+            PathPrefix: "/catchall-string",
         });
 
     await config.addRoute("/resource/{**catchall}", resourceCluster);

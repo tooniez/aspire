@@ -1,4 +1,4 @@
-﻿// ===== AddDockerfileOptions.java =====
+// ===== AddDockerfileOptions.java =====
 // AddDockerfileOptions.java - GENERATED CODE - DO NOT EDIT
 
 package aspire;
@@ -2442,6 +2442,27 @@ public class CSharpAppResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public CSharpAppResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public CSharpAppResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public CSharpAppResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public CSharpAppResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public CSharpAppResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -3628,6 +3649,27 @@ public class ConnectionStringResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ConnectionStringResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ConnectionStringResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ConnectionStringResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ConnectionStringResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ConnectionStringResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -4301,6 +4343,27 @@ public class ContainerRegistryResource extends ResourceBuilderBase {
 
     public ContainerRegistryResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public ContainerRegistryResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerRegistryResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerRegistryResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ContainerRegistryResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */
@@ -5800,6 +5863,27 @@ public class ContainerResource extends ResourceBuilderBase {
 
     public ContainerResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public ContainerResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ContainerResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ContainerResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */
@@ -7458,6 +7542,27 @@ public class DotnetToolResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public DotnetToolResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public DotnetToolResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public DotnetToolResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public DotnetToolResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public DotnetToolResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -9079,6 +9184,27 @@ public class ExecutableResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ExecutableResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExecutableResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExecutableResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ExecutableResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ExecutableResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -9881,6 +10007,27 @@ public class ExternalServiceResource extends ResourceBuilderBase {
 
     public ExternalServiceResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public ExternalServiceResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExternalServiceResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ExternalServiceResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ExternalServiceResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */
@@ -11938,6 +12085,27 @@ public class ParameterResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public ParameterResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ParameterResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ParameterResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ParameterResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public ParameterResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -13754,6 +13922,27 @@ public class ProjectResource extends ResourceBuilderBase {
 
     public ProjectResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public ProjectResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ProjectResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public ProjectResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public ProjectResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */
@@ -16115,6 +16304,27 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public TestDatabaseResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestDatabaseResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestDatabaseResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public TestDatabaseResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public TestDatabaseResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -17900,6 +18110,27 @@ public class TestRedisResource extends ResourceBuilderBase {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
     }
 
+    public TestRedisResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestRedisResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestRedisResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public TestRedisResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
+    }
+
     /** Sets the endpoints */
     public TestRedisResource withEndpoints(String[] endpoints) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -19576,6 +19807,27 @@ public class TestVaultResource extends ResourceBuilderBase {
 
     public TestVaultResource withDependency(ResourceBuilderBase dependency) {
         return withDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    public TestVaultResource withUnionDependency(String dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestVaultResource withUnionDependency(IResourceWithConnectionString dependency) {
+        return withUnionDependency(AspireUnion.of(dependency));
+    }
+
+    public TestVaultResource withUnionDependency(ResourceBuilderBase dependency) {
+        return withUnionDependency(new IResourceWithConnectionString(dependency.getHandle(), dependency.getClient()));
+    }
+
+    /** Adds a dependency from a string or another resource */
+    public TestVaultResource withUnionDependency(AspireUnion dependency) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("dependency", AspireClient.serializeValue(dependency));
+        getClient().invokeCapability("Aspire.Hosting.CodeGeneration.Java.Tests/withUnionDependency", reqArgs);
+        return this;
     }
 
     /** Sets the endpoints */

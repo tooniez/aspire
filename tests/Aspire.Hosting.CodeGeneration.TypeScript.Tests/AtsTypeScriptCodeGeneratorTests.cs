@@ -596,6 +596,35 @@ public class AtsTypeScriptCodeGeneratorTests
     }
 
     [Fact]
+    public void AspireUnion_InterfaceHandleInput_GeneratesExpandedUnion()
+    {
+        var atsContext = CreateContextFromTestAssembly();
+
+        var files = _generator.GenerateDistributedApplication(atsContext);
+        var aspireTs = files["aspire.ts"];
+
+        Assert.Contains("withUnionDependency(dependency: string | ResourceWithConnectionString | TestRedisResource)", aspireTs);
+    }
+
+    [Fact]
+    public void MapInputUnionTypeToTypeScript_ThrowsOnEmptyUnion()
+    {
+        var method = typeof(AtsTypeScriptCodeGenerator).GetMethod("MapInputUnionTypeToTypeScript", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        var typeRef = new AtsTypeRef
+        {
+            TypeId = "test/EmptyUnion",
+            Category = AtsTypeCategory.Union,
+            UnionTypes = [],
+        };
+
+        var ex = Assert.Throws<TargetInvocationException>(() => method.Invoke(_generator, [typeRef]));
+        Assert.IsType<InvalidOperationException>(ex.InnerException);
+        Assert.Equal("Union input types must define at least one member type.", ex.InnerException.Message);
+    }
+
+    [Fact]
     public async Task Scanner_BaseTypeHierarchy_IsCollected()
     {
         // Verify that AtsTypeInfo includes base type hierarchy for inheritance expansion.

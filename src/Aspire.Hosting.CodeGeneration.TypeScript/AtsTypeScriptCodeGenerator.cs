@@ -269,6 +269,11 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
     /// </summary>
     private string MapInputTypeToTypeScript(AtsTypeRef? typeRef)
     {
+        if (typeRef?.Category == AtsTypeCategory.Union)
+        {
+            return MapInputUnionTypeToTypeScript(typeRef);
+        }
+
         if (IsInterfaceHandleType(typeRef))
         {
             if (TryMapInterfaceInputTypeToTypeScript(typeRef!) is { } interfaceInputType)
@@ -285,6 +290,20 @@ internal sealed class AtsTypeScriptCodeGenerator : ICodeGenerator
         }
 
         return MapTypeRefToTypeScript(typeRef);
+    }
+
+    private string MapInputUnionTypeToTypeScript(AtsTypeRef typeRef)
+    {
+        if (typeRef.UnionTypes == null || typeRef.UnionTypes.Count == 0)
+        {
+            throw new InvalidOperationException("Union input types must define at least one member type.");
+        }
+
+        var memberTypes = typeRef.UnionTypes
+            .Select(MapInputTypeToTypeScript)
+            .Distinct();
+
+        return string.Join(" | ", memberTypes);
     }
 
     /// <summary>
