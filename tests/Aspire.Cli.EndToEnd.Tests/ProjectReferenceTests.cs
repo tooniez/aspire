@@ -108,7 +108,7 @@ public sealed class ProjectReferenceTests(ITestOutputHelper output)
 
                 public static class MyIntegrationExtensions
                 {
-                    [AspireExport("addMyService")]
+                    [AspireExport]
                     public static IResourceBuilder<ContainerResource> AddMyService(
                         this IDistributedApplicationBuilder builder, string name)
                         => builder.AddContainer(name, "redis", "latest");
