@@ -33,11 +33,13 @@ import { AspireMcpServerDefinitionProvider } from './mcp/AspireMcpServerDefiniti
 import { AspireCodeLensProvider } from './editor/AspireCodeLensProvider';
 import { AspireGutterDecorationProvider } from './editor/AspireGutterDecorationProvider';
 import { getSupportedLanguageIds } from './editor/parsers/AppHostResourceParser';
+import { readGitCommitSha } from './utils/versionInfo';
 
 let aspireExtensionContext = new AspireExtensionContext();
 
 export async function activate(context: vscode.ExtensionContext) {
-  extensionLogOutputChannel.info("Activating Aspire extension");
+  const gitCommitSha = readGitCommitSha(context);
+  extensionLogOutputChannel.info(`Activating Aspire extension (commit: ${gitCommitSha})`);
   initializeTelemetry(context);
 
   const terminalProvider = new AspireTerminalProvider(context.subscriptions);

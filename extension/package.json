@@ -828,8 +828,10 @@
     "l10n:export": "gulp prepare",
     "l10n:import": "gulp localizationBundle",
     "generate-schema": "node scripts/generate-schema.js",
-    "precompile": "npm run generate-schema && npm run l10n:export && npm run l10n:import",
-    "prewatch": "npm run generate-schema && npm run l10n:export && npm run l10n:import",
+    "generate-version": "node scripts/generate-version.js",
+    "precompile": "npm run generate-version && npm run generate-schema && npm run l10n:export && npm run l10n:import",
+    "prepackage": "npm run generate-version && npm run generate-schema && npm run l10n:export && npm run l10n:import",
+    "prewatch": "npm run generate-version && npm run generate-schema && npm run l10n:export && npm run l10n:import",
     "localize": "npm run l10n:export && npm run l10n:import"
   },
   "devDependencies": {
