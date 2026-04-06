@@ -702,7 +702,7 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
         vscode.env.openExternal(vscode.Uri.parse(element.url));
     }
 
-    openInSimpleBrowser(element: EndpointUrlItem): void {
+    openInIntegratedBrowser(element: EndpointUrlItem): void {
         vscode.commands.executeCommand('simpleBrowser.show', element.url);
     }
 
