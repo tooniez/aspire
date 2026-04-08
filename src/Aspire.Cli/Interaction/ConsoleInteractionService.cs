@@ -352,10 +352,12 @@ internal class ConsoleInteractionService : IInteractionService
         target.Profile.Out.Writer.WriteLine(text);
     }
 
-    public void DisplayMarkdown(string markdown)
+    public void DisplayMarkdown(string markdown, ConsoleOutput? consoleOverride = null)
     {
+        var effectiveConsole = consoleOverride ?? Console;
+        var target = effectiveConsole == ConsoleOutput.Error ? _errorConsole : _outConsole;
         var spectreMarkup = MarkdownToSpectreConverter.ConvertToSpectre(markdown);
-        MessageConsole.MarkupLine(spectreMarkup);
+        target.MarkupLine(spectreMarkup);
     }
 
     public void DisplayMarkupLine(string markup)
