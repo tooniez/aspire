@@ -33,6 +33,13 @@ function parseCommand(body, defaultSourceUrl = null) {
                         return { success: false, errorMessage: 'Missing value for --test.' };
                     }
 
+                    if (result.testQuery) {
+                        return {
+                            success: false,
+                            errorMessage: 'Positional input is ambiguous. Use /create-issue --test "<test-name>" [--url <pr|run|job-url>] [--workflow <selector>] [--force-new].',
+                        };
+                    }
+
                     result.testQuery = tokens[++index];
                     break;
 
@@ -57,10 +64,22 @@ function parseCommand(body, defaultSourceUrl = null) {
                     break;
 
                 default:
-                    return {
-                        success: false,
-                        errorMessage: `Unknown argument '${token}'. Supported arguments are --test, --url, --workflow, and --force-new.`,
-                    };
+                    if (token.startsWith('--')) {
+                        return {
+                            success: false,
+                            errorMessage: `Unknown argument '${token}'. Supported arguments are --test, --url, --workflow, and --force-new.`,
+                        };
+                    }
+
+                    if (result.testQuery) {
+                        return {
+                            success: false,
+                            errorMessage: 'Positional input is ambiguous. Use /create-issue --test "<test-name>" [--url <pr|run|job-url>] [--workflow <selector>] [--force-new].',
+                        };
+                    }
+
+                    result.testQuery = token;
+                    break;
             }
         }
 
@@ -94,6 +113,35 @@ function parseCommand(body, defaultSourceUrl = null) {
     };
 }
 
+function formatListResponse(resolverOutcome, resultJson) {
+    if (resolverOutcome === 'failure' && !resultJson) {
+        return { error: true, message: 'The failing-test resolver failed to run.' };
+    }
+
+    const tests = resultJson?.allFailures?.tests?.map(t => t.canonicalTestName ?? t.displayTestName)
+        ?? resultJson?.diagnostics?.availableFailedTests
+        ?? [];
+
+    if (tests.length > 0) {
+        return {
+            error: false,
+            message: '**Failed tests found on this PR:**\n\n'
+                + tests.map(name => `- \`/create-issue ${name}\``).join('\n')
+                + '\n\n',
+            tests,
+        };
+    }
+
+    // The C# tool writes JSON even on failure (exits non-zero). Surface
+    // the error instead of a misleading "no failures found" message.
+    if (resolverOutcome === 'failure' || resultJson?.success === false) {
+        const detail = resultJson?.errorMessage;
+        return { error: true, message: detail ?? 'The failing-test resolver failed to run.' };
+    }
+
+    return { error: false, message: 'No test failures were found. Use `--url` to point to a specific workflow run.\n\n' };
+}
+
 function buildIssueSearchQuery(owner, repo, metadataMarker) {
     const escapedMarker = String(metadataMarker ?? '').replaceAll('"', '\\"');
     return `repo:${owner}/${repo} is:issue label:failing-test in:body "${escapedMarker}"`;
@@ -111,6 +159,7 @@ function isSupportedSourceUrl(value) {
 
 module.exports = {
     buildIssueSearchQuery,
+    formatListResponse,
     isSupportedSourceUrl,
     parseCommand,
 };
