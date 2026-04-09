@@ -1664,6 +1664,285 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         Assert.NotEqual(0, exitCode);
         Assert.NotNull(testInteractionService);
     }
+
+    [Fact]
+    public async Task NewCommandInExtensionModeAppendsProjectNameToOutputPath()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedOutputPath = null;
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
+            options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
+            {
+                HasCapabilityAsyncCallback = (c, _) => Task.FromResult(c is "baseline.v1"),
+            };
+
+            options.NewCommandPrompterFactory = (sp) =>
+            {
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var prompter = new TestNewCommandPrompter(interactionService);
+
+                prompter.PromptForProjectNameCallback = (_) => "MyFirstApp";
+
+                // Simulate the user picking a parent folder (not named after the project)
+                prompter.PromptForOutputPathCallback = (_) =>
+                    Path.Combine(workspace.WorkspaceRoot.FullName, "source");
+
+                return prompter;
+            };
+
+            options.DotNetCliRunnerFactory = (sp) =>
+            {
+                var runner = new TestDotNetCliRunner();
+                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
+                {
+                    var package = new NuGetPackage()
+                    {
+                        Id = "Aspire.ProjectTemplates",
+                        Source = "nuget",
+                        Version = "9.2.0"
+                    };
+                    return (0, new NuGetPackage[] { package });
+                };
+                runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
+                {
+                    return (0, version);
+                };
+                runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
+                {
+                    capturedOutputPath = outputPath;
+                    return 0;
+                };
+                return runner;
+            };
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("new aspire-starter --use-redis-cache --test-framework None");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(capturedOutputPath);
+
+        // Output path should have the project name appended as a subdirectory
+        var expectedPath = Path.Combine(workspace.WorkspaceRoot.FullName, "source", "MyFirstApp");
+        Assert.Equal(expectedPath, capturedOutputPath);
+    }
+
+    [Fact]
+    public async Task NewCommandInExtensionModeDoesNotDoubleAppendProjectName()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedOutputPath = null;
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
+            options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
+            {
+                HasCapabilityAsyncCallback = (c, _) => Task.FromResult(c is "baseline.v1"),
+            };
+
+            options.NewCommandPrompterFactory = (sp) =>
+            {
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var prompter = new TestNewCommandPrompter(interactionService);
+
+                prompter.PromptForProjectNameCallback = (_) => "MyFirstApp";
+
+                // Simulate the user picking a folder already named after the project
+                prompter.PromptForOutputPathCallback = (_) =>
+                    Path.Combine(workspace.WorkspaceRoot.FullName, "source", "MyFirstApp");
+
+                return prompter;
+            };
+
+            options.DotNetCliRunnerFactory = (sp) =>
+            {
+                var runner = new TestDotNetCliRunner();
+                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
+                {
+                    var package = new NuGetPackage()
+                    {
+                        Id = "Aspire.ProjectTemplates",
+                        Source = "nuget",
+                        Version = "9.2.0"
+                    };
+                    return (0, new NuGetPackage[] { package });
+                };
+                runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
+                {
+                    return (0, version);
+                };
+                runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
+                {
+                    capturedOutputPath = outputPath;
+                    return 0;
+                };
+                return runner;
+            };
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("new aspire-starter --use-redis-cache --test-framework None");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(capturedOutputPath);
+
+        // Output path should NOT have the project name double-appended
+        var expectedPath = Path.Combine(workspace.WorkspaceRoot.FullName, "source", "MyFirstApp");
+        Assert.Equal(expectedPath, capturedOutputPath);
+    }
+
+    [Fact]
+    public async Task NewCommandInConsoleModeDoesNotAppendProjectName()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        string? capturedOutputPath = null;
+
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            // Default InteractionServiceFactory creates ConsoleInteractionService (not extension mode)
+
+            options.NewCommandPrompterFactory = (sp) =>
+            {
+                var interactionService = sp.GetRequiredService<IInteractionService>();
+                var prompter = new TestNewCommandPrompter(interactionService);
+
+                prompter.PromptForProjectNameCallback = (_) => "MyFirstApp";
+
+                // Simulate user accepting default path or selecting parent folder
+                prompter.PromptForOutputPathCallback = (_) =>
+                    Path.Combine(workspace.WorkspaceRoot.FullName, "source");
+
+                return prompter;
+            };
+
+            options.DotNetCliRunnerFactory = (sp) =>
+            {
+                var runner = new TestDotNetCliRunner();
+                runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
+                {
+                    var package = new NuGetPackage()
+                    {
+                        Id = "Aspire.ProjectTemplates",
+                        Source = "nuget",
+                        Version = "9.2.0"
+                    };
+                    return (0, new NuGetPackage[] { package });
+                };
+                runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
+                {
+                    return (0, version);
+                };
+                runner.NewProjectAsyncCallback = (templateName, projectName, outputPath, invocationOptions, ct) =>
+                {
+                    capturedOutputPath = outputPath;
+                    return 0;
+                };
+                return runner;
+            };
+        });
+        var provider = services.BuildServiceProvider();
+
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("new aspire-starter --use-redis-cache --test-framework None");
+
+        var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+        Assert.Equal(0, exitCode);
+        Assert.NotNull(capturedOutputPath);
+
+        // In console mode, the output path should NOT have project name appended
+        var expectedPath = Path.Combine(workspace.WorkspaceRoot.FullName, "source");
+        Assert.Equal(expectedPath, capturedOutputPath);
+    }
+
+    [Fact]
+    public async Task NewCommandInExtensionModeHandlesTrailingDirectorySeparator()
+    {
+        const string projectName = "MyFirstApp";
+
+        async Task AssertOutputPathAsync(Func<string, string> selectedPathFactory, Func<string, string> expectedPathFactory)
+        {
+            using var workspace = TemporaryWorkspace.Create(outputHelper);
+            string? capturedOutputPath = null;
+
+            var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+            {
+                options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp);
+                options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel
+                {
+                    HasCapabilityAsyncCallback = (c, _) => Task.FromResult(c is "baseline.v1"),
+                };
+
+                options.NewCommandPrompterFactory = (sp) =>
+                {
+                    var interactionService = sp.GetRequiredService<IInteractionService>();
+                    var prompter = new TestNewCommandPrompter(interactionService);
+
+                    prompter.PromptForProjectNameCallback = (_) => projectName;
+
+                    prompter.PromptForOutputPathCallback = (_) =>
+                        selectedPathFactory(workspace.WorkspaceRoot.FullName);
+
+                    return prompter;
+                };
+
+                options.DotNetCliRunnerFactory = (sp) =>
+                {
+                    var runner = new TestDotNetCliRunner();
+                    runner.SearchPackagesAsyncCallback = (dir, query, prerelease, take, skip, nugetSource, useCache, options, cancellationToken) =>
+                    {
+                        var package = new NuGetPackage()
+                        {
+                            Id = "Aspire.ProjectTemplates",
+                            Source = "nuget",
+                            Version = "9.2.0"
+                        };
+                        return (0, new NuGetPackage[] { package });
+                    };
+                    runner.InstallTemplateAsyncCallback = (packageName, version, nugetSource, force, invocationOptions, ct) =>
+                    {
+                        return (0, version);
+                    };
+                    runner.NewProjectAsyncCallback = (templateName, pName, outputPath, invocationOptions, ct) =>
+                    {
+                        capturedOutputPath = outputPath;
+                        return 0;
+                    };
+                    return runner;
+                };
+            });
+            var provider = services.BuildServiceProvider();
+
+            var command = provider.GetRequiredService<RootCommand>();
+            var result = command.Parse("new aspire-starter --use-redis-cache --test-framework None");
+
+            var exitCode = await result.InvokeAsync().DefaultTimeout();
+
+            Assert.Equal(0, exitCode);
+            Assert.NotNull(capturedOutputPath);
+            Assert.Equal(expectedPathFactory(workspace.WorkspaceRoot.FullName), capturedOutputPath);
+        }
+
+        // Trailing separator on a parent folder should still append the project name once.
+        await AssertOutputPathAsync(
+            workspaceRoot => Path.Combine(workspaceRoot, "source") + Path.DirectorySeparatorChar,
+            workspaceRoot => Path.Combine(workspaceRoot, "source", projectName));
+
+        // Trailing separator on a folder already named after the project should not double-append.
+        await AssertOutputPathAsync(
+            workspaceRoot => Path.Combine(workspaceRoot, projectName) + Path.DirectorySeparatorChar,
+            workspaceRoot => Path.Combine(workspaceRoot, projectName));
+    }
 }
 
 internal sealed class TestNewCommandPrompter(IInteractionService interactionService) : NewCommandPrompter(interactionService)
