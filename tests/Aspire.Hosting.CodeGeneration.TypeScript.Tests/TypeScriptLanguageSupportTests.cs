@@ -13,11 +13,11 @@ public sealed class TypeScriptLanguageSupportTests
     [Fact]
     public void Scaffold_CreatesAppHostSpecificScriptsAndTsConfig_ForNewProject()
     {
-        using var testDirectory = new TestDirectory();
+        using var testDir = new TestTempDirectory();
 
         var files = _languageSupport.Scaffold(new ScaffoldRequest
         {
-            TargetPath = testDirectory.Path,
+            TargetPath = testDir.Path,
             ProjectName = "BrownfieldApp"
         });
 
@@ -61,9 +61,9 @@ public sealed class TypeScriptLanguageSupportTests
     [Fact]
     public void Scaffold_BrownfieldOutput_ContainsOnlyAspireEntries()
     {
-        using var testDirectory = new TestDirectory();
+        using var testDir = new TestTempDirectory();
 
-        File.WriteAllText(Path.Combine(testDirectory.Path, "package.json"), """
+        File.WriteAllText(Path.Combine(testDir.Path, "package.json"), """
             {
               "name": "vite-brownfield",
               "version": "2.0.0",
@@ -85,7 +85,7 @@ public sealed class TypeScriptLanguageSupportTests
 
         var files = _languageSupport.Scaffold(new ScaffoldRequest
         {
-            TargetPath = testDirectory.Path,
+            TargetPath = testDir.Path,
             ProjectName = "Ignored"
         });
 
@@ -126,9 +126,9 @@ public sealed class TypeScriptLanguageSupportTests
     [Fact]
     public void Scaffold_AlwaysOutputsAspireVersions_RegardlessOfExistingDependencies()
     {
-        using var testDirectory = new TestDirectory();
+        using var testDir = new TestTempDirectory();
 
-        File.WriteAllText(Path.Combine(testDirectory.Path, "package.json"), """
+        File.WriteAllText(Path.Combine(testDir.Path, "package.json"), """
             {
               "dependencies": {
                 "vscode-jsonrpc": "^8.1.0"
@@ -144,7 +144,7 @@ public sealed class TypeScriptLanguageSupportTests
 
         var files = _languageSupport.Scaffold(new ScaffoldRequest
         {
-            TargetPath = testDirectory.Path,
+            TargetPath = testDir.Path,
             ProjectName = "Ignored"
         });
 
@@ -164,8 +164,8 @@ public sealed class TypeScriptLanguageSupportTests
     [Fact]
     public void Scaffold_DoesNotEmitRootTsConfig_WhenOneAlreadyExists()
     {
-        using var testDirectory = new TestDirectory();
-        var existingTsConfigPath = Path.Combine(testDirectory.Path, "tsconfig.json");
+        using var testDir = new TestTempDirectory();
+        var existingTsConfigPath = Path.Combine(testDir.Path, "tsconfig.json");
         var existingTsConfig = """
             {
               "compilerOptions": {
@@ -178,7 +178,7 @@ public sealed class TypeScriptLanguageSupportTests
 
         var files = _languageSupport.Scaffold(new ScaffoldRequest
         {
-            TargetPath = testDirectory.Path,
+            TargetPath = testDir.Path,
             ProjectName = "BrownfieldApp"
         });
 
@@ -198,23 +198,4 @@ public sealed class TypeScriptLanguageSupportTests
     }
 
     private static JsonObject ParseJson(string content) => JsonNode.Parse(content)!.AsObject();
-
-    private sealed class TestDirectory : IDisposable
-    {
-        public TestDirectory()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "aspire-ts-language-support-tests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(Path);
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            if (Directory.Exists(Path))
-            {
-                Directory.Delete(Path, recursive: true);
-            }
-        }
-    }
 }
