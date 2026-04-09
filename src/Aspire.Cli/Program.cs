@@ -718,6 +718,9 @@ public class Program
         var telemetry = app.Services.GetRequiredService<AspireCliTelemetry>();
         var telemetryManager = app.Services.GetRequiredService<TelemetryManager>();
 
+        // Log feature state at startup for diagnostics
+        app.Services.GetRequiredService<IFeatures>().LogFeatureState();
+
         // Display first run experience if this is the first time the CLI is run on this machine
         await DisplayFirstTimeUseNoticeIfNeededAsync(app.Services, args, cts.Token);
 

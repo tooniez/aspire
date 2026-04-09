@@ -944,7 +944,7 @@ public class NewCommandTests(ITestOutputHelper outputHelper)
         using var workspace = TemporaryWorkspace.Create(outputHelper);
         var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
         {
-            options.FeatureFlagsFactory = _ => new NewCommandTestFeatures(showAllTemplates: true);
+            options.FeatureFlagsFactory = _ => new TestFeatures().SetFeature(KnownFeatures.ShowAllTemplates, true);
         });
 
         var provider = services.BuildServiceProvider();
@@ -2128,18 +2128,6 @@ internal sealed class TestScaffoldingService : IScaffoldingService
         }
 
         return Task.FromResult(true);
-    }
-}
-
-internal sealed class NewCommandTestFeatures(bool showAllTemplates = false) : IFeatures
-{
-    public bool IsFeatureEnabled(string featureFlag, bool defaultValue)
-    {
-        return featureFlag switch
-        {
-            "showAllTemplates" => showAllTemplates,
-            _ => defaultValue
-        };
     }
 }
 

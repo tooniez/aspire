@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Aspire.Cli.Backchannel;
 using Aspire.Cli.Commands;
-using Aspire.Cli.Configuration;
 using Aspire.Cli.Diagnostics;
 using Aspire.Cli.DotNet;
 using Aspire.Cli.Projects;
@@ -1479,22 +1478,6 @@ public class RunCommandTests(ITestOutputHelper outputHelper)
         Assert.Empty(result.Errors);
         Assert.Contains("--custom-arg", result.UnmatchedTokens);
         Assert.Contains("value", result.UnmatchedTokens);
-    }
-
-    private sealed class TestFeatures : IFeatures
-    {
-        private readonly Dictionary<string, bool> _features = new();
-
-        public TestFeatures SetFeature(string featureName, bool value)
-        {
-            _features[featureName] = value;
-            return this;
-        }
-
-        public bool IsFeatureEnabled(string featureName, bool defaultValue = false)
-        {
-            return _features.TryGetValue(featureName, out var value) ? value : defaultValue;
-        }
     }
 
     [Fact]
