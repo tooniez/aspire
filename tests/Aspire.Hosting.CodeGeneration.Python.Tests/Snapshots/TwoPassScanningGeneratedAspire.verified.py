@@ -92,27 +92,11 @@ if sys.platform == "win32":
 
             self._handle = handle
 
-@dataclass
-class AddContainerOptions:
-    image: str
-    tag: str
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "Image": serialize_value(self.image),
-            "Tag": serialize_value(self.tag),
-        }
-
-@dataclass
-class CreateBuilderOptions:
-    args: list[str]
-    project_directory: str
-    app_host_file_path: str
-    container_registry_override: str
-    disable_dashboard: bool
-    dashboard_application_name: str
-    allow_unsecured_transport: bool
-    enable_resource_logging: bool
+        def _create_overlapped_event(self) -> _OVERLAPPED:
+            '''Create an OVERLAPPED structure with an event for async I/O.'''
+            overlapped = _OVERLAPPED()
+            overlapped.hEvent = _kernel32.CreateEventW(None, True, False, None)
+            return overlapped
 
         def recv(self, n: int) -> bytes:
             '''Read up to n bytes using overlapped I/O.'''
@@ -144,66 +128,17 @@ class CreateBuilderOptions:
             finally:
                 _kernel32.CloseHandle(overlapped.hEvent)
 
-@dataclass
-class ReferenceEnvironmentInjectionOptions:
-    connection_string: bool
-    connection_properties: bool
-    service_discovery: bool
-    endpoints: bool
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "ConnectionString": serialize_value(self.connection_string),
-            "ConnectionProperties": serialize_value(self.connection_properties),
-            "ServiceDiscovery": serialize_value(self.service_discovery),
-            "Endpoints": serialize_value(self.endpoints),
-        }
-
-@dataclass
-class CommandOptions:
-    description: str
-    parameter: Any
-    confirmation_message: str
-    icon_name: str
-    icon_variant: IconVariant
-    is_highlighted: bool
-    update_state: Any
+            return buffer.raw[:bytes_read.value]
 
         def sendall(self, data: bytes) -> None:
             '''Write all data using overlapped I/O.'''
             bytes_written = wintypes.DWORD()
             overlapped = self._create_overlapped_event()
 
-@dataclass
-class GenerateParameterDefault:
-    min_length: float
-    lower: bool
-    upper: bool
-    numeric: bool
-    special: bool
-    min_lower: float
-    min_upper: float
-    min_numeric: float
-    min_special: float
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            "MinLength": serialize_value(self.min_length),
-            "Lower": serialize_value(self.lower),
-            "Upper": serialize_value(self.upper),
-            "Numeric": serialize_value(self.numeric),
-            "Special": serialize_value(self.special),
-            "MinLower": serialize_value(self.min_lower),
-            "MinUpper": serialize_value(self.min_upper),
-            "MinNumeric": serialize_value(self.min_numeric),
-            "MinSpecial": serialize_value(self.min_special),
-        }
-
-@dataclass
-class ExecuteCommandResult:
-    success: bool
-    canceled: bool
-    error_message: str
+            try:
+                offset = 0
+                while offset < len(data):
+                    chunk = data[offset:]
 
                     success = _kernel32.WriteFile(
                         self._handle,
@@ -416,22 +351,14 @@ def _register_handle_wrapper(type_id: str, factory: _HandleWrapperFactory) -> No
     _handle_wrapper_registry[type_id] = factory
 
 
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
-        """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
-
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
-        """Adds a reference to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["source"] = serialize_value(source)
-        if connection_name is not None:
-            args["connectionName"] = serialize_value(connection_name)
-        args["optional"] = serialize_value(optional)
-        if name is not None:
-            args["name"] = serialize_value(name)
-        return self._client.invoke_capability("Aspire.Hosting/withReference", args)
+def _wrap_if_handle(value: typing.Any, client: AspireClient | None = None, kwargs: typing.Mapping[str, typing.Any] | None = None) -> typing.Any:
+    '''
+    Checks if a value is a marshalled handle and wraps it appropriately.
+    Uses the wrapper registry to create typed wrapper instances when available.
+    '''
+    if isinstance(value, dict) and _is_marshalled_handle(value):
+        handle = Handle(value)
+        type_id = value["$type"]
 
         # Try to find a registered wrapper factory for this type
         if type_id and client:
@@ -568,18 +495,29 @@ def _datetime_as_isostr(dt: typing.Union[datetime.datetime, datetime.date, datet
         return _timedelta_as_isostr(dt)
 
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
+class _AspireJSONEncoder(json.JSONEncoder):
+    '''A JSON encoder that's capable of serializing datetime objects and bytes.'''
 
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+    def default(self, o: typing.Any) -> typing.Any:
+        '''Override the default method to handle datetime and bytes serialization.
+        :param o: The object to serialize.
+        :type o: Any
+        :return: A JSON-serializable representation of the object.
+        :rtype: Any
+        '''
+        if isinstance(o, ReferenceExpression):
+            return o.to_json()
+        if isinstance(o, _ReferenceHandle):
+            return o.handle.to_json()
+        if isinstance(o, Handle):
+            return o.to_json()
+        if isinstance(o, (bytes, bytearray)):
+            return base64.b64encode(o).decode()
+        try:
+            return _datetime_as_isostr(o)
+        except AttributeError:
+            pass
+        return super().default(o)
 
 
 class AspireClient:
@@ -1002,12 +940,7 @@ class AspireClient:
         if error:
             raise error
 
-    def with_connection_property(self, name: str, value: str | ReferenceExpression) -> IResourceWithConnectionString:
-        """Adds a connection property with a string or reference expression value"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withConnectionProperty", args)
+        return result
 
     def register_cancellation_token(self, cancellation_timeout: int | None) -> str | None:
         if not cancellation_timeout:
@@ -1092,18 +1025,9 @@ class AspireClient:
                 if arg_array:
                     return callback(*arg_array)
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+            # No args or null
+            if args is None:
+                return callback()
 
             # Single primitive value (shouldn't happen with current protocol)
             return callback(_wrap_if_handle(args, client))
@@ -1300,18 +1224,14 @@ def conditional_expr(condition: typing.Any, *, match: str, when_true: str | Refe
 
     This allows you to create dynamic expressions that evaluate conditions at runtime.
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+    Example:
+        ```python
+        # Create a conditional expression based on an environment variable
+        condition = {"$handle": "Aspire.Hosting.EnvironmentVariableReference:ENVIRONMENT"}
+        expr = conditional_expr(condition, match="production",
+            when_true="redis://prod-redis:6379",
+            when_false="redis://dev-redis:6379"
+        )
 
         await api.with_environment("REDIS_URL", expr)
         ```
@@ -1570,31 +1490,13 @@ def _validate_dict_types(args: typing.Any, arg_types: typing.Any) -> bool:
     return True
 
 
-    def with_build_arg(self, name: str, value: str | ParameterResource) -> ContainerResource:
-        """Adds a build argument from a string value or parameter resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withBuildArg", args)
+# ============================================================================
+# Enum Types
+# ============================================================================
 
 CertificateTrustScope = typing.Literal["None", "Append", "Override", "System"]
 
-    def with_container_certificate_paths(self, custom_certificates_destination: str | None = None, default_certificate_bundle_paths: list[str] | None = None, default_certificate_directory_paths: list[str] | None = None) -> ContainerResource:
-        """Overrides container certificate bundle and directory paths used for trust configuration"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        if custom_certificates_destination is not None:
-            args["customCertificatesDestination"] = serialize_value(custom_certificates_destination)
-        if default_certificate_bundle_paths is not None:
-            args["defaultCertificateBundlePaths"] = serialize_value(default_certificate_bundle_paths)
-        if default_certificate_directory_paths is not None:
-            args["defaultCertificateDirectoryPaths"] = serialize_value(default_certificate_directory_paths)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerCertificatePaths", args)
-
-    def with_endpoint_proxy_support(self, proxy_enabled: bool) -> ContainerResource:
-        """Configures endpoint proxy support"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["proxyEnabled"] = serialize_value(proxy_enabled)
-        return self._client.invoke_capability("Aspire.Hosting/withEndpointProxySupport", args)
+CommandResultFormat = typing.Literal["Text", "Json", "Markdown"]
 
 ContainerLifetime = typing.Literal["Session", "Persistent"]
 
@@ -1626,22 +1528,9 @@ WaitBehavior = typing.Literal["WaitOnResourceUnavailable", "StopOnResourceUnavai
 # ============================================================================
 
 
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
-        """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
-
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
-        """Adds a reference to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["source"] = serialize_value(source)
-        if connection_name is not None:
-            args["connectionName"] = serialize_value(connection_name)
-        args["optional"] = serialize_value(optional)
-        if name is not None:
-            args["name"] = serialize_value(name)
-        return self._client.invoke_capability("Aspire.Hosting/withReference", args)
+class DockerfileBaseImageParameters(typing.TypedDict, total=False):
+    build_image: str
+    runtime_image: str
 
 
 class CommandParameters(typing.TypedDict, total=False):
@@ -1698,6 +1587,12 @@ class DockerfileParameters(typing.TypedDict, total=False):
     stage: str
 
 
+class ContainerCertificatePathsParameters(typing.TypedDict, total=False):
+    custom_certificates_destination: str
+    default_certificate_bundle_paths: typing.Iterable[str]
+    default_certificate_dir_paths: typing.Iterable[str]
+
+
 class McpServerParameters(typing.TypedDict, total=False):
     path: str
     endpoint_name: str
@@ -1743,18 +1638,15 @@ class HttpHealthCheckParameters(typing.TypedDict, total=False):
     endpoint_name: str
 
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+class HttpProbeParameters(typing.TypedDict, total=False):
+    probe_type: typing.Required[ProbeType]
+    path: str
+    initial_delay_seconds: int
+    period_seconds: int
+    timeout_seconds: int
+    failure_threshold: int
+    success_threshold: int
+    endpoint_name: str
 
 
 class VolumeParameters(typing.TypedDict, total=False):
@@ -1775,6 +1667,10 @@ class DataVolumeParameters(typing.TypedDict, total=False):
 # ============================================================================
 # DTO Classes (Data Transfer Objects)
 # ============================================================================
+
+class AddContainerOptions(typing.TypedDict, total=False):
+    Image: str
+    Tag: str
 
 class CommandOptions(typing.TypedDict, total=False):
     Description: str
@@ -1806,6 +1702,23 @@ class ExecuteCommandResult(typing.TypedDict, total=False):
     ErrorMessage: str
     Message: str
     Data: CommandResultData
+
+class GenerateParameterDefault(typing.TypedDict, total=False):
+    MinLength: int
+    Lower: bool
+    Upper: bool
+    Numeric: bool
+    Special: bool
+    MinLower: int
+    MinUpper: int
+    MinNumeric: int
+    MinSpecial: int
+
+class ReferenceEnvironmentInjectionOptions(typing.TypedDict, total=False):
+    ConnectionString: bool
+    ConnectionProperties: bool
+    ServiceDiscovery: bool
+    Endpoints: bool
 
 class ResourceEventDto(typing.TypedDict, total=False):
     ResourceName: str
@@ -2049,7 +1962,7 @@ class DistributedApplicationBuilder:
         )
         return typing.cast(ContainerRegistryResource, result)
 
-    def add_container(self, name: str, image: str, **kwargs: typing.Unpack["ContainerResourceKwargs"]) -> ContainerResource:  # type: ignore
+    def add_container(self, name: str, image: str | AddContainerOptions, **kwargs: typing.Unpack["ContainerResourceKwargs"]) -> ContainerResource:  # type: ignore
         """Adds a container resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['name'] = name
@@ -2182,6 +2095,22 @@ class DistributedApplicationBuilder:
         )
         return typing.cast(ParameterResource, result)
 
+    def add_parameter_with_generated_value(self, name: str, value: GenerateParameterDefault, *, secret: bool = False, persist: bool = False, **kwargs: typing.Unpack["ParameterResourceKwargs"]) -> ParameterResource:  # type: ignore
+        """Adds a parameter with a generated default value"""
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['name'] = name
+        rpc_args['value'] = value
+        if secret is not None:
+            rpc_args['secret'] = secret
+        if persist is not None:
+            rpc_args['persist'] = persist
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/addParameterWithGeneratedValue',
+            rpc_args,
+            kwargs,
+        )
+        return typing.cast(ParameterResource, result)
+
     def add_connection_string(self, name: str, *, env_var_name: str | None = None) -> AbstractResourceWithConnectionString:
         """Adds a connection string resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
@@ -2193,6 +2122,18 @@ class DistributedApplicationBuilder:
             rpc_args,
         )
         return typing.cast(AbstractResourceWithConnectionString, result)
+
+    def add_project_without_launch_profile(self, name: str, project_path: str, **kwargs: typing.Unpack["ProjectResourceKwargs"]) -> ProjectResource:  # type: ignore
+        """Adds a .NET project resource without a launch profile"""
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['name'] = name
+        rpc_args['projectPath'] = project_path
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/addProjectWithoutLaunchProfile',
+            rpc_args,
+            kwargs,
+        )
+        return typing.cast(ProjectResource, result)
 
     def add_project(self, name: str, project_path: str, launch_profile_name: str, **kwargs: typing.Unpack["ProjectResourceKwargs"]) -> ProjectResource:  # type: ignore
         """Adds a .NET project resource"""
@@ -2339,22 +2280,8 @@ class AbstractManifestExpressionProvider(abc.ABC):
 class AbstractExpressionValue(abc.ABC):
     """Abstract base class for AbstractExpressionValue."""
 
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
-        """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
-
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
-        """Adds a reference to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["source"] = serialize_value(source)
-        if connection_name is not None:
-            args["connectionName"] = serialize_value(connection_name)
-        args["optional"] = serialize_value(optional)
-        if name is not None:
-            args["name"] = serialize_value(name)
-        return self._client.invoke_capability("Aspire.Hosting/withReference", args)
+class AbstractHostEnvironment:
+    """Type class for AbstractHostEnvironment."""
 
     def __init__(self, handle: Handle, client: AspireClient) -> None:
         self._handle = handle
@@ -2521,18 +2448,17 @@ class AbstractReportingStep:
         )
         return typing.cast(AbstractReportingTask, result)
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+    def create_markdown_task(self, markdown_string: str, *, timeout: int | None = None) -> AbstractReportingTask:
+        """Creates a reporting task with Markdown-formatted status text"""
+        rpc_args: dict[str, typing.Any] = {'reportingStep': self._handle}
+        rpc_args['markdownString'] = markdown_string
+        if timeout is not None:
+            rpc_args['cancellationToken'] = self._client.register_cancellation_token(timeout)
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/createMarkdownTask',
+            rpc_args,
+        )
+        return typing.cast(AbstractReportingTask, result)
 
     def log_step(self, level: str, message: str) -> None:
         """Logs a plain-text message for the reporting step"""
@@ -2810,15 +2736,14 @@ class AfterResourcesCreatedEvent:
         )
         return typing.cast(AbstractServiceProvider, result)
 
-    def exclude_reference_endpoint(self) -> bool:
-        """Gets the ExcludeReferenceEndpoint property"""
-        args: Dict[str, Any] = { "context": serialize_value(self._handle) }
-        return self._client.invoke_capability("Aspire.Hosting.ApplicationModel/EndpointReference.excludeReferenceEndpoint", args)
-
-    def port(self) -> float:
-        """Gets the Port property"""
-        args: Dict[str, Any] = { "context": serialize_value(self._handle) }
-        return self._client.invoke_capability("Aspire.Hosting.ApplicationModel/EndpointReference.port", args)
+    @_cached_property
+    def model(self) -> DistributedApplicationModel:
+        """Gets the Model property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/AfterResourcesCreatedEvent.model',
+            {'context': self._handle}
+        )
+        return typing.cast(DistributedApplicationModel, result)
 
 
 class BeforeResourceStartedEvent:
@@ -3041,22 +2966,8 @@ class DistributedApplicationEventSubscription:
         return self._handle
 
 
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
-        """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
-
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
-        """Adds a reference to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["source"] = serialize_value(source)
-        if connection_name is not None:
-            args["connectionName"] = serialize_value(connection_name)
-        args["optional"] = serialize_value(optional)
-        if name is not None:
-            args["name"] = serialize_value(name)
-        return self._client.invoke_capability("Aspire.Hosting/withReference", args)
+class DistributedApplicationExecutionContext:
+    """Type class for DistributedApplicationExecutionContext."""
 
     def __init__(self, handle: Handle, client: AspireClient) -> None:
         self._handle = handle
@@ -3245,18 +3156,14 @@ class EndpointReference:
         )
         return typing.cast(bool, result)
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+    @_cached_property
+    def tls_enabled(self) -> bool:
+        """Gets the TlsEnabled property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/EndpointReference.tlsEnabled',
+            {'context': self._handle}
+        )
+        return typing.cast(bool, result)
 
     @_cached_property
     def exclude_reference_endpoint(self) -> bool:
@@ -3592,18 +3499,10 @@ class PipelineConfigurationContext:
     def __repr__(self) -> str:
         return f"PipelineConfigurationContext(handle={self._handle.handle_id})"
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
+    @_uncached_property
+    def handle(self) -> Handle:
+        """The underlying object reference handle."""
+        return self._handle
 
     @_uncached_property
     def services(self) -> AbstractServiceProvider:
@@ -4135,12 +4034,8 @@ class ReferenceExpressionBuilder:
         self._handle = handle
         self._client = client
 
-    def add_container(self, name: str, image: str | AddContainerOptions) -> ContainerResource:
-        """Adds a container resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["image"] = serialize_value(image)
-        return self._client.invoke_capability("Aspire.Hosting/addContainer", args)
+    def __repr__(self) -> str:
+        return f"ReferenceExpressionBuilder(handle={self._handle.handle_id})"
 
     @_uncached_property
     def handle(self) -> Handle:
@@ -4234,37 +4129,12 @@ class ResourceEndpointsAllocatedEvent:
 class ResourceLoggerService:
     """Type class for ResourceLoggerService."""
 
-    def add_parameter_with_generated_value(self, name: str, value: GenerateParameterDefault, secret: bool = False, persist: bool = False) -> ParameterResource:
-        """Adds a parameter with a generated default value"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        args["secret"] = serialize_value(secret)
-        args["persist"] = serialize_value(persist)
-        return self._client.invoke_capability("Aspire.Hosting/addParameterWithGeneratedValue", args)
+    def __init__(self, handle: Handle, client: AspireClient) -> None:
+        self._handle = handle
+        self._client = client
 
-    def add_connection_string(self, name: str, environment_variable_name: str | None = None) -> IResourceWithConnectionString:
-        """Adds a connection string resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        if environment_variable_name is not None:
-            args["environmentVariableName"] = serialize_value(environment_variable_name)
-        return self._client.invoke_capability("Aspire.Hosting/addConnectionString", args)
-
-    def add_project_without_launch_profile(self, name: str, project_path: str) -> ProjectResource:
-        """Adds a .NET project resource without a launch profile"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["projectPath"] = serialize_value(project_path)
-        return self._client.invoke_capability("Aspire.Hosting/addProjectWithoutLaunchProfile", args)
-
-    def add_project(self, name: str, project_path: str, launch_profile_name: str) -> ProjectResource:
-        """Adds a .NET project resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["projectPath"] = serialize_value(project_path)
-        args["launchProfileName"] = serialize_value(launch_profile_name)
-        return self._client.invoke_capability("Aspire.Hosting/addProject", args)
+    def __repr__(self) -> str:
+        return f"ResourceLoggerService(handle={self._handle.handle_id})"
 
     @_uncached_property
     def handle(self) -> Handle:
@@ -4826,14 +4696,12 @@ class AbstractResource(abc.ABC):
     def with_command(self, name: str, display_name: str, execute_command: typing.Callable[[ExecuteCommandContext], ExecuteCommandResult], *, command_options: CommandOptions | None = None) -> typing.Self:
         """Adds a resource command"""
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
+    @abc.abstractmethod
+    def with_relationship(self, resource_builder: AbstractResource, type: str) -> typing.Self:
         """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
 
-    def with_parent_relationship(self, parent: IResource) -> IResource:
+    @abc.abstractmethod
+    def with_parent_relationship(self, parent: AbstractResource) -> typing.Self:
         """Sets the parent relationship"""
 
     @abc.abstractmethod
@@ -4985,8 +4853,8 @@ class AbstractResourceWithConnectionString(AbstractResource, AbstractExpressionV
     """Abstract base class for AbstractResourceWithConnectionString interface."""
 
     @abc.abstractmethod
-    def with_connection_property(self, name: str, value: ReferenceExpression) -> typing.Self:
-        """Adds a connection property with a reference expression"""
+    def with_connection_property(self, name: str, value: str | ReferenceExpression) -> typing.Self:
+        """Adds a connection property with a string or reference expression value"""
 
     @abc.abstractmethod
     def with_connection_property_value(self, name: str, value: str) -> typing.Self:
@@ -5101,6 +4969,10 @@ class AbstractResourceWithEnvironment(AbstractResource):
         """Sets an environment variable from a connection string resource"""
 
     @abc.abstractmethod
+    def with_reference_env(self, options: ReferenceEnvironmentInjectionOptions) -> typing.Self:
+        """Configures which reference values are injected into environment variables"""
+
+    @abc.abstractmethod
     def with_reference(self, source: AbstractResource, *, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> typing.Self:
         """Adds a reference to another resource"""
 
@@ -5191,6 +5063,7 @@ class _BaseResourceKwargs(typing.TypedDict, total=False):
     explicit_start: typing.Literal[True]
     health_check: str
     command: tuple[str, str, typing.Callable[[ExecuteCommandContext], ExecuteCommandResult]] | CommandParameters
+    relationship: tuple[AbstractResource, str]
     parent_relationship: AbstractResource
     child_relationship: AbstractResource
     icon_name: str | tuple[str, IconVariant]
@@ -5220,22 +5093,8 @@ class _BaseResourceKwargs(typing.TypedDict, total=False):
     merge_logging: str | MergeLoggingParameters
     merge_route: MergeRouteParameters
 
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
-        """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
-
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
-        """Adds a reference to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["source"] = serialize_value(source)
-        if connection_name is not None:
-            args["connectionName"] = serialize_value(connection_name)
-        args["optional"] = serialize_value(optional)
-        if name is not None:
-            args["name"] = serialize_value(name)
-        return self._client.invoke_capability("Aspire.Hosting/withReference", args)
+class _BaseResource(AbstractResource):
+    """Base resource class."""
 
     def _wrap_builder(self, builder: typing.Any) -> Handle:
         if isinstance(builder, Handle):
@@ -5380,14 +5239,19 @@ class _BaseResourceKwargs(typing.TypedDict, total=False):
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
+    def with_relationship(self, resource_builder: AbstractResource, type: str) -> typing.Self:
         """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['resourceBuilder'] = resource_builder
+        rpc_args['type'] = type
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withBuilderRelationship',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
-    def with_parent_relationship(self, parent: IResource) -> IResource:
+    def with_parent_relationship(self, parent: AbstractResource) -> typing.Self:
         """Sets the parent relationship"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['parent'] = parent
@@ -5843,6 +5707,14 @@ class _BaseResourceKwargs(typing.TypedDict, total=False):
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withCommand', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'command'. Expected: (str, str, Callable[[ExecuteCommandContext], ExecuteCommandResult]) or CommandParameters")
+        if _relationship := kwargs.pop("relationship", None):
+            if _validate_tuple_types(_relationship, (AbstractResource, str)):
+                rpc_args: dict[str, typing.Any] = {"builder": handle}
+                rpc_args["resourceBuilder"] = typing.cast(tuple[AbstractResource, str], _relationship)[0]
+                rpc_args["type"] = typing.cast(tuple[AbstractResource, str], _relationship)[1]
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withBuilderRelationship', rpc_args))
+            else:
+                raise TypeError("Invalid type for option 'relationship'. Expected: (AbstractResource, str)")
         if _parent_relationship := kwargs.pop("parent_relationship", None):
             if _validate_type(_parent_relationship, AbstractResource):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -6095,7 +5967,7 @@ class _BaseResourceKwargs(typing.TypedDict, total=False):
 class ConnectionStringResourceKwargs(_BaseResourceKwargs, total=False):
     """ConnectionStringResource options."""
 
-    connection_property: tuple[str, ReferenceExpression]
+    connection_property: tuple[str, str | ReferenceExpression]
     connection_property_value: tuple[str, str]
     wait_for: AbstractResource | tuple[AbstractResource, WaitBehavior]
     wait_for_start: AbstractResource | tuple[AbstractResource, WaitBehavior]
@@ -6110,8 +5982,8 @@ class ConnectionStringResource(_BaseResource, AbstractResourceWithConnectionStri
     def __repr__(self) -> str:
         return "ConnectionStringResource(handle={self._handle.handle_id})"
 
-    def with_connection_property(self, name: str, value: ReferenceExpression) -> typing.Self:
-        """Adds a connection property with a reference expression"""
+    def with_connection_property(self, name: str, value: str | ReferenceExpression) -> typing.Self:
+        """Adds a connection property with a string or reference expression value"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['name'] = name
         rpc_args['value'] = value
@@ -6220,13 +6092,13 @@ class ConnectionStringResource(_BaseResource, AbstractResourceWithConnectionStri
 
     def __init__(self, handle: Handle, client: AspireClient, **kwargs: typing.Unpack[ConnectionStringResourceKwargs]) -> None:
         if _connection_property := kwargs.pop("connection_property", None):
-            if _validate_tuple_types(_connection_property, (str, ReferenceExpression)):
+            if _validate_tuple_types(_connection_property, (str, str | ReferenceExpression)):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["name"] = typing.cast(tuple[str, ReferenceExpression], _connection_property)[0]
-                rpc_args["value"] = typing.cast(tuple[str, ReferenceExpression], _connection_property)[1]
+                rpc_args["name"] = typing.cast(tuple[str, str | ReferenceExpression], _connection_property)[0]
+                rpc_args["value"] = typing.cast(tuple[str, str | ReferenceExpression], _connection_property)[1]
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withConnectionProperty', rpc_args))
             else:
-                raise TypeError("Invalid type for option 'connection_property'. Expected: (str, ReferenceExpression)")
+                raise TypeError("Invalid type for option 'connection_property'. Expected: (str, str | ReferenceExpression)")
         if _connection_property_value := kwargs.pop("connection_property_value", None):
             if _validate_tuple_types(_connection_property_value, (str, str)):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -6324,8 +6196,9 @@ class ContainerResourceKwargs(_BaseResourceKwargs, total=False):
     publish_as_container: typing.Literal[True]
     dockerfile: str | DockerfileParameters
     container_name: str
-    build_arg: tuple[str, ParameterResource]
+    build_arg: tuple[str, str | ParameterResource]
     build_secret: tuple[str, ParameterResource]
+    container_certificate_paths: ContainerCertificatePathsParameters | typing.Literal[True]
     endpoint_proxy_support: bool
     container_network_alias: str
     mcp_server: McpServerParameters | typing.Literal[True]
@@ -6339,6 +6212,7 @@ class ContainerResourceKwargs(_BaseResourceKwargs, total=False):
     env_connection_string: tuple[str, AbstractResourceWithConnectionString]
     args: typing.Iterable[str]
     args_callback: typing.Callable[[CommandLineArgsCallbackContext], None]
+    reference_env: ReferenceEnvironmentInjectionOptions
     reference: AbstractResource | ReferenceParameters
     reference_uri: tuple[str, str]
     reference_external_service: ExternalServiceResource
@@ -6511,12 +6385,17 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_build_arg(self, name: str, value: str | ParameterResource) -> ContainerResource:
+    def with_build_arg(self, name: str, value: str | ParameterResource) -> typing.Self:
         """Adds a build argument from a string value or parameter resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withBuildArg", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['name'] = name
+        rpc_args['value'] = value
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withBuildArg',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
     def with_build_secret(self, name: str, value: ParameterResource) -> typing.Self:
         """Adds a build secret from a parameter resource"""
@@ -6530,18 +6409,23 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_container_certificate_paths(self, custom_certificates_destination: str | None = None, default_certificate_bundle_paths: list[str] | None = None, default_certificate_directory_paths: list[str] | None = None) -> ContainerResource:
+    def with_container_certificate_paths(self, *, custom_certificates_destination: str | None = None, default_certificate_bundle_paths: typing.Iterable[str] | None = None, default_certificate_dir_paths: typing.Iterable[str] | None = None) -> typing.Self:
         """Overrides container certificate bundle and directory paths used for trust configuration"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         if custom_certificates_destination is not None:
-            args["customCertificatesDestination"] = serialize_value(custom_certificates_destination)
+            rpc_args['customCertificatesDestination'] = custom_certificates_destination
         if default_certificate_bundle_paths is not None:
-            args["defaultCertificateBundlePaths"] = serialize_value(default_certificate_bundle_paths)
-        if default_certificate_directory_paths is not None:
-            args["defaultCertificateDirectoryPaths"] = serialize_value(default_certificate_directory_paths)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerCertificatePaths", args)
+            rpc_args['defaultCertificateBundlePaths'] = default_certificate_bundle_paths
+        if default_certificate_dir_paths is not None:
+            rpc_args['defaultCertificateDirectoryPaths'] = default_certificate_dir_paths
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withContainerCertificatePaths',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
-    def with_endpoint_proxy_support(self, proxy_enabled: bool) -> ContainerResource:
+    def with_endpoint_proxy_support(self, proxy_enabled: bool) -> typing.Self:
         """Configures endpoint proxy support"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['proxyEnabled'] = proxy_enabled
@@ -6693,13 +6577,18 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
+    def with_reference_env(self, options: ReferenceEnvironmentInjectionOptions) -> typing.Self:
         """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['options'] = options
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withReferenceEnvironment',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
+    def with_reference(self, source: AbstractResource, *, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> typing.Self:
         """Adds a reference to another resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['source'] = source
@@ -6951,34 +6840,13 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
 
     def without_https_certificate(self) -> typing.Self:
         """Removes HTTPS certificate configuration"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        return self._client.invoke_capability("Aspire.Hosting/withoutHttpsCertificate", args)
-
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
-
-    def with_child_relationship(self, child: IResource) -> IResource:
-        """Sets a child relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["child"] = serialize_value(child)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderChildRelationship", args)
-
-    def with_icon_name(self, icon_name: str, icon_variant: IconVariant = None) -> IResource:
-        """Sets the icon for the resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["iconName"] = serialize_value(icon_name)
-        args["iconVariant"] = serialize_value(icon_variant)
-        return self._client.invoke_capability("Aspire.Hosting/withIconName", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withoutHttpsCertificate',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
     def with_http_probe(self, probe_type: ProbeType, *, path: str | None = None, initial_delay_seconds: int | None = None, period_seconds: int | None = None, timeout_seconds: int | None = None, failure_threshold: int | None = None, success_threshold: int | None = None, endpoint_name: str | None = None) -> typing.Self:
         """Adds an HTTP health probe to the resource"""
@@ -7178,13 +7046,13 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
             else:
                 raise TypeError("Invalid type for option 'container_name'. Expected: str")
         if _build_arg := kwargs.pop("build_arg", None):
-            if _validate_tuple_types(_build_arg, (str, ParameterResource)):
+            if _validate_tuple_types(_build_arg, (str, str | ParameterResource)):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["name"] = typing.cast(tuple[str, ParameterResource], _build_arg)[0]
-                rpc_args["value"] = typing.cast(tuple[str, ParameterResource], _build_arg)[1]
-                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withParameterBuildArg', rpc_args))
+                rpc_args["name"] = typing.cast(tuple[str, str | ParameterResource], _build_arg)[0]
+                rpc_args["value"] = typing.cast(tuple[str, str | ParameterResource], _build_arg)[1]
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withBuildArg', rpc_args))
             else:
-                raise TypeError("Invalid type for option 'build_arg'. Expected: (str, ParameterResource)")
+                raise TypeError("Invalid type for option 'build_arg'. Expected: (str, str | ParameterResource)")
         if _build_secret := kwargs.pop("build_secret", None):
             if _validate_tuple_types(_build_secret, (str, ParameterResource)):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -7193,6 +7061,18 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withParameterBuildSecret', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'build_secret'. Expected: (str, ParameterResource)")
+        if _container_certificate_paths := kwargs.pop("container_certificate_paths", None):
+            if _validate_dict_types(_container_certificate_paths, ContainerCertificatePathsParameters):
+                rpc_args: dict[str, typing.Any] = {"builder": handle}
+                rpc_args["customCertificatesDestination"] = typing.cast(ContainerCertificatePathsParameters, _container_certificate_paths).get("custom_certificates_destination")
+                rpc_args["defaultCertificateBundlePaths"] = typing.cast(ContainerCertificatePathsParameters, _container_certificate_paths).get("default_certificate_bundle_paths")
+                rpc_args["defaultCertificateDirectoryPaths"] = typing.cast(ContainerCertificatePathsParameters, _container_certificate_paths).get("default_certificate_dir_paths")
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withContainerCertificatePaths', rpc_args))
+            elif _container_certificate_paths is True:
+                rpc_args: dict[str, typing.Any] = {"builder": handle}
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withContainerCertificatePaths', rpc_args))
+            else:
+                raise TypeError("Invalid type for option 'container_certificate_paths'. Expected: ContainerCertificatePathsParameters or Literal[True]")
         if _endpoint_proxy_support := kwargs.pop("endpoint_proxy_support", None):
             if _validate_type(_endpoint_proxy_support, bool):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -7295,6 +7175,13 @@ class ContainerResource(_BaseResource, AbstractResourceWithEnvironment, Abstract
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withArgsCallback', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'args_callback'. Expected: Callable[[CommandLineArgsCallbackContext], None]")
+        if _reference_env := kwargs.pop("reference_env", None):
+            if _validate_type(_reference_env, ReferenceEnvironmentInjectionOptions):
+                rpc_args: dict[str, typing.Any] = {"builder": handle}
+                rpc_args["options"] = typing.cast(ReferenceEnvironmentInjectionOptions, _reference_env)
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withReferenceEnvironment', rpc_args))
+            else:
+                raise TypeError("Invalid type for option 'reference_env'. Expected: ReferenceEnvironmentInjectionOptions")
         if _reference := kwargs.pop("reference", None):
             if _validate_type(_reference, AbstractResource):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -7559,6 +7446,7 @@ class ProjectResourceKwargs(_BaseResourceKwargs, total=False):
     env_connection_string: tuple[str, AbstractResourceWithConnectionString]
     args: typing.Iterable[str]
     args_callback: typing.Callable[[CommandLineArgsCallbackContext], None]
+    reference_env: ReferenceEnvironmentInjectionOptions
     reference: AbstractResource | ReferenceParameters
     reference_uri: tuple[str, str]
     reference_external_service: ExternalServiceResource
@@ -7591,160 +7479,7 @@ class ProjectResource(_BaseResource, AbstractResourceWithEnvironment, AbstractRe
     def __repr__(self) -> str:
         return "ProjectResource(handle={self._handle.handle_id})"
 
-    def set_description(self, value: str) -> TestEnvironmentContext:
-        """Sets the Description property"""
-        args: Dict[str, Any] = { "context": serialize_value(self._handle) }
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting.CodeGeneration.TypeScript.Tests.TestTypes/TestEnvironmentContext.setDescription", args)
-
-    def priority(self) -> float:
-        """Gets the Priority property"""
-        args: Dict[str, Any] = { "context": serialize_value(self._handle) }
-        return self._client.invoke_capability("Aspire.Hosting.CodeGeneration.TypeScript.Tests.TestTypes/TestEnvironmentContext.priority", args)
-
-    def set_priority(self, value: float) -> TestEnvironmentContext:
-        """Sets the Priority property"""
-        args: Dict[str, Any] = { "context": serialize_value(self._handle) }
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting.CodeGeneration.TypeScript.Tests.TestTypes/TestEnvironmentContext.setPriority", args)
-
-
-class TestRedisResource(ResourceBuilderBase):
-    def __init__(self, handle: Handle, client: AspireClient):
-        super().__init__(handle, client)
-
-    def with_container_registry(self, registry: IResource) -> IResource:
-        """Configures a resource to use a container registry"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["registry"] = serialize_value(registry)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerRegistry", args)
-
-    def with_bind_mount(self, source: str, target: str, is_read_only: bool = False) -> ContainerResource:
-        """Adds a bind mount"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["source"] = serialize_value(source)
-        args["target"] = serialize_value(target)
-        args["isReadOnly"] = serialize_value(is_read_only)
-        return self._client.invoke_capability("Aspire.Hosting/withBindMount", args)
-
-    def with_entrypoint(self, entrypoint: str) -> ContainerResource:
-        """Sets the container entrypoint"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["entrypoint"] = serialize_value(entrypoint)
-        return self._client.invoke_capability("Aspire.Hosting/withEntrypoint", args)
-
-    def with_image_tag(self, tag: str) -> ContainerResource:
-        """Sets the container image tag"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["tag"] = serialize_value(tag)
-        return self._client.invoke_capability("Aspire.Hosting/withImageTag", args)
-
-    def with_image_registry(self, registry: str) -> ContainerResource:
-        """Sets the container image registry"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["registry"] = serialize_value(registry)
-        return self._client.invoke_capability("Aspire.Hosting/withImageRegistry", args)
-
-    def with_image(self, image: str, tag: str | None = None) -> ContainerResource:
-        """Sets the container image"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["image"] = serialize_value(image)
-        if tag is not None:
-            args["tag"] = serialize_value(tag)
-        return self._client.invoke_capability("Aspire.Hosting/withImage", args)
-
-    def with_image_sha256(self, sha256: str) -> ContainerResource:
-        """Sets the image SHA256 digest"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["sha256"] = serialize_value(sha256)
-        return self._client.invoke_capability("Aspire.Hosting/withImageSHA256", args)
-
-    def with_container_runtime_args(self, args: list[str]) -> ContainerResource:
-        """Adds runtime arguments for the container"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["args"] = serialize_value(args)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerRuntimeArgs", args)
-
-    def with_lifetime(self, lifetime: ContainerLifetime) -> ContainerResource:
-        """Sets the lifetime behavior of the container resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["lifetime"] = serialize_value(lifetime)
-        return self._client.invoke_capability("Aspire.Hosting/withLifetime", args)
-
-    def with_image_pull_policy(self, pull_policy: ImagePullPolicy) -> ContainerResource:
-        """Sets the container image pull policy"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["pullPolicy"] = serialize_value(pull_policy)
-        return self._client.invoke_capability("Aspire.Hosting/withImagePullPolicy", args)
-
-    def publish_as_container(self) -> ContainerResource:
-        """Configures the resource to be published as a container"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        return self._client.invoke_capability("Aspire.Hosting/publishAsContainer", args)
-
-    def with_dockerfile(self, context_path: str, dockerfile_path: str | None = None, stage: str | None = None) -> ContainerResource:
-        """Configures the resource to use a Dockerfile"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["contextPath"] = serialize_value(context_path)
-        if dockerfile_path is not None:
-            args["dockerfilePath"] = serialize_value(dockerfile_path)
-        if stage is not None:
-            args["stage"] = serialize_value(stage)
-        return self._client.invoke_capability("Aspire.Hosting/withDockerfile", args)
-
-    def with_container_name(self, name: str) -> ContainerResource:
-        """Sets the container name"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerName", args)
-
-    def with_build_arg(self, name: str, value: str | ParameterResource) -> ContainerResource:
-        """Adds a build argument from a string value or parameter resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withBuildArg", args)
-
-    def with_build_secret(self, name: str, value: ParameterResource) -> ContainerResource:
-        """Adds a build secret from a parameter resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withParameterBuildSecret", args)
-
-    def with_container_certificate_paths(self, custom_certificates_destination: str | None = None, default_certificate_bundle_paths: list[str] | None = None, default_certificate_directory_paths: list[str] | None = None) -> ContainerResource:
-        """Overrides container certificate bundle and directory paths used for trust configuration"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        if custom_certificates_destination is not None:
-            args["customCertificatesDestination"] = serialize_value(custom_certificates_destination)
-        if default_certificate_bundle_paths is not None:
-            args["defaultCertificateBundlePaths"] = serialize_value(default_certificate_bundle_paths)
-        if default_certificate_directory_paths is not None:
-            args["defaultCertificateDirectoryPaths"] = serialize_value(default_certificate_directory_paths)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerCertificatePaths", args)
-
-    def with_endpoint_proxy_support(self, proxy_enabled: bool) -> ContainerResource:
-        """Configures endpoint proxy support"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["proxyEnabled"] = serialize_value(proxy_enabled)
-        return self._client.invoke_capability("Aspire.Hosting/withEndpointProxySupport", args)
-
-    def with_dockerfile_base_image(self, build_image: str | None = None, runtime_image: str | None = None) -> IResource:
-        """Sets the base image for a Dockerfile build"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        if build_image is not None:
-            args["buildImage"] = serialize_value(build_image)
-        if runtime_image is not None:
-            args["runtimeImage"] = serialize_value(runtime_image)
-        return self._client.invoke_capability("Aspire.Hosting/withDockerfileBaseImage", args)
-
-    def with_container_network_alias(self, alias: str) -> ContainerResource:
-        """Adds a network alias for the container"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["alias"] = serialize_value(alias)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerNetworkAlias", args)
-
-    def with_mcp_server(self, path: str = "/mcp", endpoint_name: str | None = None) -> IResourceWithEndpoints:
+    def with_mcp_server(self, *, path: str = "/mcp", endpoint_name: str | None = None) -> typing.Self:
         """Configures an MCP server endpoint on the resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         if path is not None:
@@ -7875,21 +7610,7 @@ class TestRedisResource(ResourceBuilderBase):
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_connection_property(self, name: str, value: str | ReferenceExpression) -> IResourceWithConnectionString:
-        """Adds a connection property with a string or reference expression value"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withConnectionProperty", args)
-
-    def with_connection_property_value(self, name: str, value: str) -> IResourceWithConnectionString:
-        """Adds a connection property with a string value"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withConnectionPropertyValue", args)
-
-    def with_args(self, args: list[str]) -> IResourceWithArgs:
+    def with_args(self, args: typing.Iterable[str]) -> typing.Self:
         """Adds arguments"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['args'] = args
@@ -7911,21 +7632,18 @@ class TestRedisResource(ResourceBuilderBase):
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_args_callback_async(self, callback: Callable[[CommandLineArgsCallbackContext], None]) -> IResourceWithArgs:
-        """Sets command-line arguments via async callback"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        callback_id = register_callback(callback) if callback is not None else None
-        if callback_id is not None:
-            args["callback"] = callback_id
-        return self._client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)
-
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
+    def with_reference_env(self, options: ReferenceEnvironmentInjectionOptions) -> typing.Self:
         """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['options'] = options
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withReferenceEnvironment',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
+    def with_reference(self, source: AbstractResource, *, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> typing.Self:
         """Adds a reference to another resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['source'] = source
@@ -8189,34 +7907,13 @@ class TestRedisResource(ResourceBuilderBase):
 
     def without_https_certificate(self) -> typing.Self:
         """Removes HTTPS certificate configuration"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        return self._client.invoke_capability("Aspire.Hosting/withoutHttpsCertificate", args)
-
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
-
-    def with_child_relationship(self, child: IResource) -> IResource:
-        """Sets a child relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["child"] = serialize_value(child)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderChildRelationship", args)
-
-    def with_icon_name(self, icon_name: str, icon_variant: IconVariant = None) -> IResource:
-        """Sets the icon for the resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["iconName"] = serialize_value(icon_name)
-        args["iconVariant"] = serialize_value(icon_variant)
-        return self._client.invoke_capability("Aspire.Hosting/withIconName", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withoutHttpsCertificate',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
     def with_http_probe(self, probe_type: ProbeType, *, path: str | None = None, initial_delay_seconds: int | None = None, period_seconds: int | None = None, timeout_seconds: int | None = None, failure_threshold: int | None = None, success_threshold: int | None = None, endpoint_name: str | None = None) -> typing.Self:
         """Adds an HTTP health probe to the resource"""
@@ -8404,6 +8101,13 @@ class TestRedisResource(ResourceBuilderBase):
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withArgsCallback', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'args_callback'. Expected: Callable[[CommandLineArgsCallbackContext], None]")
+        if _reference_env := kwargs.pop("reference_env", None):
+            if _validate_type(_reference_env, ReferenceEnvironmentInjectionOptions):
+                rpc_args: dict[str, typing.Any] = {"builder": handle}
+                rpc_args["options"] = typing.cast(ReferenceEnvironmentInjectionOptions, _reference_env)
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withReferenceEnvironment', rpc_args))
+            else:
+                raise TypeError("Invalid type for option 'reference_env'. Expected: ReferenceEnvironmentInjectionOptions")
         if _reference := kwargs.pop("reference", None):
             if _validate_type(_reference, AbstractResource):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -8677,6 +8381,7 @@ class ExecutableResourceKwargs(_BaseResourceKwargs, total=False):
     env_connection_string: tuple[str, AbstractResourceWithConnectionString]
     args: typing.Iterable[str]
     args_callback: typing.Callable[[CommandLineArgsCallbackContext], None]
+    reference_env: ReferenceEnvironmentInjectionOptions
     reference: AbstractResource | ReferenceParameters
     reference_uri: tuple[str, str]
     reference_external_service: ExternalServiceResource
@@ -8743,53 +8448,7 @@ class ExecutableResource(_BaseResource, AbstractResourceWithEnvironment, Abstrac
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_build_arg(self, name: str, value: str | ParameterResource) -> ContainerResource:
-        """Adds a build argument from a string value or parameter resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withBuildArg", args)
-
-    def with_build_secret(self, name: str, value: ParameterResource) -> ContainerResource:
-        """Adds a build secret from a parameter resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["name"] = serialize_value(name)
-        args["value"] = serialize_value(value)
-        return self._client.invoke_capability("Aspire.Hosting/withParameterBuildSecret", args)
-
-    def with_container_certificate_paths(self, custom_certificates_destination: str | None = None, default_certificate_bundle_paths: list[str] | None = None, default_certificate_directory_paths: list[str] | None = None) -> ContainerResource:
-        """Overrides container certificate bundle and directory paths used for trust configuration"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        if custom_certificates_destination is not None:
-            args["customCertificatesDestination"] = serialize_value(custom_certificates_destination)
-        if default_certificate_bundle_paths is not None:
-            args["defaultCertificateBundlePaths"] = serialize_value(default_certificate_bundle_paths)
-        if default_certificate_directory_paths is not None:
-            args["defaultCertificateDirectoryPaths"] = serialize_value(default_certificate_directory_paths)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerCertificatePaths", args)
-
-    def with_endpoint_proxy_support(self, proxy_enabled: bool) -> ContainerResource:
-        """Configures endpoint proxy support"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["proxyEnabled"] = serialize_value(proxy_enabled)
-        return self._client.invoke_capability("Aspire.Hosting/withEndpointProxySupport", args)
-
-    def with_dockerfile_base_image(self, build_image: str | None = None, runtime_image: str | None = None) -> IResource:
-        """Sets the base image for a Dockerfile build"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        if build_image is not None:
-            args["buildImage"] = serialize_value(build_image)
-        if runtime_image is not None:
-            args["runtimeImage"] = serialize_value(runtime_image)
-        return self._client.invoke_capability("Aspire.Hosting/withDockerfileBaseImage", args)
-
-    def with_container_network_alias(self, alias: str) -> ContainerResource:
-        """Adds a network alias for the container"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["alias"] = serialize_value(alias)
-        return self._client.invoke_capability("Aspire.Hosting/withContainerNetworkAlias", args)
-
-    def with_mcp_server(self, path: str = "/mcp", endpoint_name: str | None = None) -> IResourceWithEndpoints:
+    def with_mcp_server(self, *, path: str = "/mcp", endpoint_name: str | None = None) -> typing.Self:
         """Configures an MCP server endpoint on the resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         if path is not None:
@@ -8909,21 +8568,18 @@ class ExecutableResource(_BaseResource, AbstractResourceWithEnvironment, Abstrac
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_args_callback_async(self, callback: Callable[[CommandLineArgsCallbackContext], None]) -> IResourceWithArgs:
-        """Sets command-line arguments via async callback"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        callback_id = register_callback(callback) if callback is not None else None
-        if callback_id is not None:
-            args["callback"] = callback_id
-        return self._client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)
-
-    def with_reference_environment(self, options: ReferenceEnvironmentInjectionOptions) -> IResourceWithEnvironment:
+    def with_reference_env(self, options: ReferenceEnvironmentInjectionOptions) -> typing.Self:
         """Configures which reference values are injected into environment variables"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["options"] = serialize_value(options)
-        return self._client.invoke_capability("Aspire.Hosting/withReferenceEnvironment", args)
+        rpc_args: dict[str, typing.Any] = {'builder': self._handle}
+        rpc_args['options'] = options
+        result = self._client.invoke_capability(
+            'Aspire.Hosting/withReferenceEnvironment',
+            rpc_args,
+        )
+        self._handle = self._wrap_builder(result)
+        return self
 
-    def with_reference(self, source: IResource, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> IResourceWithEnvironment:
+    def with_reference(self, source: AbstractResource, *, connection_name: str | None = None, optional: bool = False, name: str | None = None) -> typing.Self:
         """Adds a reference to another resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['source'] = source
@@ -9183,33 +8839,7 @@ class ExecutableResource(_BaseResource, AbstractResourceWithEnvironment, Abstrac
         self._handle = self._wrap_builder(result)
         return self
 
-    def with_relationship(self, resource_builder: IResource, type: str) -> IResource:
-        """Adds a relationship to another resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["resourceBuilder"] = serialize_value(resource_builder)
-        args["type"] = serialize_value(type)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderRelationship", args)
-
-    def with_parent_relationship(self, parent: IResource) -> IResource:
-        """Sets the parent relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["parent"] = serialize_value(parent)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderParentRelationship", args)
-
-    def with_child_relationship(self, child: IResource) -> IResource:
-        """Sets a child relationship"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["child"] = serialize_value(child)
-        return self._client.invoke_capability("Aspire.Hosting/withBuilderChildRelationship", args)
-
-    def with_icon_name(self, icon_name: str, icon_variant: IconVariant = None) -> IResource:
-        """Sets the icon for the resource"""
-        args: Dict[str, Any] = { "builder": serialize_value(self._handle) }
-        args["iconName"] = serialize_value(icon_name)
-        args["iconVariant"] = serialize_value(icon_variant)
-        return self._client.invoke_capability("Aspire.Hosting/withIconName", args)
-
-    def with_http_probe(self, probe_type: ProbeType, path: str | None = None, initial_delay_seconds: float | None = None, period_seconds: float | None = None, timeout_seconds: float | None = None, failure_threshold: float | None = None, success_threshold: float | None = None, endpoint_name: str | None = None) -> IResourceWithEndpoints:
+    def with_http_probe(self, probe_type: ProbeType, *, path: str | None = None, initial_delay_seconds: int | None = None, period_seconds: int | None = None, timeout_seconds: int | None = None, failure_threshold: int | None = None, success_threshold: int | None = None, endpoint_name: str | None = None) -> typing.Self:
         """Adds an HTTP health probe to the resource"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['probeType'] = probe_type
@@ -9396,6 +9026,13 @@ class ExecutableResource(_BaseResource, AbstractResourceWithEnvironment, Abstrac
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withArgsCallback', rpc_args))
             else:
                 raise TypeError("Invalid type for option 'args_callback'. Expected: Callable[[CommandLineArgsCallbackContext], None]")
+        if _reference_env := kwargs.pop("reference_env", None):
+            if _validate_type(_reference_env, ReferenceEnvironmentInjectionOptions):
+                rpc_args: dict[str, typing.Any] = {"builder": handle}
+                rpc_args["options"] = typing.cast(ReferenceEnvironmentInjectionOptions, _reference_env)
+                handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withReferenceEnvironment', rpc_args))
+            else:
+                raise TypeError("Invalid type for option 'reference_env'. Expected: ReferenceEnvironmentInjectionOptions")
         if _reference := kwargs.pop("reference", None):
             if _validate_type(_reference, AbstractResource):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
@@ -9850,7 +9487,7 @@ class TestDatabaseResource(ContainerResource):
 class TestRedisResourceKwargs(ContainerResourceKwargs, total=False):
     """TestRedisResource options."""
 
-    connection_property: tuple[str, ReferenceExpression]
+    connection_property: tuple[str, str | ReferenceExpression]
     connection_property_value: tuple[str, str]
     on_connection_string_available: typing.Callable[[ConnectionStringAvailableEvent], None]
     persistence: TestPersistenceMode | typing.Literal[True]
@@ -9866,8 +9503,8 @@ class TestRedisResource(ContainerResource, AbstractResourceWithConnectionString)
     def __repr__(self) -> str:
         return "TestRedisResource(handle={self._handle.handle_id})"
 
-    def with_connection_property(self, name: str, value: ReferenceExpression) -> typing.Self:
-        """Adds a connection property with a reference expression"""
+    def with_connection_property(self, name: str, value: str | ReferenceExpression) -> typing.Self:
+        """Adds a connection property with a string or reference expression value"""
         rpc_args: dict[str, typing.Any] = {'builder': self._handle}
         rpc_args['name'] = name
         rpc_args['value'] = value
@@ -10044,13 +9681,13 @@ class TestRedisResource(ContainerResource, AbstractResourceWithConnectionString)
 
     def __init__(self, handle: Handle, client: AspireClient, **kwargs: typing.Unpack[TestRedisResourceKwargs]) -> None:
         if _connection_property := kwargs.pop("connection_property", None):
-            if _validate_tuple_types(_connection_property, (str, ReferenceExpression)):
+            if _validate_tuple_types(_connection_property, (str, str | ReferenceExpression)):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}
-                rpc_args["name"] = typing.cast(tuple[str, ReferenceExpression], _connection_property)[0]
-                rpc_args["value"] = typing.cast(tuple[str, ReferenceExpression], _connection_property)[1]
+                rpc_args["name"] = typing.cast(tuple[str, str | ReferenceExpression], _connection_property)[0]
+                rpc_args["value"] = typing.cast(tuple[str, str | ReferenceExpression], _connection_property)[1]
                 handle = self._wrap_builder(client.invoke_capability('Aspire.Hosting/withConnectionProperty', rpc_args))
             else:
-                raise TypeError("Invalid type for option 'connection_property'. Expected: (str, ReferenceExpression)")
+                raise TypeError("Invalid type for option 'connection_property'. Expected: (str, str | ReferenceExpression)")
         if _connection_property_value := kwargs.pop("connection_property_value", None):
             if _validate_tuple_types(_connection_property_value, (str, str)):
                 rpc_args: dict[str, typing.Any] = {"builder": handle}

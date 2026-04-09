@@ -3930,7 +3930,7 @@ export interface DistributedApplicationBuilder {
     addConnectionStringBuilder(name: string, connectionStringBuilder: (obj: ReferenceExpressionBuilder) => Promise<void>): ConnectionStringResourcePromise;
     addContainerRegistry(name: string, endpoint: ParameterResource, options?: AddContainerRegistryOptions): ContainerRegistryResourcePromise;
     addContainerRegistryFromString(name: string, endpoint: string, options?: AddContainerRegistryFromStringOptions): ContainerRegistryResourcePromise;
-    addContainer(name: string, image: string): ContainerResourcePromise;
+    addContainer(name: string, image: string | AddContainerOptions): ContainerResourcePromise;
     addDockerfile(name: string, contextPath: string, options?: AddDockerfileOptions): ContainerResourcePromise;
     addDotnetTool(name: string, packageId: string): DotnetToolResourcePromise;
     addExecutable(name: string, command: string, workingDirectory: string, args: string[]): ExecutableResourcePromise;
@@ -3940,7 +3940,9 @@ export interface DistributedApplicationBuilder {
     addParameter(name: string, options?: AddParameterOptions): ParameterResourcePromise;
     addParameterWithValue(name: string, value: string, options?: AddParameterWithValueOptions): ParameterResourcePromise;
     addParameterFromConfiguration(name: string, configurationKey: string, options?: AddParameterFromConfigurationOptions): ParameterResourcePromise;
+    addParameterWithGeneratedValue(name: string, value: GenerateParameterDefault, options?: AddParameterWithGeneratedValueOptions): ParameterResourcePromise;
     addConnectionString(name: string, options?: AddConnectionStringOptions): ResourceWithConnectionStringPromise;
+    addProjectWithoutLaunchProfile(name: string, projectPath: string): ProjectResourcePromise;
     addProject(name: string, projectPath: string, launchProfileName: string): ProjectResourcePromise;
     addProjectWithOptions(name: string, projectPath: string, configure: (obj: ProjectResourceOptions) => Promise<void>): ProjectResourcePromise;
     addCSharpApp(name: string, path: string): ProjectResourcePromise;
@@ -3958,7 +3960,7 @@ export interface DistributedApplicationBuilderPromise extends PromiseLike<Distri
     addConnectionStringBuilder(name: string, connectionStringBuilder: (obj: ReferenceExpressionBuilder) => Promise<void>): ConnectionStringResourcePromise;
     addContainerRegistry(name: string, endpoint: ParameterResource, options?: AddContainerRegistryOptions): ContainerRegistryResourcePromise;
     addContainerRegistryFromString(name: string, endpoint: string, options?: AddContainerRegistryFromStringOptions): ContainerRegistryResourcePromise;
-    addContainer(name: string, image: string): ContainerResourcePromise;
+    addContainer(name: string, image: string | AddContainerOptions): ContainerResourcePromise;
     addDockerfile(name: string, contextPath: string, options?: AddDockerfileOptions): ContainerResourcePromise;
     addDotnetTool(name: string, packageId: string): DotnetToolResourcePromise;
     addExecutable(name: string, command: string, workingDirectory: string, args: string[]): ExecutableResourcePromise;
@@ -3968,7 +3970,9 @@ export interface DistributedApplicationBuilderPromise extends PromiseLike<Distri
     addParameter(name: string, options?: AddParameterOptions): ParameterResourcePromise;
     addParameterWithValue(name: string, value: string, options?: AddParameterWithValueOptions): ParameterResourcePromise;
     addParameterFromConfiguration(name: string, configurationKey: string, options?: AddParameterFromConfigurationOptions): ParameterResourcePromise;
+    addParameterWithGeneratedValue(name: string, value: GenerateParameterDefault, options?: AddParameterWithGeneratedValueOptions): ParameterResourcePromise;
     addConnectionString(name: string, options?: AddConnectionStringOptions): ResourceWithConnectionStringPromise;
+    addProjectWithoutLaunchProfile(name: string, projectPath: string): ProjectResourcePromise;
     addProject(name: string, projectPath: string, launchProfileName: string): ProjectResourcePromise;
     addProjectWithOptions(name: string, projectPath: string, configure: (obj: ProjectResourceOptions) => Promise<void>): ProjectResourcePromise;
     addCSharpApp(name: string, path: string): ProjectResourcePromise;
@@ -4143,7 +4147,7 @@ class DistributedApplicationBuilderImpl implements DistributedApplicationBuilder
     }
 
     addContainer(name: string, image: string | AddContainerOptions): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._addContainerInternal(name, image));
+        return new ContainerResourcePromiseImpl(this._addContainerInternal(name, image));
     }
 
     /** Adds a container resource built from a Dockerfile */
@@ -4303,13 +4307,13 @@ class DistributedApplicationBuilderImpl implements DistributedApplicationBuilder
             'Aspire.Hosting/addParameterWithGeneratedValue',
             rpcArgs
         );
-        return new ParameterResource(result, this._client);
+        return new ParameterResourceImpl(result, this._client);
     }
 
     addParameterWithGeneratedValue(name: string, value: GenerateParameterDefault, options?: AddParameterWithGeneratedValueOptions): ParameterResourcePromise {
         const secret = options?.secret;
         const persist = options?.persist;
-        return new ParameterResourcePromise(this._addParameterWithGeneratedValueInternal(name, value, secret, persist));
+        return new ParameterResourcePromiseImpl(this._addParameterWithGeneratedValueInternal(name, value, secret, persist));
     }
 
     /** Adds a connection string resource */
@@ -4337,11 +4341,11 @@ class DistributedApplicationBuilderImpl implements DistributedApplicationBuilder
             'Aspire.Hosting/addProjectWithoutLaunchProfile',
             rpcArgs
         );
-        return new ProjectResource(result, this._client);
+        return new ProjectResourceImpl(result, this._client);
     }
 
     addProjectWithoutLaunchProfile(name: string, projectPath: string): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._addProjectWithoutLaunchProfileInternal(name, projectPath));
+        return new ProjectResourcePromiseImpl(this._addProjectWithoutLaunchProfileInternal(name, projectPath));
     }
 
     /** Adds a .NET project resource */
@@ -4531,7 +4535,7 @@ class DistributedApplicationBuilderPromiseImpl implements DistributedApplication
 
     /** Adds a container resource */
     addContainer(name: string, image: string | AddContainerOptions): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._promise.then(obj => obj.addContainer(name, image)));
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.addContainer(name, image)));
     }
 
     /** Adds a container resource built from a Dockerfile */
@@ -4581,7 +4585,7 @@ class DistributedApplicationBuilderPromiseImpl implements DistributedApplication
 
     /** Adds a parameter with a generated default value */
     addParameterWithGeneratedValue(name: string, value: GenerateParameterDefault, options?: AddParameterWithGeneratedValueOptions): ParameterResourcePromise {
-        return new ParameterResourcePromise(this._promise.then(obj => obj.addParameterWithGeneratedValue(name, value, options)));
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.addParameterWithGeneratedValue(name, value, options)));
     }
 
     /** Adds a connection string resource */
@@ -4591,7 +4595,7 @@ class DistributedApplicationBuilderPromiseImpl implements DistributedApplication
 
     /** Adds a .NET project resource without a launch profile */
     addProjectWithoutLaunchProfile(name: string, projectPath: string): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._promise.then(obj => obj.addProjectWithoutLaunchProfile(name, projectPath)));
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.addProjectWithoutLaunchProfile(name, projectPath)));
     }
 
     /** Adds a .NET project resource */
@@ -5662,7 +5666,7 @@ export interface ConnectionStringResource {
     withContainerRegistry(registry: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ConnectionStringResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): ConnectionStringResourcePromise;
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ConnectionStringResourcePromise;
-    withConnectionProperty(name: string, value: ReferenceExpression): ConnectionStringResourcePromise;
+    withConnectionProperty(name: string, value: string | ReferenceExpression): ConnectionStringResourcePromise;
     withConnectionPropertyValue(name: string, value: string): ConnectionStringResourcePromise;
     getConnectionProperty(key: string): Promise<ReferenceExpression>;
     withUrlsCallback(callback: (obj: ResourceUrlsCallbackContext) => Promise<void>): ConnectionStringResourcePromise;
@@ -5678,6 +5682,7 @@ export interface ConnectionStringResource {
     waitForCompletion(dependency: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WaitForCompletionOptions): ConnectionStringResourcePromise;
     withHealthCheck(key: string): ConnectionStringResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ConnectionStringResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ConnectionStringResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ConnectionStringResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ConnectionStringResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ConnectionStringResourcePromise;
@@ -5720,7 +5725,7 @@ export interface ConnectionStringResourcePromise extends PromiseLike<ConnectionS
     withContainerRegistry(registry: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ConnectionStringResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): ConnectionStringResourcePromise;
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ConnectionStringResourcePromise;
-    withConnectionProperty(name: string, value: ReferenceExpression): ConnectionStringResourcePromise;
+    withConnectionProperty(name: string, value: string | ReferenceExpression): ConnectionStringResourcePromise;
     withConnectionPropertyValue(name: string, value: string): ConnectionStringResourcePromise;
     getConnectionProperty(key: string): Promise<ReferenceExpression>;
     withUrlsCallback(callback: (obj: ResourceUrlsCallbackContext) => Promise<void>): ConnectionStringResourcePromise;
@@ -5736,6 +5741,7 @@ export interface ConnectionStringResourcePromise extends PromiseLike<ConnectionS
     waitForCompletion(dependency: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WaitForCompletionOptions): ConnectionStringResourcePromise;
     withHealthCheck(key: string): ConnectionStringResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ConnectionStringResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ConnectionStringResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ConnectionStringResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ConnectionStringResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ConnectionStringResourcePromise;
@@ -5846,7 +5852,7 @@ class ConnectionStringResourceImpl extends ResourceBuilderBase<ConnectionStringR
 
     /** Adds a connection property with a string or reference expression value */
     withConnectionProperty(name: string, value: string | ReferenceExpression): ConnectionStringResourcePromise {
-        return new ConnectionStringResourcePromise(this._withConnectionPropertyInternal(name, value));
+        return new ConnectionStringResourcePromiseImpl(this._withConnectionPropertyInternal(name, value));
     }
 
     /** @internal */
@@ -6091,22 +6097,22 @@ class ConnectionStringResourceImpl extends ResourceBuilderBase<ConnectionStringR
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ConnectionStringResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ConnectionStringResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ConnectionStringResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ConnectionStringResource(result, this._client);
+        return new ConnectionStringResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ConnectionStringResourcePromise {
-        return new ConnectionStringResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ConnectionStringResourcePromise {
+        return new ConnectionStringResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<ConnectionStringResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<ConnectionStringResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<ConnectionStringResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -6746,7 +6752,7 @@ class ConnectionStringResourcePromiseImpl implements ConnectionStringResourcePro
 
     /** Adds a connection property with a string or reference expression value */
     withConnectionProperty(name: string, value: string | ReferenceExpression): ConnectionStringResourcePromise {
-        return new ConnectionStringResourcePromise(this._promise.then(obj => obj.withConnectionProperty(name, value)));
+        return new ConnectionStringResourcePromiseImpl(this._promise.then(obj => obj.withConnectionProperty(name, value)));
     }
 
     /** Adds a connection property with a string value */
@@ -6825,8 +6831,8 @@ class ConnectionStringResourcePromiseImpl implements ConnectionStringResourcePro
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ConnectionStringResourcePromise {
-        return new ConnectionStringResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ConnectionStringResourcePromise {
+        return new ConnectionStringResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -7028,6 +7034,7 @@ export interface ContainerRegistryResource {
     withExplicitStart(): ContainerRegistryResourcePromise;
     withHealthCheck(key: string): ContainerRegistryResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ContainerRegistryResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerRegistryResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerRegistryResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerRegistryResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ContainerRegistryResourcePromise;
@@ -7075,6 +7082,7 @@ export interface ContainerRegistryResourcePromise extends PromiseLike<ContainerR
     withExplicitStart(): ContainerRegistryResourcePromise;
     withHealthCheck(key: string): ContainerRegistryResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ContainerRegistryResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerRegistryResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerRegistryResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerRegistryResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ContainerRegistryResourcePromise;
@@ -7311,22 +7319,22 @@ class ContainerRegistryResourceImpl extends ResourceBuilderBase<ContainerRegistr
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ContainerRegistryResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ContainerRegistryResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ContainerRegistryResource(result, this._client);
+        return new ContainerRegistryResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ContainerRegistryResourcePromise {
-        return new ContainerRegistryResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<ContainerRegistryResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<ContainerRegistryResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -7955,8 +7963,8 @@ class ContainerRegistryResourcePromiseImpl implements ContainerRegistryResourceP
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ContainerRegistryResourcePromise {
-        return new ContainerRegistryResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -8145,8 +8153,9 @@ export interface ContainerResource {
     publishAsContainer(): ContainerResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): ContainerResourcePromise;
     withContainerName(name: string): ContainerResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): ContainerResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): ContainerResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): ContainerResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): ContainerResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): ContainerResourcePromise;
     withContainerNetworkAlias(alias: string): ContainerResourcePromise;
@@ -8163,6 +8172,7 @@ export interface ContainerResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ContainerResourcePromise;
     withArgs(args: string[]): ContainerResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): ContainerResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ContainerResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ContainerResourcePromise;
     withReferenceUri(name: string, uri: string): ContainerResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ContainerResourcePromise;
@@ -8192,6 +8202,7 @@ export interface ContainerResource {
     withCertificateTrustScope(scope: CertificateTrustScope): ContainerResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ContainerResourcePromise;
     withoutHttpsCertificate(): ContainerResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ContainerResourcePromise;
@@ -8248,8 +8259,9 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     publishAsContainer(): ContainerResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): ContainerResourcePromise;
     withContainerName(name: string): ContainerResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): ContainerResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): ContainerResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): ContainerResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): ContainerResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): ContainerResourcePromise;
     withContainerNetworkAlias(alias: string): ContainerResourcePromise;
@@ -8266,6 +8278,7 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ContainerResourcePromise;
     withArgs(args: string[]): ContainerResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): ContainerResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ContainerResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ContainerResourcePromise;
     withReferenceUri(name: string, uri: string): ContainerResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ContainerResourcePromise;
@@ -8295,6 +8308,7 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     withCertificateTrustScope(scope: CertificateTrustScope): ContainerResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ContainerResourcePromise;
     withoutHttpsCertificate(): ContainerResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ContainerResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ContainerResourcePromise;
@@ -8561,7 +8575,7 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._withBuildArgInternal(name, value));
+        return new ContainerResourcePromiseImpl(this._withBuildArgInternal(name, value));
     }
 
     /** @internal */
@@ -8589,7 +8603,7 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
             'Aspire.Hosting/withContainerCertificatePaths',
             rpcArgs
         );
-        return new ContainerResource(result, this._client);
+        return new ContainerResourceImpl(result, this._client);
     }
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
@@ -8597,7 +8611,7 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
         const customCertificatesDestination = options?.customCertificatesDestination;
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
-        return new ContainerResourcePromise(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
+        return new ContainerResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
     }
 
     /** @internal */
@@ -8879,16 +8893,16 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new ContainerResource(result, this._client);
+        return new ContainerResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new ContainerResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<ContainerResource> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<ContainerResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -9394,22 +9408,22 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ContainerResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ContainerResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ContainerResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ContainerResource(result, this._client);
+        return new ContainerResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<ContainerResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<ContainerResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<ContainerResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -10182,7 +10196,7 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._promise.then(obj => obj.withBuildArg(name, value)));
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withBuildArg(name, value)));
     }
 
     /** Adds a build secret from a parameter resource */
@@ -10192,7 +10206,7 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
     }
 
     /** Configures endpoint proxy support */
@@ -10287,14 +10301,9 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withArgsCallback(callback)));
     }
 
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._promise.then(obj => obj.withArgsCallbackAsync(callback)));
-    }
-
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -10443,8 +10452,8 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ContainerResourcePromise {
-        return new ContainerResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -10672,6 +10681,7 @@ export interface CSharpAppResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): CSharpAppResourcePromise;
     withArgs(args: string[]): CSharpAppResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): CSharpAppResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): CSharpAppResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): CSharpAppResourcePromise;
     withReferenceUri(name: string, uri: string): CSharpAppResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): CSharpAppResourcePromise;
@@ -10702,6 +10712,7 @@ export interface CSharpAppResource {
     withCertificateTrustScope(scope: CertificateTrustScope): CSharpAppResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): CSharpAppResourcePromise;
     withoutHttpsCertificate(): CSharpAppResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): CSharpAppResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): CSharpAppResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): CSharpAppResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): CSharpAppResourcePromise;
@@ -10761,6 +10772,7 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): CSharpAppResourcePromise;
     withArgs(args: string[]): CSharpAppResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): CSharpAppResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): CSharpAppResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): CSharpAppResourcePromise;
     withReferenceUri(name: string, uri: string): CSharpAppResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): CSharpAppResourcePromise;
@@ -10791,6 +10803,7 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
     withCertificateTrustScope(scope: CertificateTrustScope): CSharpAppResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): CSharpAppResourcePromise;
     withoutHttpsCertificate(): CSharpAppResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): CSharpAppResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): CSharpAppResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): CSharpAppResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): CSharpAppResourcePromise;
@@ -11136,42 +11149,22 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
     }
 
     /** @internal */
-    private async _withArgsCallbackAsyncInternal(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): Promise<CSharpAppResource> {
-        const callbackId = registerCallback(async (argData: unknown) => {
-            const argHandle = wrapIfHandle(argData) as CommandLineArgsCallbackContextHandle;
-            const arg = new CommandLineArgsCallbackContext(argHandle, this._client);
-            await callback(arg);
-        });
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
-        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
-            'Aspire.Hosting/withArgsCallbackAsync',
-            rpcArgs
-        );
-        return new CSharpAppResource(result, this._client);
-    }
-
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromise(this._withArgsCallbackAsyncInternal(callback));
-    }
-
-    /** @internal */
     private async _withReferenceEnvironmentInternal(options: ReferenceEnvironmentInjectionOptions): Promise<CSharpAppResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, options };
         const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new CSharpAppResource(result, this._client);
+        return new CSharpAppResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new CSharpAppResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<CSharpAppResource> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<CSharpAppResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -11692,22 +11685,22 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<CSharpAppResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<CSharpAppResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new CSharpAppResource(result, this._client);
+        return new CSharpAppResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<CSharpAppResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<CSharpAppResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -12493,7 +12486,7 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -12647,8 +12640,8 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): CSharpAppResourcePromise {
-        return new CSharpAppResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -12878,6 +12871,7 @@ export interface DotnetToolResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): DotnetToolResourcePromise;
     withArgs(args: string[]): DotnetToolResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): DotnetToolResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): DotnetToolResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): DotnetToolResourcePromise;
     withReferenceUri(name: string, uri: string): DotnetToolResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): DotnetToolResourcePromise;
@@ -12907,6 +12901,7 @@ export interface DotnetToolResource {
     withCertificateTrustScope(scope: CertificateTrustScope): DotnetToolResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): DotnetToolResourcePromise;
     withoutHttpsCertificate(): DotnetToolResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): DotnetToolResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): DotnetToolResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): DotnetToolResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): DotnetToolResourcePromise;
@@ -12973,6 +12968,7 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): DotnetToolResourcePromise;
     withArgs(args: string[]): DotnetToolResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): DotnetToolResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): DotnetToolResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): DotnetToolResourcePromise;
     withReferenceUri(name: string, uri: string): DotnetToolResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): DotnetToolResourcePromise;
@@ -13002,6 +12998,7 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
     withCertificateTrustScope(scope: CertificateTrustScope): DotnetToolResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): DotnetToolResourcePromise;
     withoutHttpsCertificate(): DotnetToolResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): DotnetToolResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): DotnetToolResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): DotnetToolResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): DotnetToolResourcePromise;
@@ -13450,42 +13447,22 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
     }
 
     /** @internal */
-    private async _withArgsCallbackAsyncInternal(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): Promise<DotnetToolResource> {
-        const callbackId = registerCallback(async (argData: unknown) => {
-            const argHandle = wrapIfHandle(argData) as CommandLineArgsCallbackContextHandle;
-            const arg = new CommandLineArgsCallbackContext(argHandle, this._client);
-            await callback(arg);
-        });
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
-        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
-            'Aspire.Hosting/withArgsCallbackAsync',
-            rpcArgs
-        );
-        return new DotnetToolResource(result, this._client);
-    }
-
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromise(this._withArgsCallbackAsyncInternal(callback));
-    }
-
-    /** @internal */
     private async _withReferenceEnvironmentInternal(options: ReferenceEnvironmentInjectionOptions): Promise<DotnetToolResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, options };
         const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new DotnetToolResource(result, this._client);
+        return new DotnetToolResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new DotnetToolResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<DotnetToolResource> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<DotnetToolResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -13991,22 +13968,22 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<DotnetToolResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<DotnetToolResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new DotnetToolResource(result, this._client);
+        return new DotnetToolResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<DotnetToolResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<DotnetToolResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -14827,7 +14804,7 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -14976,8 +14953,8 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): DotnetToolResourcePromise {
-        return new DotnetToolResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -15201,6 +15178,7 @@ export interface ExecutableResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ExecutableResourcePromise;
     withArgs(args: string[]): ExecutableResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): ExecutableResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ExecutableResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ExecutableResourcePromise;
     withReferenceUri(name: string, uri: string): ExecutableResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ExecutableResourcePromise;
@@ -15230,6 +15208,7 @@ export interface ExecutableResource {
     withCertificateTrustScope(scope: CertificateTrustScope): ExecutableResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ExecutableResourcePromise;
     withoutHttpsCertificate(): ExecutableResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExecutableResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExecutableResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExecutableResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ExecutableResourcePromise;
@@ -15290,6 +15269,7 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ExecutableResourcePromise;
     withArgs(args: string[]): ExecutableResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): ExecutableResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ExecutableResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ExecutableResourcePromise;
     withReferenceUri(name: string, uri: string): ExecutableResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ExecutableResourcePromise;
@@ -15319,6 +15299,7 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
     withCertificateTrustScope(scope: CertificateTrustScope): ExecutableResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ExecutableResourcePromise;
     withoutHttpsCertificate(): ExecutableResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExecutableResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExecutableResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExecutableResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ExecutableResourcePromise;
@@ -15677,42 +15658,22 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
     }
 
     /** @internal */
-    private async _withArgsCallbackAsyncInternal(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): Promise<ExecutableResource> {
-        const callbackId = registerCallback(async (argData: unknown) => {
-            const argHandle = wrapIfHandle(argData) as CommandLineArgsCallbackContextHandle;
-            const arg = new CommandLineArgsCallbackContext(argHandle, this._client);
-            await callback(arg);
-        });
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
-        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
-            'Aspire.Hosting/withArgsCallbackAsync',
-            rpcArgs
-        );
-        return new ExecutableResource(result, this._client);
-    }
-
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): ExecutableResourcePromise {
-        return new ExecutableResourcePromise(this._withArgsCallbackAsyncInternal(callback));
-    }
-
-    /** @internal */
     private async _withReferenceEnvironmentInternal(options: ReferenceEnvironmentInjectionOptions): Promise<ExecutableResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, options };
         const result = await this._client.invokeCapability<ExecutableResourceHandle>(
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new ExecutableResource(result, this._client);
+        return new ExecutableResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ExecutableResourcePromise {
-        return new ExecutableResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new ExecutableResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<ExecutableResource> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<ExecutableResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -16218,22 +16179,22 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ExecutableResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ExecutableResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ExecutableResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ExecutableResource(result, this._client);
+        return new ExecutableResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ExecutableResourcePromise {
-        return new ExecutableResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<ExecutableResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<ExecutableResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<ExecutableResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -17024,7 +16985,7 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ExecutableResourcePromise {
-        return new ExecutableResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -17173,8 +17134,8 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ExecutableResourcePromise {
-        return new ExecutableResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -17392,6 +17353,7 @@ export interface ExternalServiceResource {
     withExplicitStart(): ExternalServiceResourcePromise;
     withHealthCheck(key: string): ExternalServiceResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ExternalServiceResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExternalServiceResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExternalServiceResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExternalServiceResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ExternalServiceResourcePromise;
@@ -17440,6 +17402,7 @@ export interface ExternalServiceResourcePromise extends PromiseLike<ExternalServ
     withExplicitStart(): ExternalServiceResourcePromise;
     withHealthCheck(key: string): ExternalServiceResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ExternalServiceResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExternalServiceResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExternalServiceResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ExternalServiceResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ExternalServiceResourcePromise;
@@ -17695,22 +17658,22 @@ class ExternalServiceResourceImpl extends ResourceBuilderBase<ExternalServiceRes
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ExternalServiceResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ExternalServiceResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ExternalServiceResource(result, this._client);
+        return new ExternalServiceResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ExternalServiceResourcePromise {
-        return new ExternalServiceResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<ExternalServiceResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<ExternalServiceResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -18344,8 +18307,8 @@ class ExternalServiceResourcePromiseImpl implements ExternalServiceResourcePromi
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ExternalServiceResourcePromise {
-        return new ExternalServiceResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -18533,6 +18496,7 @@ export interface ParameterResource {
     withExplicitStart(): ParameterResourcePromise;
     withHealthCheck(key: string): ParameterResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ParameterResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ParameterResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ParameterResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ParameterResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ParameterResourcePromise;
@@ -18581,6 +18545,7 @@ export interface ParameterResourcePromise extends PromiseLike<ParameterResource>
     withExplicitStart(): ParameterResourcePromise;
     withHealthCheck(key: string): ParameterResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ParameterResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ParameterResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ParameterResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ParameterResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ParameterResourcePromise;
@@ -18834,22 +18799,22 @@ class ParameterResourceImpl extends ResourceBuilderBase<ParameterResourceHandle>
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ParameterResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ParameterResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ParameterResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ParameterResource(result, this._client);
+        return new ParameterResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ParameterResourcePromise {
-        return new ParameterResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<ParameterResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<ParameterResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<ParameterResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -19483,8 +19448,8 @@ class ParameterResourcePromiseImpl implements ParameterResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ParameterResourcePromise {
-        return new ParameterResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -19677,6 +19642,7 @@ export interface ProjectResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ProjectResourcePromise;
     withArgs(args: string[]): ProjectResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): ProjectResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ProjectResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ProjectResourcePromise;
     withReferenceUri(name: string, uri: string): ProjectResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ProjectResourcePromise;
@@ -19707,6 +19673,7 @@ export interface ProjectResource {
     withCertificateTrustScope(scope: CertificateTrustScope): ProjectResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ProjectResourcePromise;
     withoutHttpsCertificate(): ProjectResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ProjectResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ProjectResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ProjectResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ProjectResourcePromise;
@@ -19766,6 +19733,7 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ProjectResourcePromise;
     withArgs(args: string[]): ProjectResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): ProjectResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ProjectResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ProjectResourcePromise;
     withReferenceUri(name: string, uri: string): ProjectResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ProjectResourcePromise;
@@ -19796,6 +19764,7 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
     withCertificateTrustScope(scope: CertificateTrustScope): ProjectResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): ProjectResourcePromise;
     withoutHttpsCertificate(): ProjectResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ProjectResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ProjectResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ProjectResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ProjectResourcePromise;
@@ -20147,12 +20116,12 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new ProjectResource(result, this._client);
+        return new ProjectResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new ProjectResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
@@ -20677,18 +20646,18 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<ProjectResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<ProjectResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<ProjectResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new ProjectResource(result, this._client);
+        return new ProjectResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
@@ -21476,14 +21445,9 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withArgsCallback(callback)));
     }
 
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._promise.then(obj => obj.withArgsCallbackAsync(callback)));
-    }
-
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -21637,8 +21601,8 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ProjectResourcePromise {
-        return new ProjectResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -21857,8 +21821,9 @@ export interface TestDatabaseResource {
     publishAsContainer(): TestDatabaseResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): TestDatabaseResourcePromise;
     withContainerName(name: string): TestDatabaseResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): TestDatabaseResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): TestDatabaseResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): TestDatabaseResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestDatabaseResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): TestDatabaseResourcePromise;
     withContainerNetworkAlias(alias: string): TestDatabaseResourcePromise;
@@ -21875,6 +21840,7 @@ export interface TestDatabaseResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): TestDatabaseResourcePromise;
     withArgs(args: string[]): TestDatabaseResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): TestDatabaseResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestDatabaseResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): TestDatabaseResourcePromise;
     withReferenceUri(name: string, uri: string): TestDatabaseResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): TestDatabaseResourcePromise;
@@ -21904,6 +21870,7 @@ export interface TestDatabaseResource {
     withCertificateTrustScope(scope: CertificateTrustScope): TestDatabaseResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestDatabaseResourcePromise;
     withoutHttpsCertificate(): TestDatabaseResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestDatabaseResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestDatabaseResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestDatabaseResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): TestDatabaseResourcePromise;
@@ -21960,8 +21927,9 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     publishAsContainer(): TestDatabaseResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): TestDatabaseResourcePromise;
     withContainerName(name: string): TestDatabaseResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): TestDatabaseResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): TestDatabaseResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): TestDatabaseResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestDatabaseResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): TestDatabaseResourcePromise;
     withContainerNetworkAlias(alias: string): TestDatabaseResourcePromise;
@@ -21978,6 +21946,7 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): TestDatabaseResourcePromise;
     withArgs(args: string[]): TestDatabaseResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): TestDatabaseResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestDatabaseResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): TestDatabaseResourcePromise;
     withReferenceUri(name: string, uri: string): TestDatabaseResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): TestDatabaseResourcePromise;
@@ -22007,6 +21976,7 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     withCertificateTrustScope(scope: CertificateTrustScope): TestDatabaseResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestDatabaseResourcePromise;
     withoutHttpsCertificate(): TestDatabaseResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestDatabaseResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestDatabaseResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestDatabaseResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): TestDatabaseResourcePromise;
@@ -22273,7 +22243,7 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._withBuildArgInternal(name, value));
+        return new TestDatabaseResourcePromiseImpl(this._withBuildArgInternal(name, value));
     }
 
     /** @internal */
@@ -22301,7 +22271,7 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
             'Aspire.Hosting/withContainerCertificatePaths',
             rpcArgs
         );
-        return new TestDatabaseResource(result, this._client);
+        return new TestDatabaseResourceImpl(result, this._client);
     }
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
@@ -22309,7 +22279,7 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
         const customCertificatesDestination = options?.customCertificatesDestination;
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
-        return new TestDatabaseResourcePromise(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
+        return new TestDatabaseResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
     }
 
     /** @internal */
@@ -22585,42 +22555,22 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     }
 
     /** @internal */
-    private async _withArgsCallbackAsyncInternal(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): Promise<TestDatabaseResource> {
-        const callbackId = registerCallback(async (argData: unknown) => {
-            const argHandle = wrapIfHandle(argData) as CommandLineArgsCallbackContextHandle;
-            const arg = new CommandLineArgsCallbackContext(argHandle, this._client);
-            await callback(arg);
-        });
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
-        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
-            'Aspire.Hosting/withArgsCallbackAsync',
-            rpcArgs
-        );
-        return new TestDatabaseResource(result, this._client);
-    }
-
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._withArgsCallbackAsyncInternal(callback));
-    }
-
-    /** @internal */
     private async _withReferenceEnvironmentInternal(options: ReferenceEnvironmentInjectionOptions): Promise<TestDatabaseResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, options };
         const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new TestDatabaseResource(result, this._client);
+        return new TestDatabaseResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new TestDatabaseResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<TestDatabaseResource> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<TestDatabaseResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -23126,22 +23076,22 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<TestDatabaseResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<TestDatabaseResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new TestDatabaseResource(result, this._client);
+        return new TestDatabaseResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<TestDatabaseResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<TestDatabaseResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -23914,7 +23864,7 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._promise.then(obj => obj.withBuildArg(name, value)));
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withBuildArg(name, value)));
     }
 
     /** Adds a build secret from a parameter resource */
@@ -23924,7 +23874,7 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
     }
 
     /** Configures endpoint proxy support */
@@ -24021,7 +23971,7 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -24170,8 +24120,8 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -24395,8 +24345,9 @@ export interface TestRedisResource {
     publishAsContainer(): TestRedisResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): TestRedisResourcePromise;
     withContainerName(name: string): TestRedisResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): TestRedisResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): TestRedisResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): TestRedisResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestRedisResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): TestRedisResourcePromise;
     withContainerNetworkAlias(alias: string): TestRedisResourcePromise;
@@ -24411,10 +24362,11 @@ export interface TestRedisResource {
     withEnvironmentEndpoint(name: string, endpointReference: EndpointReference): TestRedisResourcePromise;
     withEnvironmentParameter(name: string, parameter: ParameterResource): TestRedisResourcePromise;
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): TestRedisResourcePromise;
-    withConnectionProperty(name: string, value: ReferenceExpression): TestRedisResourcePromise;
+    withConnectionProperty(name: string, value: string | ReferenceExpression): TestRedisResourcePromise;
     withConnectionPropertyValue(name: string, value: string): TestRedisResourcePromise;
     withArgs(args: string[]): TestRedisResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): TestRedisResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestRedisResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): TestRedisResourcePromise;
     getConnectionProperty(key: string): Promise<ReferenceExpression>;
     withReferenceUri(name: string, uri: string): TestRedisResourcePromise;
@@ -24445,6 +24397,7 @@ export interface TestRedisResource {
     withCertificateTrustScope(scope: CertificateTrustScope): TestRedisResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestRedisResourcePromise;
     withoutHttpsCertificate(): TestRedisResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestRedisResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestRedisResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestRedisResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): TestRedisResourcePromise;
@@ -24514,8 +24467,9 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     publishAsContainer(): TestRedisResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): TestRedisResourcePromise;
     withContainerName(name: string): TestRedisResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): TestRedisResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): TestRedisResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): TestRedisResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestRedisResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): TestRedisResourcePromise;
     withContainerNetworkAlias(alias: string): TestRedisResourcePromise;
@@ -24530,10 +24484,11 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     withEnvironmentEndpoint(name: string, endpointReference: EndpointReference): TestRedisResourcePromise;
     withEnvironmentParameter(name: string, parameter: ParameterResource): TestRedisResourcePromise;
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): TestRedisResourcePromise;
-    withConnectionProperty(name: string, value: ReferenceExpression): TestRedisResourcePromise;
+    withConnectionProperty(name: string, value: string | ReferenceExpression): TestRedisResourcePromise;
     withConnectionPropertyValue(name: string, value: string): TestRedisResourcePromise;
     withArgs(args: string[]): TestRedisResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): TestRedisResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestRedisResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): TestRedisResourcePromise;
     getConnectionProperty(key: string): Promise<ReferenceExpression>;
     withReferenceUri(name: string, uri: string): TestRedisResourcePromise;
@@ -24564,6 +24519,7 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     withCertificateTrustScope(scope: CertificateTrustScope): TestRedisResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestRedisResourcePromise;
     withoutHttpsCertificate(): TestRedisResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestRedisResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestRedisResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestRedisResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): TestRedisResourcePromise;
@@ -24843,7 +24799,7 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._withBuildArgInternal(name, value));
+        return new TestRedisResourcePromiseImpl(this._withBuildArgInternal(name, value));
     }
 
     /** @internal */
@@ -24871,7 +24827,7 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
             'Aspire.Hosting/withContainerCertificatePaths',
             rpcArgs
         );
-        return new TestRedisResource(result, this._client);
+        return new TestRedisResourceImpl(result, this._client);
     }
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
@@ -24879,7 +24835,7 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
         const customCertificatesDestination = options?.customCertificatesDestination;
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
-        return new TestRedisResourcePromise(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
+        return new TestRedisResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
     }
 
     /** @internal */
@@ -25131,7 +25087,7 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
 
     /** Adds a connection property with a string or reference expression value */
     withConnectionProperty(name: string, value: string | ReferenceExpression): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._withConnectionPropertyInternal(name, value));
+        return new TestRedisResourcePromiseImpl(this._withConnectionPropertyInternal(name, value));
     }
 
     /** @internal */
@@ -25185,42 +25141,22 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     }
 
     /** @internal */
-    private async _withArgsCallbackAsyncInternal(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): Promise<TestRedisResource> {
-        const callbackId = registerCallback(async (argData: unknown) => {
-            const argHandle = wrapIfHandle(argData) as CommandLineArgsCallbackContextHandle;
-            const arg = new CommandLineArgsCallbackContext(argHandle, this._client);
-            await callback(arg);
-        });
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
-        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
-            'Aspire.Hosting/withArgsCallbackAsync',
-            rpcArgs
-        );
-        return new TestRedisResource(result, this._client);
-    }
-
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._withArgsCallbackAsyncInternal(callback));
-    }
-
-    /** @internal */
     private async _withReferenceEnvironmentInternal(options: ReferenceEnvironmentInjectionOptions): Promise<TestRedisResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, options };
         const result = await this._client.invokeCapability<TestRedisResourceHandle>(
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new TestRedisResource(result, this._client);
+        return new TestRedisResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new TestRedisResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<TestRedisResource> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<TestRedisResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -25735,22 +25671,22 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<TestRedisResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<TestRedisResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<TestRedisResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new TestRedisResource(result, this._client);
+        return new TestRedisResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<TestRedisResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<TestRedisResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<TestRedisResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -26712,7 +26648,7 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._promise.then(obj => obj.withBuildArg(name, value)));
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withBuildArg(name, value)));
     }
 
     /** Adds a build secret from a parameter resource */
@@ -26722,7 +26658,7 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
     }
 
     /** Configures endpoint proxy support */
@@ -26809,7 +26745,7 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
 
     /** Adds a connection property with a string or reference expression value */
     withConnectionProperty(name: string, value: string | ReferenceExpression): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._promise.then(obj => obj.withConnectionProperty(name, value)));
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withConnectionProperty(name, value)));
     }
 
     /** Adds a connection property with a string value */
@@ -26827,14 +26763,9 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withArgsCallback(callback)));
     }
 
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._promise.then(obj => obj.withArgsCallbackAsync(callback)));
-    }
-
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -26988,8 +26919,8 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): TestRedisResourcePromise {
-        return new TestRedisResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -27278,8 +27209,9 @@ export interface TestVaultResource {
     publishAsContainer(): TestVaultResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): TestVaultResourcePromise;
     withContainerName(name: string): TestVaultResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): TestVaultResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): TestVaultResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): TestVaultResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestVaultResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): TestVaultResourcePromise;
     withContainerNetworkAlias(alias: string): TestVaultResourcePromise;
@@ -27296,6 +27228,7 @@ export interface TestVaultResource {
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): TestVaultResourcePromise;
     withArgs(args: string[]): TestVaultResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): TestVaultResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestVaultResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): TestVaultResourcePromise;
     withReferenceUri(name: string, uri: string): TestVaultResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): TestVaultResourcePromise;
@@ -27325,6 +27258,7 @@ export interface TestVaultResource {
     withCertificateTrustScope(scope: CertificateTrustScope): TestVaultResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestVaultResourcePromise;
     withoutHttpsCertificate(): TestVaultResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestVaultResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestVaultResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestVaultResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): TestVaultResourcePromise;
@@ -27382,8 +27316,9 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     publishAsContainer(): TestVaultResourcePromise;
     withDockerfile(contextPath: string, options?: WithDockerfileOptions): TestVaultResourcePromise;
     withContainerName(name: string): TestVaultResourcePromise;
-    withBuildArg(name: string, value: ParameterResource): TestVaultResourcePromise;
+    withBuildArg(name: string, value: string | ParameterResource): TestVaultResourcePromise;
     withBuildSecret(name: string, value: ParameterResource): TestVaultResourcePromise;
+    withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestVaultResourcePromise;
     withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise;
     withDockerfileBaseImage(options?: WithDockerfileBaseImageOptions): TestVaultResourcePromise;
     withContainerNetworkAlias(alias: string): TestVaultResourcePromise;
@@ -27400,6 +27335,7 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): TestVaultResourcePromise;
     withArgs(args: string[]): TestVaultResourcePromise;
     withArgsCallback(callback: (obj: CommandLineArgsCallbackContext) => Promise<void>): TestVaultResourcePromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestVaultResourcePromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): TestVaultResourcePromise;
     withReferenceUri(name: string, uri: string): TestVaultResourcePromise;
     withReferenceExternalService(externalService: ExternalServiceResource): TestVaultResourcePromise;
@@ -27429,6 +27365,7 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     withCertificateTrustScope(scope: CertificateTrustScope): TestVaultResourcePromise;
     withHttpsDeveloperCertificate(options?: WithHttpsDeveloperCertificateOptions): TestVaultResourcePromise;
     withoutHttpsCertificate(): TestVaultResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestVaultResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestVaultResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): TestVaultResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): TestVaultResourcePromise;
@@ -27696,7 +27633,7 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._withBuildArgInternal(name, value));
+        return new TestVaultResourcePromiseImpl(this._withBuildArgInternal(name, value));
     }
 
     /** @internal */
@@ -27724,7 +27661,7 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
             'Aspire.Hosting/withContainerCertificatePaths',
             rpcArgs
         );
-        return new TestVaultResource(result, this._client);
+        return new TestVaultResourceImpl(result, this._client);
     }
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
@@ -27732,7 +27669,7 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
         const customCertificatesDestination = options?.customCertificatesDestination;
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
-        return new TestVaultResourcePromise(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
+        return new TestVaultResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths));
     }
 
     /** @internal */
@@ -28014,12 +27951,12 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new TestVaultResource(result, this._client);
+        return new TestVaultResourceImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._withReferenceEnvironmentInternal(options));
+        return new TestVaultResourcePromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
@@ -28529,22 +28466,22 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<TestVaultResource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<TestVaultResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<TestVaultResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new TestVaultResource(result, this._client);
+        return new TestVaultResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
-    private async _withParentRelationshipInternal(parent: ResourceBuilderBase): Promise<TestVaultResource> {
+    private async _withParentRelationshipInternal(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): Promise<TestVaultResource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, parent };
         const result = await this._client.invokeCapability<TestVaultResourceHandle>(
             'Aspire.Hosting/withBuilderParentRelationship',
@@ -29332,7 +29269,7 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
 
     /** Adds a build argument from a string value or parameter resource */
     withBuildArg(name: string, value: string | ParameterResource): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._promise.then(obj => obj.withBuildArg(name, value)));
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withBuildArg(name, value)));
     }
 
     /** Adds a build secret from a parameter resource */
@@ -29342,7 +29279,7 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
 
     /** Overrides container certificate bundle and directory paths used for trust configuration */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)));
     }
 
     /** Configures endpoint proxy support */
@@ -29437,14 +29374,9 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withArgsCallback(callback)));
     }
 
-    /** Sets command-line arguments via async callback */
-    withArgsCallbackAsync(callback: (arg: CommandLineArgsCallbackContext) => Promise<void>): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._promise.then(obj => obj.withArgsCallbackAsync(callback)));
-    }
-
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */
@@ -29593,8 +29525,8 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): TestVaultResourcePromise {
-        return new TestVaultResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -29965,6 +29897,7 @@ export interface Resource {
     withExplicitStart(): ResourcePromise;
     withHealthCheck(key: string): ResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ResourcePromise;
@@ -30012,6 +29945,7 @@ export interface ResourcePromise extends PromiseLike<Resource> {
     withExplicitStart(): ResourcePromise;
     withHealthCheck(key: string): ResourcePromise;
     withCommand(name: string, displayName: string, executeCommand: (arg: ExecuteCommandContext) => Promise<ExecuteCommandResult>, options?: WithCommandOptions): ResourcePromise;
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ResourcePromise;
     withParentRelationship(parent: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ResourcePromise;
     withChildRelationship(child: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource): ResourcePromise;
     withIconName(iconName: string, options?: WithIconNameOptions): ResourcePromise;
@@ -30248,18 +30182,18 @@ class ResourceImpl extends ResourceBuilderBase<IResourceHandle> implements Resou
     }
 
     /** @internal */
-    private async _withRelationshipInternal(resourceBuilder: ResourceBuilderBase, type: string): Promise<Resource> {
+    private async _withRelationshipInternal(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): Promise<Resource> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, resourceBuilder, type };
         const result = await this._client.invokeCapability<IResourceHandle>(
             'Aspire.Hosting/withBuilderRelationship',
             rpcArgs
         );
-        return new Resource(result, this._client);
+        return new ResourceImpl(result, this._client);
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ResourcePromise {
-        return new ResourcePromise(this._withRelationshipInternal(resourceBuilder, type));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ResourcePromise {
+        return new ResourcePromiseImpl(this._withRelationshipInternal(resourceBuilder, type));
     }
 
     /** @internal */
@@ -30892,8 +30826,8 @@ class ResourcePromiseImpl implements ResourcePromise {
     }
 
     /** Adds a relationship to another resource */
-    withRelationship(resourceBuilder: ResourceBuilderBase, type: string): ResourcePromise {
-        return new ResourcePromise(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
+    withRelationship(resourceBuilder: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, type: string): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withRelationship(resourceBuilder, type)));
     }
 
     /** Sets the parent relationship */
@@ -31157,7 +31091,7 @@ class ResourceWithArgsPromiseImpl implements ResourceWithArgsPromise {
 
 export interface ResourceWithConnectionString {
     toJSON(): MarshalledHandle;
-    withConnectionProperty(name: string, value: ReferenceExpression): ResourceWithConnectionStringPromise;
+    withConnectionProperty(name: string, value: string | ReferenceExpression): ResourceWithConnectionStringPromise;
     withConnectionPropertyValue(name: string, value: string): ResourceWithConnectionStringPromise;
     getConnectionProperty(key: string): Promise<ReferenceExpression>;
     onConnectionStringAvailable(callback: (arg: ConnectionStringAvailableEvent) => Promise<void>): ResourceWithConnectionStringPromise;
@@ -31166,7 +31100,7 @@ export interface ResourceWithConnectionString {
 }
 
 export interface ResourceWithConnectionStringPromise extends PromiseLike<ResourceWithConnectionString> {
-    withConnectionProperty(name: string, value: ReferenceExpression): ResourceWithConnectionStringPromise;
+    withConnectionProperty(name: string, value: string | ReferenceExpression): ResourceWithConnectionStringPromise;
     withConnectionPropertyValue(name: string, value: string): ResourceWithConnectionStringPromise;
     getConnectionProperty(key: string): Promise<ReferenceExpression>;
     onConnectionStringAvailable(callback: (arg: ConnectionStringAvailableEvent) => Promise<void>): ResourceWithConnectionStringPromise;
@@ -31195,7 +31129,7 @@ class ResourceWithConnectionStringImpl extends ResourceBuilderBase<IResourceWith
 
     /** Adds a connection property with a string or reference expression value */
     withConnectionProperty(name: string, value: string | ReferenceExpression): ResourceWithConnectionStringPromise {
-        return new ResourceWithConnectionStringPromise(this._withConnectionPropertyInternal(name, value));
+        return new ResourceWithConnectionStringPromiseImpl(this._withConnectionPropertyInternal(name, value));
     }
 
     /** @internal */
@@ -31291,7 +31225,7 @@ class ResourceWithConnectionStringPromiseImpl implements ResourceWithConnectionS
 
     /** Adds a connection property with a string or reference expression value */
     withConnectionProperty(name: string, value: string | ReferenceExpression): ResourceWithConnectionStringPromise {
-        return new ResourceWithConnectionStringPromise(this._promise.then(obj => obj.withConnectionProperty(name, value)));
+        return new ResourceWithConnectionStringPromiseImpl(this._promise.then(obj => obj.withConnectionProperty(name, value)));
     }
 
     /** Adds a connection property with a string value */
@@ -31763,6 +31697,7 @@ export interface ResourceWithEnvironment {
     withEnvironmentEndpoint(name: string, endpointReference: EndpointReference): ResourceWithEnvironmentPromise;
     withEnvironmentParameter(name: string, parameter: ParameterResource): ResourceWithEnvironmentPromise;
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ResourceWithEnvironmentPromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ResourceWithEnvironmentPromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ResourceWithEnvironmentPromise;
     withReferenceUri(name: string, uri: string): ResourceWithEnvironmentPromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ResourceWithEnvironmentPromise;
@@ -31784,6 +31719,7 @@ export interface ResourceWithEnvironmentPromise extends PromiseLike<ResourceWith
     withEnvironmentEndpoint(name: string, endpointReference: EndpointReference): ResourceWithEnvironmentPromise;
     withEnvironmentParameter(name: string, parameter: ParameterResource): ResourceWithEnvironmentPromise;
     withEnvironmentConnectionString(envVarName: string, resource: ConnectionStringResource | ResourceWithConnectionString | TestRedisResource): ResourceWithEnvironmentPromise;
+    withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ResourceWithEnvironmentPromise;
     withReference(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, options?: WithReferenceOptions): ResourceWithEnvironmentPromise;
     withReferenceUri(name: string, uri: string): ResourceWithEnvironmentPromise;
     withReferenceExternalService(externalService: ExternalServiceResource): ResourceWithEnvironmentPromise;
@@ -31949,16 +31885,16 @@ class ResourceWithEnvironmentImpl extends ResourceBuilderBase<IResourceWithEnvir
             'Aspire.Hosting/withReferenceEnvironment',
             rpcArgs
         );
-        return new ResourceWithEnvironment(result, this._client);
+        return new ResourceWithEnvironmentImpl(result, this._client);
     }
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ResourceWithEnvironmentPromise {
-        return new ResourceWithEnvironmentPromise(this._withReferenceEnvironmentInternal(options));
+        return new ResourceWithEnvironmentPromiseImpl(this._withReferenceEnvironmentInternal(options));
     }
 
     /** @internal */
-    private async _withReferenceInternal(source: ResourceBuilderBase, connectionName?: string, optional?: boolean, name?: string): Promise<ResourceWithEnvironment> {
+    private async _withReferenceInternal(source: CSharpAppResource | ComputeResource | ConnectionStringResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource, connectionName?: string, optional?: boolean, name?: string): Promise<ResourceWithEnvironment> {
         const rpcArgs: Record<string, unknown> = { builder: this._handle, source };
         if (connectionName !== undefined) rpcArgs.connectionName = connectionName;
         if (optional !== undefined) rpcArgs.optional = optional;
@@ -32191,7 +32127,7 @@ class ResourceWithEnvironmentPromiseImpl implements ResourceWithEnvironmentPromi
 
     /** Configures which reference values are injected into environment variables */
     withReferenceEnvironment(options: ReferenceEnvironmentInjectionOptions): ResourceWithEnvironmentPromise {
-        return new ResourceWithEnvironmentPromise(this._promise.then(obj => obj.withReferenceEnvironment(options)));
+        return new ResourceWithEnvironmentPromiseImpl(this._promise.then(obj => obj.withReferenceEnvironment(options)));
     }
 
     /** Adds a reference to another resource */

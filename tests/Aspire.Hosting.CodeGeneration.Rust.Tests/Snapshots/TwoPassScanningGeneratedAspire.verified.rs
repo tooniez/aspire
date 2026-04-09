@@ -1075,17 +1075,6 @@ impl CSharpAppResource {
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
 
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
     /// Configures which reference values are injected into environment variables
     pub fn with_reference_environment(&self, options: ReferenceEnvironmentInjectionOptions) -> Result<IResourceWithEnvironment, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -3692,17 +3681,6 @@ impl ContainerResource {
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
 
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
     /// Configures which reference values are injected into environment variables
     pub fn with_reference_environment(&self, options: ReferenceEnvironmentInjectionOptions) -> Result<IResourceWithEnvironment, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -5102,17 +5080,6 @@ impl DotnetToolResource {
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
 
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
     /// Configures which reference values are injected into environment variables
     pub fn with_reference_environment(&self, options: ReferenceEnvironmentInjectionOptions) -> Result<IResourceWithEnvironment, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -6496,17 +6463,6 @@ impl ExecutableResource {
         let callback_id = register_callback(callback);
         args.insert("callback".to_string(), Value::String(callback_id));
         let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallback", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
@@ -10883,17 +10839,6 @@ impl ProjectResource {
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
 
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
     /// Configures which reference values are injected into environment variables
     pub fn with_reference_environment(&self, options: ReferenceEnvironmentInjectionOptions) -> Result<IResourceWithEnvironment, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -12772,17 +12717,6 @@ impl TestDatabaseResource {
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
 
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
     /// Configures which reference values are injected into environment variables
     pub fn with_reference_environment(&self, options: ReferenceEnvironmentInjectionOptions) -> Result<IResourceWithEnvironment, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -14146,17 +14080,6 @@ impl TestRedisResource {
         let callback_id = register_callback(callback);
         args.insert("callback".to_string(), Value::String(callback_id));
         let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallback", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }
@@ -15653,17 +15576,6 @@ impl TestVaultResource {
         let callback_id = register_callback(callback);
         args.insert("callback".to_string(), Value::String(callback_id));
         let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallback", args)?;
-        let handle: Handle = serde_json::from_value(result)?;
-        Ok(IResourceWithArgs::new(handle, self.client.clone()))
-    }
-
-    /// Sets command-line arguments via async callback
-    pub fn with_args_callback_async(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IResourceWithArgs, Box<dyn std::error::Error>> {
-        let mut args: HashMap<String, Value> = HashMap::new();
-        args.insert("builder".to_string(), self.handle.to_json());
-        let callback_id = register_callback(callback);
-        args.insert("callback".to_string(), Value::String(callback_id));
-        let result = self.client.invoke_capability("Aspire.Hosting/withArgsCallbackAsync", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResourceWithArgs::new(handle, self.client.clone()))
     }

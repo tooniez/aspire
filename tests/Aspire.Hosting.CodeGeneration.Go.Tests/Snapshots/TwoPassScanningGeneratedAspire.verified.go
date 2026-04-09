@@ -770,21 +770,6 @@ func (s *CSharpAppResource) WithArgsCallback(callback func(...any) any) (*IResou
 	return result.(*IResourceWithArgs), nil
 }
 
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *CSharpAppResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
 // WithReferenceEnvironment configures which reference values are injected into environment variables
 func (s *CSharpAppResource) WithReferenceEnvironment(options *ReferenceEnvironmentInjectionOptions) (*IResourceWithEnvironment, error) {
 	reqArgs := map[string]any{
@@ -4007,21 +3992,6 @@ func (s *ContainerResource) WithArgsCallback(callback func(...any) any) (*IResou
 	return result.(*IResourceWithArgs), nil
 }
 
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *ContainerResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
 // WithReferenceEnvironment configures which reference values are injected into environment variables
 func (s *ContainerResource) WithReferenceEnvironment(options *ReferenceEnvironmentInjectionOptions) (*IResourceWithEnvironment, error) {
 	reqArgs := map[string]any{
@@ -5649,21 +5619,6 @@ func (s *DotnetToolResource) WithArgsCallback(callback func(...any) any) (*IReso
 		reqArgs["callback"] = RegisterCallback(callback)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallback", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *DotnetToolResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -7373,21 +7328,6 @@ func (s *ExecutableResource) WithArgsCallback(callback func(...any) any) (*IReso
 		reqArgs["callback"] = RegisterCallback(callback)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallback", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *ExecutableResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -12198,21 +12138,6 @@ func (s *ProjectResource) WithArgsCallback(callback func(...any) any) (*IResourc
 	return result.(*IResourceWithArgs), nil
 }
 
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *ProjectResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
 // WithReferenceEnvironment configures which reference values are injected into environment variables
 func (s *ProjectResource) WithReferenceEnvironment(options *ReferenceEnvironmentInjectionOptions) (*IResourceWithEnvironment, error) {
 	reqArgs := map[string]any{
@@ -14377,21 +14302,6 @@ func (s *TestDatabaseResource) WithArgsCallback(callback func(...any) any) (*IRe
 	return result.(*IResourceWithArgs), nil
 }
 
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *TestDatabaseResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
 // WithReferenceEnvironment configures which reference values are injected into environment variables
 func (s *TestDatabaseResource) WithReferenceEnvironment(options *ReferenceEnvironmentInjectionOptions) (*IResourceWithEnvironment, error) {
 	reqArgs := map[string]any{
@@ -16081,21 +15991,6 @@ func (s *TestRedisResource) WithArgsCallback(callback func(...any) any) (*IResou
 		reqArgs["callback"] = RegisterCallback(callback)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallback", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *TestRedisResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -17960,21 +17855,6 @@ func (s *TestVaultResource) WithArgsCallback(callback func(...any) any) (*IResou
 		reqArgs["callback"] = RegisterCallback(callback)
 	}
 	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallback", reqArgs)
-	if err != nil {
-		return nil, err
-	}
-	return result.(*IResourceWithArgs), nil
-}
-
-// WithArgsCallbackAsync sets command-line arguments via async callback
-func (s *TestVaultResource) WithArgsCallbackAsync(callback func(...any) any) (*IResourceWithArgs, error) {
-	reqArgs := map[string]any{
-		"builder": SerializeValue(s.Handle()),
-	}
-	if callback != nil {
-		reqArgs["callback"] = RegisterCallback(callback)
-	}
-	result, err := s.Client().InvokeCapability("Aspire.Hosting/withArgsCallbackAsync", reqArgs)
 	if err != nil {
 		return nil, err
 	}

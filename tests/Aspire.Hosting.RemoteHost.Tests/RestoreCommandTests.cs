@@ -20,11 +20,9 @@ public class RestoreCommandTests
         {
             var sourcePath = Path.Combine(workspaceRoot, "source");
             var outputPath = Path.Combine(workspaceRoot, "obj");
-            var packagesPath = Path.Combine(workspaceRoot, "packages");
 
             Directory.CreateDirectory(sourcePath);
             Directory.CreateDirectory(outputPath);
-            Directory.CreateDirectory(packagesPath);
 
             CreatePackage(sourcePath);
 
@@ -34,7 +32,6 @@ public class RestoreCommandTests
                 "--framework", "net10.0",
                 "--runtime-identifier", RuntimeInformation.RuntimeIdentifier,
                 "--output", outputPath,
-                "--packages-dir", packagesPath,
                 "--source", sourcePath,
                 "--no-nuget-org"
             ]);
