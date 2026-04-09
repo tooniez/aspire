@@ -739,6 +739,12 @@ public class DistributedApplicationBuilder : IDistributedApplicationBuilder
                 throw new DistributedApplicationException($"Multiple resources with the name '{duplicateResourceName}'. Resource names are case-insensitive.");
             }
 
+            // Validate resource names. Resources added directly to the collection bypass AddResource validation.
+            foreach (var resource in Resources)
+            {
+                ValidateResourceName(resource);
+            }
+
             var application = new DistributedApplication(_innerBuilder.Build());
 
             _executionContextOptions.ServiceProvider = application.Services.GetRequiredService<IServiceProvider>();
@@ -756,6 +762,8 @@ public class DistributedApplicationBuilder : IDistributedApplicationBuilder
     public IResourceBuilder<T> AddResource<T>(T resource) where T : IResource
     {
         ArgumentNullException.ThrowIfNull(resource);
+
+        ValidateResourceName(resource);
 
         if (Resources.FirstOrDefault(r => string.Equals(r.Name, resource.Name, StringComparisons.ResourceName)) is { } existingResource)
         {
@@ -832,6 +840,16 @@ public class DistributedApplicationBuilder : IDistributedApplicationBuilder
                 configuration.Sources.RemoveAt(i);
             }
         }
+    }
+
+    private static void ValidateResourceName(IResource resource)
+    {
+        if (!resource.TryGetLastAnnotation<NameValidationPolicyAnnotation>(out var policy))
+        {
+            policy = NameValidationPolicyAnnotation.Default;
+        }
+
+        ModelName.ValidateName(nameof(Resource), resource.Name, policy.MaxLength, policy.ValidateStartsWithLetter, policy.ValidateAllowedCharacters, policy.ValidateNoConsecutiveHyphens, policy.ValidateNoTrailingHyphen);
     }
 
     private static bool PathsEqual(string left, string right) =>
