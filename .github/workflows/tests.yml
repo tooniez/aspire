@@ -210,7 +210,7 @@ jobs:
     name: Aspire CLI Starter Validation (${{ matrix.os.name }})
     runs-on: ${{ matrix.os.runner }}
     timeout-minutes: 15
-    needs: [build_packages, build_cli_archive_windows, build_cli_archive_windows_arm]
+    needs: [build_packages, build_cli_archive_windows, build_cli_archive_windows_arm64]
     if: ${{ github.event_name == 'pull_request' && github.repository_owner == 'microsoft' }}
     strategy:
       fail-fast: false
