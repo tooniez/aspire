@@ -7,6 +7,9 @@ on:
       versionOverrideArg:
         required: false
         type: string
+      extensionVersionOverride:
+        required: false
+        type: string
 
 jobs:
   setup_for_tests:
@@ -294,6 +297,11 @@ jobs:
         run: npm install
       - name: Run tests
         run: npm test
+      - name: Override extension version for PR builds
+        if: ${{ inputs.extensionVersionOverride != '' }}
+        env:
+          EXTENSION_VERSION: ${{ inputs.extensionVersionOverride }}
+        run: npm version "$EXTENSION_VERSION" --no-git-tag-version
       - name: Package VSIX
         run: npm exec @vscode/vsce -- package --pre-release -o out/aspire-extension.vsix
       - name: Upload VSIX
