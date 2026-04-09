@@ -44,8 +44,7 @@ const _keyVaultConnection = await project.addKeyVaultConnection(keyVault);
 const builderProjectFoundry = await builder.addFoundry('builder-project-foundry');
 const builderProject = await builderProjectFoundry.addProject('builder-project');
 const _builderProjectModel = await builderProject.addModelDeployment('builder-project-model', 'Phi-4-mini', '1', 'Microsoft');
-const projectModel = await project.addModelDeploymentFromModel('project-model', model);
-const _promptAgent = await project.addAndPublishPromptAgent(projectModel, 'writer-agent', 'Write concise answers.');
+const _projectModel = await project.addModelDeploymentFromModel('project-model', model);
 const hostedAgent = await builder.addExecutable(
     'hosted-agent',
     'node',
