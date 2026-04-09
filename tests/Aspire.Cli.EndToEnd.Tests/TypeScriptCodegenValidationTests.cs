@@ -3,6 +3,7 @@
 
 using Aspire.Cli.EndToEnd.Tests.Helpers;
 using Aspire.Cli.Tests.Utils;
+using Aspire.TestUtilities;
 using Hex1b.Automation;
 using Xunit;
 
@@ -97,6 +98,7 @@ public sealed class TypeScriptCodegenValidationTests(ITestOutputHelper output)
     }
 
     [Fact]
+    [QuarantinedTest("https://github.com/microsoft/aspire/issues/15975")]
     public async Task RunWithMissingAwaitShowsHelpfulError()
     {
         using var workspace = TemporaryWorkspace.Create(output);
