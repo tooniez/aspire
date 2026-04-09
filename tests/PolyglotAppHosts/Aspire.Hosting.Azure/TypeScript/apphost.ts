@@ -27,9 +27,9 @@ await fileBicep.clearDefaultRoleAssignments();
 await fileBicep.getBicepIdentifier();
 await fileBicep.isExisting();
 await fileBicep.runAsExisting("file-bicep-existing", "rg-bicep");
-await fileBicep.runAsExistingFromParameters(existingName, existingResourceGroup);
+await fileBicep.runAsExisting(existingName, existingResourceGroup);
 await fileBicep.publishAsExisting("file-bicep-existing", "rg-bicep");
-await fileBicep.publishAsExistingFromParameters(existingName, existingResourceGroup);
+await fileBicep.publishAsExisting(existingName, existingResourceGroup);
 await fileBicep.asExisting(existingName, existingResourceGroup);
 
 const inlineBicep = await builder.addBicepTemplateString("inline-bicep", `
@@ -61,9 +61,9 @@ await infrastructure.clearDefaultRoleAssignments();
 await infrastructure.getBicepIdentifier();
 await infrastructure.isExisting();
 await infrastructure.runAsExisting("infra-existing", "rg-infra");
-await infrastructure.runAsExistingFromParameters(existingName, existingResourceGroup);
+await infrastructure.runAsExisting(existingName, existingResourceGroup);
 await infrastructure.publishAsExisting("infra-existing", "rg-infra");
-await infrastructure.publishAsExistingFromParameters(existingName, existingResourceGroup);
+await infrastructure.publishAsExisting(existingName, existingResourceGroup);
 await infrastructure.asExisting(existingName, existingResourceGroup);
 
 const identity = await builder.addAzureUserAssignedIdentity("identity");
@@ -84,9 +84,9 @@ await identity.clearDefaultRoleAssignments();
 await identity.getBicepIdentifier();
 await identity.isExisting();
 await identity.runAsExisting("identity-existing", "rg-identity");
-await identity.runAsExistingFromParameters(existingName, existingResourceGroup);
+await identity.runAsExisting(existingName, existingResourceGroup);
 await identity.publishAsExisting("identity-existing", "rg-identity");
-await identity.publishAsExistingFromParameters(existingName, existingResourceGroup);
+await identity.publishAsExisting(existingName, existingResourceGroup);
 await identity.asExisting(existingName, existingResourceGroup);
 const identityClientId = await identity.getOutput("clientId");
 
