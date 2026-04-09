@@ -441,14 +441,13 @@ internal class ConsoleInteractionService : IInteractionService
         MessageLogger.LogInformation("Confirm: {PromptText} (default: {DefaultValue})", promptText, defaultValue);
 
         // Use [Y/n] or [y/N] convention where the capitalized letter indicates the default value.
-        // Double brackets [[ ]] are used to escape literal brackets in Spectre.Console markup.
-        var yesChoice = defaultValue ? "Y" : "y";
-        var noChoice = defaultValue ? "n" : "N";
-        var fullPromptText = $"{promptText} [[{yesChoice}/{noChoice}]]";
+        var yesChoice = defaultValue ? 'Y' : 'y';
+        var noChoice = defaultValue ? 'n' : 'N';
 
-        var prompt = new ConfirmationPrompt(fullPromptText)
+        var prompt = new ConfirmationPrompt(promptText)
         {
-            ShowChoices = false,
+            Yes = yesChoice,
+            No = noChoice,
             ShowDefaultValue = false,
             DefaultValue = defaultValue,
         };
