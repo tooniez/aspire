@@ -450,5 +450,9 @@ await container.withCommand("restart", "Restart", async (_ctx) => {
     return { success: true };
 });
 
+// withHttpCommand
+await container.withHttpCommand("/health", "Health Check");
+await container.withHttpCommand("/api/reset", "Reset", { methodName: "POST", confirmationMessage: "Are you sure?" });
+
 const app = await builder.build();
 await app.run();

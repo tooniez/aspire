@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -2622,7 +2623,8 @@ public static class ResourceBuilderExtensions
     /// </para>
     /// <para>
     /// The <see cref="HttpCommandOptions.GetCommandResult"/> callback will be invoked after the response is received to determine the result of the command invocation. If this callback
-    /// is not specified, the command will be considered succesful if the response status code is in the 2xx range.
+    /// is not specified, the command will be considered successful if the response status code is in the 2xx range. Set
+    /// <see cref="HttpCommandOptions.ResultMode"/> to flow the HTTP response body back to the command caller.
     /// </para>
     /// <example>
     /// Adds a command to the project resource that when invoked sends an HTTP POST request to the path <c>/clear-cache</c>.
@@ -2655,7 +2657,7 @@ public static class ResourceBuilderExtensions
     /// </example>
     /// <para>This method is not available in polyglot app hosts.</para>
     /// </remarks>
-    [AspireExportIgnore(Reason = "Func<HttpRequestMessage> is not ATS-compatible.")]
+    [AspireExportIgnore(Reason = "Use the ATS-specific withHttpCommand export.")]
     public static IResourceBuilder<TResource> WithHttpCommand<TResource>(
         this IResourceBuilder<TResource> builder,
         string path,
@@ -2714,7 +2716,8 @@ public static class ResourceBuilderExtensions
     /// </para>
     /// <para>
     /// The <see cref="HttpCommandOptions.GetCommandResult"/> callback will be invoked after the response is received to determine the result of the command invocation. If this callback
-    /// is not specified, the command will be considered succesful if the response status code is in the 2xx range.
+    /// is not specified, the command will be considered successful if the response status code is in the 2xx range. Set
+    /// <see cref="HttpCommandOptions.ResultMode"/> to flow the HTTP response body back to the command caller.
     /// </para>
     /// <example>
     /// Adds commands to a project resource that when invoked sends an HTTP POST request to an endpoint on a separate load generator resource, to generate load against the
@@ -2730,7 +2733,7 @@ public static class ResourceBuilderExtensions
     /// </example>
     /// <para>This method is not available in polyglot app hosts.</para>
     /// </remarks>
-    [AspireExportIgnore(Reason = "Func<EndpointReference> delegate — not ATS-compatible.")]
+    [AspireExportIgnore(Reason = "Use the ATS-specific withHttpCommand export.")]
     public static IResourceBuilder<TResource> WithHttpCommand<TResource>(
         this IResourceBuilder<TResource> builder,
         string path,
@@ -2790,9 +2793,10 @@ public static class ResourceBuilderExtensions
                     };
                     await commandOptions.PrepareRequest(requestContext).ConfigureAwait(false);
                 }
+                HttpResponseMessage? response = null;
                 try
                 {
-                    var response = await httpClient.SendAsync(request, context.CancellationToken).ConfigureAwait(false);
+                    response = await httpClient.SendAsync(request, context.CancellationToken).ConfigureAwait(false);
                     if (commandOptions.GetCommandResult is not null)
                     {
                         var resultContext = new HttpCommandResultContext
@@ -2807,18 +2811,146 @@ public static class ResourceBuilderExtensions
                         return await commandOptions.GetCommandResult(resultContext).ConfigureAwait(false);
                     }
 
-                    return response.IsSuccessStatusCode
-                        ? CommandResults.Success()
-                        : CommandResults.Failure($"Request failed with status code {response.StatusCode}");
+                    return await GetDefaultHttpCommandResultAsync(response, commandOptions, context.CancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
                     return CommandResults.Failure(ex);
                 }
+                finally
+                {
+                    response?.Dispose();
+                }
             },
             commandOptions);
 
         return builder;
+    }
+
+    [AspireExport("withHttpCommand", Description = "Adds an HTTP resource command")]
+    internal static IResourceBuilder<TResource> WithHttpCommandExport<TResource>(
+        this IResourceBuilder<TResource> builder,
+        string path,
+        string displayName,
+        HttpCommandExportOptions? options = null)
+        where TResource : IResourceWithEndpoints
+        => builder.WithHttpCommand(
+            path,
+            displayName,
+            options?.EndpointName,
+            options?.CommandName,
+            CreateHttpCommandOptions(options));
+
+    private static HttpCommandOptions? CreateHttpCommandOptions(HttpCommandExportOptions? exportOptions)
+    {
+        if (exportOptions is null)
+        {
+            return null;
+        }
+
+        return new HttpCommandOptions
+        {
+            Description = exportOptions.Description,
+            ConfirmationMessage = exportOptions.ConfirmationMessage,
+            IconName = exportOptions.IconName,
+            IconVariant = exportOptions.IconVariant,
+            IsHighlighted = exportOptions.IsHighlighted,
+            Method = !string.IsNullOrWhiteSpace(exportOptions.MethodName) ? new HttpMethod(exportOptions.MethodName) : null,
+            ResultMode = exportOptions.ResultMode
+        };
+    }
+
+    internal static async Task<ExecuteCommandResult> GetDefaultHttpCommandResultAsync(HttpResponseMessage response, HttpCommandOptions commandOptions, CancellationToken cancellationToken)
+    {
+        var errorMessage = response.IsSuccessStatusCode
+            ? null
+            : $"Request failed with status code {response.StatusCode}";
+
+        if (TryGetHttpCommandResultFormat(commandOptions.ResultMode, response.Content?.Headers.ContentType, out var resultFormat) &&
+            response.Content is not null)
+        {
+            var result = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(result))
+            {
+                return errorMessage is null
+                    ? new ExecuteCommandResult { Success = true, Data = new CommandResultData { Value = result, Format = resultFormat } }
+                    : CommandResults.Failure(errorMessage, result, resultFormat);
+            }
+        }
+
+        return errorMessage is null
+            ? CommandResults.Success()
+            : CommandResults.Failure(errorMessage);
+    }
+
+    private static bool TryGetHttpCommandResultFormat(HttpCommandResultMode resultMode, MediaTypeHeaderValue? contentType, out CommandResultFormat resultFormat)
+    {
+        resultFormat = default;
+
+        switch (resultMode)
+        {
+            case HttpCommandResultMode.None:
+                return false;
+            case HttpCommandResultMode.Json:
+                resultFormat = CommandResultFormat.Json;
+                return true;
+            case HttpCommandResultMode.Text:
+                resultFormat = CommandResultFormat.Text;
+                return true;
+            case HttpCommandResultMode.Auto:
+                return TryInferHttpCommandResultFormat(contentType, out resultFormat);
+            default:
+                throw new InvalidOperationException($"Unsupported {nameof(HttpCommandResultMode)} value '{resultMode}'.");
+        }
+    }
+
+    internal static bool TryInferHttpCommandResultFormat(MediaTypeHeaderValue? contentType, out CommandResultFormat resultFormat)
+    {
+        switch (GetKnownHttpCommandResultContentType(contentType))
+        {
+            case KnownHttpCommandResultContentType.Json:
+                resultFormat = CommandResultFormat.Json;
+                return true;
+            case KnownHttpCommandResultContentType.Text:
+                resultFormat = CommandResultFormat.Text;
+                return true;
+            default:
+                resultFormat = default;
+                return false;
+        }
+    }
+
+    private static KnownHttpCommandResultContentType GetKnownHttpCommandResultContentType(MediaTypeHeaderValue? contentType)
+    {
+        var mediaType = contentType?.MediaType;
+
+        if (string.IsNullOrEmpty(mediaType))
+        {
+            return KnownHttpCommandResultContentType.None;
+        }
+
+        if (mediaType.Equals("application/json", StringComparison.OrdinalIgnoreCase) ||
+            mediaType.EndsWith("+json", StringComparison.OrdinalIgnoreCase))
+        {
+            return KnownHttpCommandResultContentType.Json;
+        }
+
+        if (mediaType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
+            mediaType.Equals("application/xml", StringComparison.OrdinalIgnoreCase) ||
+            mediaType.EndsWith("+xml", StringComparison.OrdinalIgnoreCase) ||
+            mediaType.Equals("application/x-www-form-urlencoded", StringComparison.OrdinalIgnoreCase))
+        {
+            return KnownHttpCommandResultContentType.Text;
+        }
+
+        return KnownHttpCommandResultContentType.None;
+    }
+
+    private enum KnownHttpCommandResultContentType
+    {
+        None,
+        Json,
+        Text
     }
 
     /// <summary>

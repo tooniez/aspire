@@ -2048,6 +2048,23 @@ public class CSharpAppResource extends ResourceBuilderBase {
         return this;
     }
 
+    public CSharpAppResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public CSharpAppResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public CSharpAppResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -5572,6 +5589,23 @@ public class ContainerResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ContainerResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public ContainerResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public ContainerResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -7298,6 +7332,23 @@ public class DotnetToolResource extends ResourceBuilderBase {
         return this;
     }
 
+    public DotnetToolResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public DotnetToolResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public DotnetToolResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -8963,6 +9014,23 @@ public class ExecutableResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ExecutableResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public ExecutableResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public ExecutableResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -10558,6 +10626,91 @@ public class HandleWrapperBase {
 
     AspireClient getClient() {
         return client;
+    }
+}
+
+// ===== HttpCommandExportOptions.java =====
+// HttpCommandExportOptions.java - GENERATED CODE - DO NOT EDIT
+
+package aspire;
+
+import java.util.*;
+import java.util.function.*;
+
+/** HttpCommandExportOptions DTO. */
+public class HttpCommandExportOptions {
+    private String description;
+    private String confirmationMessage;
+    private String iconName;
+    private IconVariant iconVariant;
+    private boolean isHighlighted;
+    private String commandName;
+    private String endpointName;
+    private String methodName;
+    private HttpCommandResultMode resultMode;
+
+    public String getDescription() { return description; }
+    public void setDescription(String value) { this.description = value; }
+    public String getConfirmationMessage() { return confirmationMessage; }
+    public void setConfirmationMessage(String value) { this.confirmationMessage = value; }
+    public String getIconName() { return iconName; }
+    public void setIconName(String value) { this.iconName = value; }
+    public IconVariant getIconVariant() { return iconVariant; }
+    public void setIconVariant(IconVariant value) { this.iconVariant = value; }
+    public boolean getIsHighlighted() { return isHighlighted; }
+    public void setIsHighlighted(boolean value) { this.isHighlighted = value; }
+    public String getCommandName() { return commandName; }
+    public void setCommandName(String value) { this.commandName = value; }
+    public String getEndpointName() { return endpointName; }
+    public void setEndpointName(String value) { this.endpointName = value; }
+    public String getMethodName() { return methodName; }
+    public void setMethodName(String value) { this.methodName = value; }
+    public HttpCommandResultMode getResultMode() { return resultMode; }
+    public void setResultMode(HttpCommandResultMode value) { this.resultMode = value; }
+
+    public Map<String, Object> toMap() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("Description", AspireClient.serializeValue(description));
+        map.put("ConfirmationMessage", AspireClient.serializeValue(confirmationMessage));
+        map.put("IconName", AspireClient.serializeValue(iconName));
+        map.put("IconVariant", AspireClient.serializeValue(iconVariant));
+        map.put("IsHighlighted", AspireClient.serializeValue(isHighlighted));
+        map.put("CommandName", AspireClient.serializeValue(commandName));
+        map.put("EndpointName", AspireClient.serializeValue(endpointName));
+        map.put("MethodName", AspireClient.serializeValue(methodName));
+        map.put("ResultMode", AspireClient.serializeValue(resultMode));
+        return map;
+    }
+}
+
+// ===== HttpCommandResultMode.java =====
+// HttpCommandResultMode.java - GENERATED CODE - DO NOT EDIT
+
+package aspire;
+
+import java.util.*;
+import java.util.function.*;
+
+/** HttpCommandResultMode enum. */
+public enum HttpCommandResultMode implements WireValueEnum {
+    NONE("None"),
+    AUTO("Auto"),
+    JSON("Json"),
+    TEXT("Text");
+
+    private final String value;
+
+    HttpCommandResultMode(String value) {
+        this.value = value;
+    }
+
+    public String getValue() { return value; }
+
+    public static HttpCommandResultMode fromValue(String value) {
+        for (HttpCommandResultMode e : values()) {
+            if (e.value.equals(value)) return e;
+        }
+        throw new IllegalArgumentException("Unknown value: " + value);
     }
 }
 
@@ -13851,6 +14004,23 @@ public class ProjectResource extends ResourceBuilderBase {
         return this;
     }
 
+    public ProjectResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public ProjectResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public ProjectResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -16299,6 +16469,23 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         return this;
     }
 
+    public TestDatabaseResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public TestDatabaseResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public TestDatabaseResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -18072,6 +18259,23 @@ public class TestRedisResource extends ResourceBuilderBase {
             reqArgs.put("commandOptions", AspireClient.serializeValue(commandOptions));
         }
         getClient().invokeCapability("Aspire.Hosting/withCommand", reqArgs);
+        return this;
+    }
+
+    public TestRedisResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public TestRedisResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
         return this;
     }
 
@@ -19932,6 +20136,23 @@ public class TestVaultResource extends ResourceBuilderBase {
         return this;
     }
 
+    public TestVaultResource withHttpCommand(String path, String displayName) {
+        return withHttpCommand(path, displayName, null);
+    }
+
+    /** Adds an HTTP resource command */
+    public TestVaultResource withHttpCommand(String path, String displayName, HttpCommandExportOptions options) {
+        Map<String, Object> reqArgs = new HashMap<>();
+        reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
+        reqArgs.put("path", AspireClient.serializeValue(path));
+        reqArgs.put("displayName", AspireClient.serializeValue(displayName));
+        if (options != null) {
+            reqArgs.put("options", AspireClient.serializeValue(options));
+        }
+        getClient().invokeCapability("Aspire.Hosting/withHttpCommand", reqArgs);
+        return this;
+    }
+
     /** Configures developer certificate trust */
     public TestVaultResource withDeveloperCertificateTrust(boolean trust) {
         Map<String, Object> reqArgs = new HashMap<>();
@@ -21394,6 +21615,8 @@ public final class WithVolumeOptions {
 .modules/GenerateParameterDefault.java
 .modules/Handle.java
 .modules/HandleWrapperBase.java
+.modules/HttpCommandExportOptions.java
+.modules/HttpCommandResultMode.java
 .modules/IComputeResource.java
 .modules/IConfiguration.java
 .modules/IConfigurationSection.java
