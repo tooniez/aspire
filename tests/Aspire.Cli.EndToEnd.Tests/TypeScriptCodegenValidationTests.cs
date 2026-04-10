@@ -157,7 +157,7 @@ public sealed class TypeScriptCodegenValidationTests(ITestOutputHelper output)
 
         // Validate that un-awaited chains compile without type errors.
         // withReference(db) should accept PromiseLike<T> from the un-awaited addDatabase().
-        await auto.TypeAsync("npx tsc --noEmit");
+        await auto.TypeAsync("npx tsc --noEmit --project tsconfig.apphost.json");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptFailFastAsync(counter, TimeSpan.FromMinutes(2));
 
