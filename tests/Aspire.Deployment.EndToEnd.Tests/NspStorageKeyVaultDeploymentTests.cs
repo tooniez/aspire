@@ -177,13 +177,6 @@ var builder = DistributedApplication.CreateBuilder(args);
 // Azure Container App Environment
 builder.AddAzureContainerAppEnvironment("env");
 
-// Azure Storage with Blobs
-var storage = builder.AddAzureStorage("storage");
-var blobs = storage.AddBlobs("blobs");
-
-// Azure Key Vault
-var kv = builder.AddAzureKeyVault("kv");
-
 // Network Security Perimeter with subscription-level inbound access
 var nsp = builder.AddNetworkSecurityPerimeter("nsp")
     .WithAccessRule(new AzureNspAccessRule
@@ -192,8 +185,15 @@ var nsp = builder.AddNetworkSecurityPerimeter("nsp")
         Direction = NetworkSecurityPerimeterAccessRuleDirection.Inbound,
         Subscriptions = { "/subscriptions/{{subscriptionId}}" }
     });
-storage.WithNetworkSecurityPerimeter(nsp);
-kv.WithNetworkSecurityPerimeter(nsp);
+
+// Azure Storage with Blobs
+var storage = builder.AddAzureStorage("storage")
+    .WithNetworkSecurityPerimeter(nsp);
+var blobs = storage.AddBlobs("blobs");
+
+// Azure Key Vault
+var kv = builder.AddAzureKeyVault("kv")
+    .WithNetworkSecurityPerimeter(nsp);
 
 #pragma warning restore ASPIREAZURE003
 """);
@@ -215,6 +215,7 @@ kv.WithNetworkSecurityPerimeter(nsp);
             }
 
             // Step 8: Modify Server Program.cs to register Storage Blob and Key Vault clients
+            //         and add verification endpoints that exercise those resources
             {
                 var projectDir = Path.Combine(workspace.WorkspaceRoot.FullName, projectName);
                 var serverProgramPath = Path.Combine(projectDir, $"{projectName}.Server", "Program.cs");
@@ -223,6 +224,10 @@ kv.WithNetworkSecurityPerimeter(nsp);
 
                 var content = File.ReadAllText(serverProgramPath);
 
+                // Add using statements at the top
+                content = "using Azure.Security.KeyVault.Secrets;\nusing Azure.Storage.Blobs;\n" + content;
+
+                // Register the Aspire client integrations
                 content = content.Replace(
                     "builder.AddServiceDefaults();",
                     """
@@ -231,9 +236,43 @@ builder.AddAzureBlobServiceClient("blobs");
 builder.AddAzureKeyVaultClient("kv");
 """);
 
+                // Add verification endpoints before MapDefaultEndpoints
+                content = content.Replace(
+                    "app.MapDefaultEndpoints();",
+                    """
+// Endpoint to verify Azure Blob Storage connectivity through the NSP.
+app.MapGet("/api/verify-blobs", async (BlobServiceClient blobServiceClient) =>
+{
+    var containerClient = blobServiceClient.GetBlobContainerClient("nsp-test");
+    await containerClient.CreateIfNotExistsAsync();
+    var blobName = $"test-{Guid.NewGuid():N}.txt";
+    var blobClient = containerClient.GetBlobClient(blobName);
+    var testContent = $"Hello from NSP test at {DateTime.UtcNow:O}";
+    await blobClient.UploadAsync(BinaryData.FromString(testContent), overwrite: true);
+    var download = await blobClient.DownloadContentAsync();
+    var readBack = download.Value.Content.ToString();
+    await blobClient.DeleteAsync();
+    return Results.Ok(new { status = "ok", match = testContent == readBack });
+});
+
+// Endpoint to verify Azure Key Vault connectivity through the NSP.
+// Lists secret properties to prove authentication and network access work.
+app.MapGet("/api/verify-keyvault", async (SecretClient secretClient) =>
+{
+    var count = 0;
+    await foreach (var secret in secretClient.GetPropertiesOfSecretsAsync())
+    {
+        count++;
+    }
+    return Results.Ok(new { status = "ok", secretCount = count });
+});
+
+app.MapDefaultEndpoints();
+""");
+
                 File.WriteAllText(serverProgramPath, content);
 
-                output.WriteLine($"Modified Server Program.cs to add blob and key vault client registrations");
+                output.WriteLine($"Modified Server Program.cs to add blob/key vault client registrations and verification endpoints");
             }
 
             // Step 9: Navigate to AppHost project directory
@@ -254,8 +293,8 @@ builder.AddAzureKeyVaultClient("kv");
             await auto.WaitUntilTextAsync("PIPELINE SUCCEEDED", timeout: TimeSpan.FromMinutes(30));
             await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(2));
 
-            // Step 12: Verify deployed endpoints with retry
-            output.WriteLine("Step 12: Verifying deployed endpoints...");
+            // Step 12: Verify deployed endpoints and resource connectivity through the NSP
+            output.WriteLine("Step 12: Verifying deployed endpoints and resource connectivity...");
             await auto.TypeAsync($"RG_NAME=\"{resourceGroupName}\" && " +
                       "urls=$(az containerapp list -g \"$RG_NAME\" --query \"[].properties.configuration.ingress.fqdn\" -o tsv 2>/dev/null | grep -v '\\.internal\\.') && " +
                       "if [ -z \"$urls\" ]; then echo \"❌ No external container app endpoints found\"; exit 1; fi && " +
@@ -270,9 +309,28 @@ builder.AddAzureKeyVaultClient("kv");
                       "done; " +
                       "if [ \"$success\" -eq 0 ]; then echo \"  ❌ Failed after 18 attempts\"; failed=1; fi; " +
                       "done && " +
-                      "if [ \"$failed\" -ne 0 ]; then echo \"❌ One or more endpoint checks failed\"; exit 1; fi");
+                      "if [ \"$failed\" -ne 0 ]; then echo \"❌ One or more endpoint checks failed\"; exit 1; fi && " +
+                      "SERVER_FQDN=$(az containerapp list -g \"$RG_NAME\" --query \"[?contains(name,'server')].properties.configuration.ingress.fqdn\" -o tsv 2>/dev/null | head -1) && " +
+                      "if [ -z \"$SERVER_FQDN\" ]; then echo \"❌ Could not find server container app\"; exit 1; fi && " +
+                      "echo \"Server FQDN: $SERVER_FQDN\" && " +
+                      "echo \"Verifying Blob Storage connectivity...\" && " +
+                      "BLOB_RESULT=\"\" && blob_ok=0 && " +
+                      "for i in $(seq 1 12); do " +
+                      "BLOB_RESULT=$(curl -s \"https://$SERVER_FQDN/api/verify-blobs\" --max-time 30 2>/dev/null); " +
+                      "if echo \"$BLOB_RESULT\" | grep -q '\"status\":\"ok\"'; then echo \"  ✅ Blob Storage: $BLOB_RESULT\"; blob_ok=1; break; fi; " +
+                      "echo \"  Attempt $i: $BLOB_RESULT, retrying in 10s...\"; sleep 10; " +
+                      "done && " +
+                      "echo \"Verifying Key Vault connectivity...\" && " +
+                      "KV_RESULT=\"\" && kv_ok=0 && " +
+                      "for i in $(seq 1 12); do " +
+                      "KV_RESULT=$(curl -s \"https://$SERVER_FQDN/api/verify-keyvault\" --max-time 30 2>/dev/null); " +
+                      "if echo \"$KV_RESULT\" | grep -q '\"status\":\"ok\"'; then echo \"  ✅ Key Vault: $KV_RESULT\"; kv_ok=1; break; fi; " +
+                      "echo \"  Attempt $i: $KV_RESULT, retrying in 10s...\"; sleep 10; " +
+                      "done && " +
+                      "if [ \"$blob_ok\" -eq 0 ] || [ \"$kv_ok\" -eq 0 ]; then echo \"❌ Resource connectivity verification failed (blob=$blob_ok, kv=$kv_ok)\"; exit 1; fi && " +
+                      "echo \"✅ All endpoint and resource connectivity checks passed\"");
             await auto.EnterAsync();
-            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(5));
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(8));
 
             // Step 13: Exit terminal
             await auto.TypeAsync("exit");
