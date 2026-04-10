@@ -17,7 +17,6 @@ using Aspire.Hosting;
 using Aspire.Shared.UserSecrets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Semver;
 using Spectre.Console;
 
 namespace Aspire.Cli.Projects;
