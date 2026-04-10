@@ -25,10 +25,10 @@
 
   <ItemGroup>
     <Compile Include="$(SharedDir)NpmVersionHelper.cs" Link="NpmVersionHelper.cs" />
+    <Compile Include="$(SharedDir)SmolSemVer.cs" Link="SmolSemVer.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Semver" />
     <ProjectReference Include="..\Aspire.TypeSystem\Aspire.TypeSystem.csproj" />
   </ItemGroup>
 
