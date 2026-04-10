@@ -20,11 +20,11 @@ void main() throws Exception {
         fileBicep.clearDefaultRoleAssignments();
         fileBicep.getBicepIdentifier();
         fileBicep.isExisting();
-        fileBicep.runAsExisting("file-bicep-existing", "rg-bicep");
-        fileBicep.runAsExistingFromParameters(existingName, existingResourceGroup);
-        fileBicep.publishAsExisting("file-bicep-existing", "rg-bicep");
-        fileBicep.publishAsExistingFromParameters(existingName, existingResourceGroup);
-        fileBicep.asExisting(existingName, existingResourceGroup);
+        fileBicep.runAsExisting(AspireUnion.of("file-bicep-existing"), AspireUnion.of("rg-bicep"));
+        fileBicep.runAsExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
+        fileBicep.publishAsExisting(AspireUnion.of("file-bicep-existing"), AspireUnion.of("rg-bicep"));
+        fileBicep.publishAsExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
+        fileBicep.asExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
         var inlineBicep = builder.addBicepTemplateString("inline-bicep", """
         output inlineUrl string = "https://inline.example.com"
         """);
@@ -49,11 +49,11 @@ void main() throws Exception {
         infrastructure.clearDefaultRoleAssignments();
         infrastructure.getBicepIdentifier();
         infrastructure.isExisting();
-        infrastructure.runAsExisting("infra-existing", "rg-infra");
-        infrastructure.runAsExistingFromParameters(existingName, existingResourceGroup);
-        infrastructure.publishAsExisting("infra-existing", "rg-infra");
-        infrastructure.publishAsExistingFromParameters(existingName, existingResourceGroup);
-        infrastructure.asExisting(existingName, existingResourceGroup);
+        infrastructure.runAsExisting(AspireUnion.of("infra-existing"), AspireUnion.of("rg-infra"));
+        infrastructure.runAsExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
+        infrastructure.publishAsExisting(AspireUnion.of("infra-existing"), AspireUnion.of("rg-infra"));
+        infrastructure.publishAsExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
+        infrastructure.asExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
         var identity = builder.addAzureUserAssignedIdentity("identity");
         identity.configureInfrastructure((infrastructureContext) -> { });
         identity.withParameter("identityEmpty");
@@ -68,11 +68,11 @@ void main() throws Exception {
         identity.clearDefaultRoleAssignments();
         identity.getBicepIdentifier();
         identity.isExisting();
-        identity.runAsExisting("identity-existing", "rg-identity");
-        identity.runAsExistingFromParameters(existingName, existingResourceGroup);
-        identity.publishAsExisting("identity-existing", "rg-identity");
-        identity.publishAsExistingFromParameters(existingName, existingResourceGroup);
-        identity.asExisting(existingName, existingResourceGroup);
+        identity.runAsExisting(AspireUnion.of("identity-existing"), AspireUnion.of("rg-identity"));
+        identity.runAsExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
+        identity.publishAsExisting(AspireUnion.of("identity-existing"), AspireUnion.of("rg-identity"));
+        identity.publishAsExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
+        identity.asExisting(AspireUnion.of(existingName), AspireUnion.of(existingResourceGroup));
         container.withEnvironment("INFRA_URL", infrastructureOutput);
         container.withEnvironment("SECRET_FROM_IDENTITY", identity);
         container.withAzureUserAssignedIdentity(identity);
