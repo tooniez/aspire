@@ -66,11 +66,11 @@ resource webapp 'Microsoft.Web/sites@2025-03-01' = {
         }
         {
           name: 'PROJECT1_HTTP'
-          value: 'https://${take('${toLower('project1')}-${uniqueString(resourceGroup().id)}', 60)}.azurewebsites.net'
+          value: 'http://${take('${toLower('project1')}-${uniqueString(resourceGroup().id)}', 60)}.azurewebsites.net'
         }
         {
           name: 'services__project1__http__0'
-          value: 'https://${take('${toLower('project1')}-${uniqueString(resourceGroup().id)}', 60)}.azurewebsites.net'
+          value: 'http://${take('${toLower('project1')}-${uniqueString(resourceGroup().id)}', 60)}.azurewebsites.net'
         }
         {
           name: 'ASPIRE_ENVIRONMENT_NAME'
