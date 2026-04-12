@@ -49,7 +49,8 @@ internal sealed class ConsoleActivityLogger
 
     private const string SuccessSymbol = "✓";
     private const string FailureSymbol = "✗";
-    private const string WarningSymbol = "⚠";
+    // The warning symbol is intentionally not ⚠ because that character can be displayed as an emoji in some terminals, causing rendering issues.
+    private const string WarningSymbol = "△";
     private const string InProgressSymbol = "→";
     private const string InfoSymbol = "i";
     private const int SummaryTimelineWidth = 28;
@@ -403,17 +404,19 @@ internal sealed class ConsoleActivityLogger
         foreach (var rec in orderedRecords)
         {
             var durStr = FormatSummaryDuration(rec.Duration, totalTimeline).PadLeft(durationWidth);
-            var symbol = rec.State switch
+            var stateSymbol = rec.State switch
             {
-                ActivityState.Success => _enableColor ? "[green]" + SuccessSymbol + "[/]" : SuccessSymbol,
-                ActivityState.Warning => _enableColor ? "[yellow]" + WarningSymbol + "[/]" : WarningSymbol,
-                ActivityState.Failure => _enableColor ? "[red]" + FailureSymbol + "[/]" : FailureSymbol,
-                _ => _enableColor ? "[cyan]" + InProgressSymbol + "[/]" : InProgressSymbol
+                ActivityState.Success => SuccessSymbol,
+                ActivityState.Warning => WarningSymbol,
+                ActivityState.Failure => FailureSymbol,
+                ActivityState.Info => InfoSymbol,
+                _ => InProgressSymbol
             };
-            // DisplayName and FailureReason are already Spectre-safe (pre-processed
-            // through ConvertTextWithMarkdownFlag which escapes or converts markdown).
+            var symbol = _enableColor ? $"[{GetStateColor(rec.State)}]{stateSymbol}[/]" : stateSymbol;
             var displayName = GetIndentedDisplayName(rec);
             var name = (renderTimeline ? displayName.PadRight(nameWidth) : displayName).EscapeMarkup();
+
+            // FailureReason is already Spectre-safe (pre-processed through ConvertTextWithMarkdownFlag which escapes or converts markdown).
             var reason = rec.State == ActivityState.Failure && !string.IsNullOrEmpty(rec.FailureReason)
                 ? (_enableColor ? $" [red]— {HighlightMessage(rec.FailureReason!)}[/]" : $" — {rec.FailureReason!}")
                 : string.Empty;
@@ -642,13 +645,7 @@ internal sealed class ConsoleActivityLogger
             return escapedBar;
         }
 
-        return state switch
-        {
-            ActivityState.Success => $"[green]{escapedBar}[/]",
-            ActivityState.Warning => $"[yellow]{escapedBar}[/]",
-            ActivityState.Failure => $"[red]{escapedBar}[/]",
-            _ => $"[cyan]{escapedBar}[/]"
-        };
+        return $"[{GetStateColor(state)}]{escapedBar}[/]";
     }
 
     private void WriteCompletion(string taskKey, string symbol, string message, ActivityState state, double? seconds)
@@ -725,15 +722,17 @@ internal sealed class ConsoleActivityLogger
         }
     }
 
-    private static string ColorizeSymbol(string symbol, ActivityState state) => state switch
+    private static string GetStateColor(ActivityState state) => state switch
     {
-        ActivityState.Success => $"[green]{symbol}[/]",
-        ActivityState.Warning => $"[yellow]{symbol}[/]",
-        ActivityState.Failure => $"[red]{symbol}[/]",
-        ActivityState.InProgress => $"[cyan]{symbol}[/]",
-        ActivityState.Info => $"[dim]{symbol}[/]",
-        _ => symbol
+        ActivityState.Success => "green",
+        ActivityState.Warning => "yellow",
+        ActivityState.Failure => "red",
+        ActivityState.Info => "blue",
+        _ => "cyan"
     };
+
+    private static string ColorizeSymbol(string symbol, ActivityState state) =>
+        $"[{GetStateColor(state)}]{symbol}[/]";
 
     // Messages are already converted from Markdown to Spectre markup in PipelineCommandBase.
     // When interactive output is not supported, we need to convert Spectre link markup
