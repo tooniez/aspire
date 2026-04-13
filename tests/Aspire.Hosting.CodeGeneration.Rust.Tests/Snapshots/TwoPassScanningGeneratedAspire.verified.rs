@@ -1685,6 +1685,17 @@ impl CSharpAppResource {
         Ok(IResource::new(handle, self.client.clone()))
     }
 
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
+    }
+
     /// Sets the remote image name for publishing
     pub fn with_remote_image_name(&self, remote_image_name: &str) -> Result<IComputeResource, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -2871,6 +2882,154 @@ impl ConnectionStringResource {
         let result = self.client.invoke_capability("Aspire.Hosting.CodeGeneration.Rust.Tests/withMergeRouteMiddleware", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResource::new(handle, self.client.clone()))
+    }
+}
+
+/// Wrapper for Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptions
+pub struct ContainerImagePushOptions {
+    handle: Handle,
+    client: Arc<AspireClient>,
+}
+
+impl HasHandle for ContainerImagePushOptions {
+    fn handle(&self) -> &Handle {
+        &self.handle
+    }
+}
+
+impl ContainerImagePushOptions {
+    pub fn new(handle: Handle, client: Arc<AspireClient>) -> Self {
+        Self { handle, client }
+    }
+
+    pub fn handle(&self) -> &Handle {
+        &self.handle
+    }
+
+    pub fn client(&self) -> &Arc<AspireClient> {
+        &self.client
+    }
+
+    /// Gets the RemoteImageName property
+    pub fn remote_image_name(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.remoteImageName", args)?;
+        Ok(serde_json::from_value(result)?)
+    }
+
+    /// Sets the RemoteImageName property
+    pub fn set_remote_image_name(&self, value: &str) -> Result<ContainerImagePushOptions, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        args.insert("value".to_string(), serde_json::to_value(&value).unwrap_or(Value::Null));
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.setRemoteImageName", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(ContainerImagePushOptions::new(handle, self.client.clone()))
+    }
+
+    /// Gets the RemoteImageTag property
+    pub fn remote_image_tag(&self) -> Result<String, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.remoteImageTag", args)?;
+        Ok(serde_json::from_value(result)?)
+    }
+
+    /// Sets the RemoteImageTag property
+    pub fn set_remote_image_tag(&self, value: &str) -> Result<ContainerImagePushOptions, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        args.insert("value".to_string(), serde_json::to_value(&value).unwrap_or(Value::Null));
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.setRemoteImageTag", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(ContainerImagePushOptions::new(handle, self.client.clone()))
+    }
+}
+
+/// Wrapper for Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptionsCallbackContext
+pub struct ContainerImagePushOptionsCallbackContext {
+    handle: Handle,
+    client: Arc<AspireClient>,
+}
+
+impl HasHandle for ContainerImagePushOptionsCallbackContext {
+    fn handle(&self) -> &Handle {
+        &self.handle
+    }
+}
+
+impl ContainerImagePushOptionsCallbackContext {
+    pub fn new(handle: Handle, client: Arc<AspireClient>) -> Self {
+        Self { handle, client }
+    }
+
+    pub fn handle(&self) -> &Handle {
+        &self.handle
+    }
+
+    pub fn client(&self) -> &Arc<AspireClient> {
+        &self.client
+    }
+
+    /// Gets the Resource property
+    pub fn resource(&self) -> Result<IResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.resource", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IResource::new(handle, self.client.clone()))
+    }
+
+    /// Sets the Resource property
+    pub fn set_resource(&self, value: &IResource) -> Result<ContainerImagePushOptionsCallbackContext, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        args.insert("value".to_string(), value.handle().to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.setResource", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(ContainerImagePushOptionsCallbackContext::new(handle, self.client.clone()))
+    }
+
+    /// Gets the CancellationToken property
+    pub fn cancellation_token(&self) -> Result<CancellationToken, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.cancellationToken", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(CancellationToken::new(handle, self.client.clone()))
+    }
+
+    /// Sets the CancellationToken property
+    pub fn set_cancellation_token(&self, value: Option<&CancellationToken>) -> Result<ContainerImagePushOptionsCallbackContext, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        if let Some(token) = value {
+            let token_id = register_cancellation(token, self.client.clone());
+            args.insert("value".to_string(), Value::String(token_id));
+        }
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.setCancellationToken", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(ContainerImagePushOptionsCallbackContext::new(handle, self.client.clone()))
+    }
+
+    /// Gets the Options property
+    pub fn options(&self) -> Result<ContainerImagePushOptions, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.options", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(ContainerImagePushOptions::new(handle, self.client.clone()))
+    }
+
+    /// Sets the Options property
+    pub fn set_options(&self, value: &ContainerImagePushOptions) -> Result<ContainerImagePushOptionsCallbackContext, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        args.insert("value".to_string(), value.handle().to_json());
+        let result = self.client.invoke_capability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.setOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(ContainerImagePushOptionsCallbackContext::new(handle, self.client.clone()))
     }
 }
 
@@ -4421,6 +4580,17 @@ impl ContainerResource {
         Ok(IResource::new(handle, self.client.clone()))
     }
 
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
+    }
+
     /// Sets the remote image name for publishing
     pub fn with_remote_image_name(&self, remote_image_name: &str) -> Result<IComputeResource, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -5881,6 +6051,17 @@ impl DotnetToolResource {
         let result = self.client.invoke_capability("Aspire.Hosting/excludeFromMcp", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResource::new(handle, self.client.clone()))
+    }
+
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
     }
 
     /// Sets the remote image name for publishing
@@ -7545,6 +7726,17 @@ impl ExecutableResource {
         let result = self.client.invoke_capability("Aspire.Hosting/excludeFromMcp", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResource::new(handle, self.client.clone()))
+    }
+
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
     }
 
     /// Sets the remote image name for publishing
@@ -12055,6 +12247,17 @@ impl ProjectResource {
         Ok(IResource::new(handle, self.client.clone()))
     }
 
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
+    }
+
     /// Sets the remote image name for publishing
     pub fn with_remote_image_name(&self, remote_image_name: &str) -> Result<IComputeResource, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -13985,6 +14188,17 @@ impl TestDatabaseResource {
         Ok(IResource::new(handle, self.client.clone()))
     }
 
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
+    }
+
     /// Sets the remote image name for publishing
     pub fn with_remote_image_name(&self, remote_image_name: &str) -> Result<IComputeResource, Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
@@ -15422,6 +15636,17 @@ impl TestRedisResource {
         let result = self.client.invoke_capability("Aspire.Hosting/excludeFromMcp", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResource::new(handle, self.client.clone()))
+    }
+
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
     }
 
     /// Sets the remote image name for publishing
@@ -16972,6 +17197,17 @@ impl TestVaultResource {
         let result = self.client.invoke_capability("Aspire.Hosting/excludeFromMcp", args)?;
         let handle: Handle = serde_json::from_value(result)?;
         Ok(IResource::new(handle, self.client.clone()))
+    }
+
+    /// Sets image push options via callback
+    pub fn with_image_push_options(&self, callback: impl Fn(Vec<Value>) -> Value + Send + Sync + 'static) -> Result<IComputeResource, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("builder".to_string(), self.handle.to_json());
+        let callback_id = register_callback(callback);
+        args.insert("callback".to_string(), Value::String(callback_id));
+        let result = self.client.invoke_capability("Aspire.Hosting/withImagePushOptions", args)?;
+        let handle: Handle = serde_json::from_value(result)?;
+        Ok(IComputeResource::new(handle, self.client.clone()))
     }
 
     /// Sets the remote image name for publishing

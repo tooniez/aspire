@@ -1484,6 +1484,21 @@ func (s *CSharpAppResource) ExcludeFromMcp() (*IResource, error) {
 	return result.(*IResource), nil
 }
 
+// WithImagePushOptions sets image push options via callback
+func (s *CSharpAppResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
+}
+
 // WithRemoteImageName sets the remote image name for publishing
 func (s *CSharpAppResource) WithRemoteImageName(remoteImageName string) (*IComputeResource, error) {
 	reqArgs := map[string]any{
@@ -2953,6 +2968,157 @@ func (s *ConnectionStringResource) WithMergeRouteMiddleware(path string, method 
 		return nil, err
 	}
 	return result.(*IResource), nil
+}
+
+// ContainerImagePushOptions wraps a handle for Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptions.
+type ContainerImagePushOptions struct {
+	HandleWrapperBase
+}
+
+// NewContainerImagePushOptions creates a new ContainerImagePushOptions.
+func NewContainerImagePushOptions(handle *Handle, client *AspireClient) *ContainerImagePushOptions {
+	return &ContainerImagePushOptions{
+		HandleWrapperBase: NewHandleWrapperBase(handle, client),
+	}
+}
+
+// RemoteImageName gets the RemoteImageName property
+func (s *ContainerImagePushOptions) RemoteImageName() (*string, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.remoteImageName", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*string), nil
+}
+
+// SetRemoteImageName sets the RemoteImageName property
+func (s *ContainerImagePushOptions) SetRemoteImageName(value string) (*ContainerImagePushOptions, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	reqArgs["value"] = SerializeValue(value)
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.setRemoteImageName", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*ContainerImagePushOptions), nil
+}
+
+// RemoteImageTag gets the RemoteImageTag property
+func (s *ContainerImagePushOptions) RemoteImageTag() (*string, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.remoteImageTag", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*string), nil
+}
+
+// SetRemoteImageTag sets the RemoteImageTag property
+func (s *ContainerImagePushOptions) SetRemoteImageTag(value string) (*ContainerImagePushOptions, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	reqArgs["value"] = SerializeValue(value)
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptions.setRemoteImageTag", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*ContainerImagePushOptions), nil
+}
+
+// ContainerImagePushOptionsCallbackContext wraps a handle for Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptionsCallbackContext.
+type ContainerImagePushOptionsCallbackContext struct {
+	HandleWrapperBase
+}
+
+// NewContainerImagePushOptionsCallbackContext creates a new ContainerImagePushOptionsCallbackContext.
+func NewContainerImagePushOptionsCallbackContext(handle *Handle, client *AspireClient) *ContainerImagePushOptionsCallbackContext {
+	return &ContainerImagePushOptionsCallbackContext{
+		HandleWrapperBase: NewHandleWrapperBase(handle, client),
+	}
+}
+
+// Resource gets the Resource property
+func (s *ContainerImagePushOptionsCallbackContext) Resource() (*IResource, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.resource", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IResource), nil
+}
+
+// SetResource sets the Resource property
+func (s *ContainerImagePushOptionsCallbackContext) SetResource(value *IResource) (*ContainerImagePushOptionsCallbackContext, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	reqArgs["value"] = SerializeValue(value)
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.setResource", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*ContainerImagePushOptionsCallbackContext), nil
+}
+
+// CancellationToken gets the CancellationToken property
+func (s *ContainerImagePushOptionsCallbackContext) CancellationToken() (*CancellationToken, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.cancellationToken", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*CancellationToken), nil
+}
+
+// SetCancellationToken sets the CancellationToken property
+func (s *ContainerImagePushOptionsCallbackContext) SetCancellationToken(value *CancellationToken) (*ContainerImagePushOptionsCallbackContext, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	if value != nil {
+		reqArgs["value"] = RegisterCancellation(value, s.Client())
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.setCancellationToken", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*ContainerImagePushOptionsCallbackContext), nil
+}
+
+// Options gets the Options property
+func (s *ContainerImagePushOptionsCallbackContext) Options() (*ContainerImagePushOptions, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.options", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*ContainerImagePushOptions), nil
+}
+
+// SetOptions sets the Options property
+func (s *ContainerImagePushOptionsCallbackContext) SetOptions(value *ContainerImagePushOptions) (*ContainerImagePushOptionsCallbackContext, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	reqArgs["value"] = SerializeValue(value)
+	result, err := s.Client().InvokeCapability("Aspire.Hosting.ApplicationModel/ContainerImagePushOptionsCallbackContext.setOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*ContainerImagePushOptionsCallbackContext), nil
 }
 
 // ContainerImageReference wraps a handle for Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImageReference.
@@ -4806,6 +4972,21 @@ func (s *ContainerResource) ExcludeFromMcp() (*IResource, error) {
 	return result.(*IResource), nil
 }
 
+// WithImagePushOptions sets image push options via callback
+func (s *ContainerResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
+}
+
 // WithRemoteImageName sets the remote image name for publishing
 func (s *ContainerResource) WithRemoteImageName(remoteImageName string) (*IComputeResource, error) {
 	reqArgs := map[string]any{
@@ -6515,6 +6696,21 @@ func (s *DotnetToolResource) ExcludeFromMcp() (*IResource, error) {
 		return nil, err
 	}
 	return result.(*IResource), nil
+}
+
+// WithImagePushOptions sets image push options via callback
+func (s *DotnetToolResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
 }
 
 // WithRemoteImageName sets the remote image name for publishing
@@ -8576,6 +8772,21 @@ func (s *ExecutableResource) ExcludeFromMcp() (*IResource, error) {
 		return nil, err
 	}
 	return result.(*IResource), nil
+}
+
+// WithImagePushOptions sets image push options via callback
+func (s *ExecutableResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
 }
 
 // WithRemoteImageName sets the remote image name for publishing
@@ -13529,6 +13740,21 @@ func (s *ProjectResource) ExcludeFromMcp() (*IResource, error) {
 	return result.(*IResource), nil
 }
 
+// WithImagePushOptions sets image push options via callback
+func (s *ProjectResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
+}
+
 // WithRemoteImageName sets the remote image name for publishing
 func (s *ProjectResource) WithRemoteImageName(remoteImageName string) (*IComputeResource, error) {
 	reqArgs := map[string]any{
@@ -15757,6 +15983,21 @@ func (s *TestDatabaseResource) ExcludeFromMcp() (*IResource, error) {
 	return result.(*IResource), nil
 }
 
+// WithImagePushOptions sets image push options via callback
+func (s *TestDatabaseResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
+}
+
 // WithRemoteImageName sets the remote image name for publishing
 func (s *TestDatabaseResource) WithRemoteImageName(remoteImageName string) (*IComputeResource, error) {
 	reqArgs := map[string]any{
@@ -17541,6 +17782,21 @@ func (s *TestRedisResource) ExcludeFromMcp() (*IResource, error) {
 		return nil, err
 	}
 	return result.(*IResource), nil
+}
+
+// WithImagePushOptions sets image push options via callback
+func (s *TestRedisResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
 }
 
 // WithRemoteImageName sets the remote image name for publishing
@@ -19472,6 +19728,21 @@ func (s *TestVaultResource) ExcludeFromMcp() (*IResource, error) {
 	return result.(*IResource), nil
 }
 
+// WithImagePushOptions sets image push options via callback
+func (s *TestVaultResource) WithImagePushOptions(callback func(...any) any) (*IComputeResource, error) {
+	reqArgs := map[string]any{
+		"builder": SerializeValue(s.Handle()),
+	}
+	if callback != nil {
+		reqArgs["callback"] = RegisterCallback(callback)
+	}
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/withImagePushOptions", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*IComputeResource), nil
+}
+
 // WithRemoteImageName sets the remote image name for publishing
 func (s *TestVaultResource) WithRemoteImageName(remoteImageName string) (*IComputeResource, error) {
 	reqArgs := map[string]any{
@@ -20194,6 +20465,12 @@ func init() {
 	})
 	RegisterHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ConnectionStringAvailableEvent", func(h *Handle, c *AspireClient) any {
 		return NewConnectionStringAvailableEvent(h, c)
+	})
+	RegisterHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptions", func(h *Handle, c *AspireClient) any {
+		return NewContainerImagePushOptions(h, c)
+	})
+	RegisterHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptionsCallbackContext", func(h *Handle, c *AspireClient) any {
+		return NewContainerImagePushOptionsCallbackContext(h, c)
 	})
 	RegisterHandleWrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.DistributedApplicationModel", func(h *Handle, c *AspireClient) any {
 		return NewDistributedApplicationModel(h, c)
