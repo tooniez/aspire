@@ -13,8 +13,9 @@ public sealed class ComposeOperationContext
 {
     /// <summary>
     /// Gets the path to the Docker Compose YAML file.
+    /// When null, compose operations will use the project name only without referencing a file.
     /// </summary>
-    public required string ComposeFilePath { get; init; }
+    public string? ComposeFilePath { get; init; }
 
     /// <summary>
     /// Gets the compose project name used for resource isolation.

@@ -4,9 +4,11 @@
 #pragma warning disable ASPIRECOMPUTE002
 #pragma warning disable ASPIRECOMPUTE003
 #pragma warning disable ASPIREPIPELINES001
+#pragma warning disable ASPIREPIPELINES002
 #pragma warning disable ASPIREPIPELINES003
 #pragma warning disable ASPIRECONTAINERRUNTIME001
 
+using System.Text.Json.Nodes;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Pipelines;
 using Aspire.Hosting.Publishing;
@@ -391,6 +393,42 @@ public class KubernetesDeployTests(ITestOutputHelper output)
 
         // Verify helm-uninstall step exists
         Assert.Contains(logs, msg => msg.Contains("helm-uninstall-env"));
+    }
+
+    [Fact]
+    public async Task HelmUninstallStep_RequiredByDestroy()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Diagnostics);
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+
+        builder.AddKubernetesEnvironment("env");
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        var logs = mockActivityReporter.LoggedMessages
+            .Where(s => s.StepTitle == "diagnostics")
+            .Select(s => s.Message)
+            .ToList();
+
+        output.WriteLine("Diagnostics logs:");
+        foreach (var log in logs)
+        {
+            output.WriteLine($"  {log}");
+        }
+
+        // Verify helm-uninstall-env depends on destroy-helm-env (the prompt layer)
+        var helmUninstallLines = logs.Where(l => l.Contains("helm-uninstall-env")).ToList();
+        Assert.Contains(helmUninstallLines, msg => msg.Contains("destroy-helm-env"));
     }
 
     [Fact]
@@ -1275,5 +1313,137 @@ public class KubernetesDeployTests(ITestOutputHelper output)
         Assert.NotNull(dashboard.OtlpGrpcEndpoint);
         Assert.Equal("http", dashboard.PrimaryEndpoint.EndpointName);
         Assert.Equal("otlp-grpc", dashboard.OtlpGrpcEndpoint.EndpointName);
+    }
+
+    [Fact]
+    public async Task DestroyHelm_WithState_RunsHelmUninstall()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeHelm = new FakeHelmRunner();
+        var stateManager = new InMemoryDeploymentStateManager();
+        stateManager.SetSection("Helm:env", new JsonObject
+        {
+            ["ReleaseName"] = "my-release",
+            ["Namespace"] = "my-namespace"
+        });
+
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Destroy);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
+
+        builder.AddKubernetesEnvironment("env");
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify helm uninstall was called with saved state values
+        Assert.True(fakeHelm.WasUninstallCalled);
+        Assert.Contains("my-release", fakeHelm.LastArguments!);
+        Assert.Contains("my-namespace", fakeHelm.LastArguments!);
+    }
+
+    [Fact]
+    public async Task DestroyHelm_WithNoState_ReportsNothingToDestroy()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeHelm = new FakeHelmRunner();
+        var stateManager = new InMemoryDeploymentStateManager();
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Destroy);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
+
+        builder.AddKubernetesEnvironment("env");
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify helm was NOT called
+        Assert.False(fakeHelm.WasUninstallCalled);
+
+        // Verify it reported nothing to destroy
+        var completedSteps = mockActivityReporter.CompletedSteps;
+        Assert.Contains(completedSteps, s => s.CompletionText.Contains("Nothing to destroy", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class FakeHelmRunner : IHelmRunner
+    {
+        public bool WasUninstallCalled { get; private set; }
+        public string? LastArguments { get; private set; }
+        public int ExitCode { get; set; }
+
+        public Task<int> RunAsync(
+            string arguments,
+            string? workingDirectory = null,
+            Action<string>? onOutputData = null,
+            Action<string>? onErrorData = null,
+            CancellationToken cancellationToken = default)
+        {
+            LastArguments = arguments;
+            if (arguments.StartsWith("uninstall", StringComparison.OrdinalIgnoreCase))
+            {
+                WasUninstallCalled = true;
+            }
+            return Task.FromResult(ExitCode);
+        }
+    }
+
+    [Fact]
+    public async Task DestroyHelm_WhenUninstallFails_PreservesState()
+    {
+        using var tempDir = new TestTempDirectory();
+
+        var fakeHelm = new FakeHelmRunner { ExitCode = 1 };
+        var stateManager = new InMemoryDeploymentStateManager();
+        stateManager.SetSection("Helm:env", new JsonObject
+        {
+            ["ReleaseName"] = "my-release",
+            ["Namespace"] = "my-namespace"
+        });
+
+        var mockActivityReporter = new TestPipelineActivityReporter(output);
+        var builder = TestDistributedApplicationBuilder.Create(
+            DistributedApplicationOperation.Publish,
+            tempDir.Path,
+            step: WellKnownPipelineSteps.Destroy);
+
+        builder.Services.AddSingleton<IResourceContainerImageManager, MockImageBuilder>();
+        builder.Services.AddSingleton<IPipelineActivityReporter>(mockActivityReporter);
+        builder.Services.AddSingleton<IDeploymentStateManager>(stateManager);
+        builder.Services.AddSingleton<IHelmRunner>(fakeHelm);
+        builder.Services.Configure<PipelineOptions>(o => o.SkipConfirmation = true);
+
+        builder.AddKubernetesEnvironment("env");
+        builder.AddContainer("api", "myimage");
+
+        using var app = builder.Build();
+        await app.RunAsync();
+
+        // Verify helm uninstall was attempted
+        Assert.True(fakeHelm.WasUninstallCalled);
+
+        // Verify state was NOT deleted (preserved for retry)
+        var stateSection = await stateManager.AcquireSectionAsync("Helm:env");
+        Assert.Equal("my-release", stateSection.Data["ReleaseName"]?.ToString());
     }
 }

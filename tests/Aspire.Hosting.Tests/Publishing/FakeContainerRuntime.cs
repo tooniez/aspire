@@ -21,6 +21,8 @@ public sealed class FakeContainerRuntime(bool shouldFail = false, bool isRunning
     public bool WasPushImageCalled { get; private set; }
     public bool WasBuildImageCalled { get; private set; }
     public bool WasLoginToRegistryCalled { get; private set; }
+    public bool WasComposeDownCalled { get; private set; }
+    public ComposeOperationContext? LastComposeDownContext { get; private set; }
     public ConcurrentBag<(string localImageName, string targetImageName)> TagImageCalls { get; } = [];
     public ConcurrentBag<string> RemoveImageCalls { get; } = [];
     public ConcurrentBag<IResource> PushImageCalls { get; } = [];
@@ -115,6 +117,8 @@ public sealed class FakeContainerRuntime(bool shouldFail = false, bool isRunning
 
     public Task ComposeDownAsync(ComposeOperationContext context, CancellationToken cancellationToken)
     {
+        WasComposeDownCalled = true;
+        LastComposeDownContext = context;
         if (shouldFail)
         {
             throw new DistributedApplicationException("Fake container runtime is configured to fail");

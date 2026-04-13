@@ -124,10 +124,8 @@ builder.Build().Run();
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(30));
 
-        // Step 11: Clean up - stop and remove containers using podman
-        await auto.TypeAsync("cd deploy-output && podman compose down --volumes --remove-orphans 2>/dev/null || true");
-        await auto.EnterAsync();
-        await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromSeconds(60));
+        // Step 11: Clean up - destroy the deployment using aspire destroy
+        await auto.AspireDestroyAsync(counter);
 
         await auto.TypeAsync("exit");
         await auto.EnterAsync();

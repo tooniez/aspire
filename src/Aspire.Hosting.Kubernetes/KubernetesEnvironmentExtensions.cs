@@ -5,6 +5,7 @@ using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Kubernetes;
 using Aspire.Hosting.Kubernetes.Extensions;
 using Aspire.Hosting.Lifecycle;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Aspire.Hosting;
 
@@ -16,6 +17,7 @@ public static class KubernetesEnvironmentExtensions
     internal static IDistributedApplicationBuilder AddKubernetesInfrastructureCore(this IDistributedApplicationBuilder builder)
     {
         builder.Services.TryAddEventingSubscriber<KubernetesInfrastructure>();
+        builder.Services.TryAddSingleton<IHelmRunner, DefaultHelmRunner>();
 
         return builder;
     }

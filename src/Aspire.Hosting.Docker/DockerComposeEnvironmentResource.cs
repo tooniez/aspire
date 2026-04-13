@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #pragma warning disable ASPIREPIPELINES001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+#pragma warning disable ASPIREPIPELINES002
 #pragma warning disable ASPIREPIPELINES003 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 #pragma warning disable ASPIRECONTAINERRUNTIME001
+#pragma warning disable ASPIREINTERACTION001
 
 using System.Diagnostics.CodeAnalysis;
 using Aspire.Hosting.ApplicationModel;
@@ -13,6 +15,8 @@ using Aspire.Hosting.Publishing;
 using Aspire.Hosting.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Aspire.Hosting.Docker;
 
@@ -120,6 +124,64 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             };
             dockerComposeUpStep.RequiredBy(WellKnownPipelineSteps.Deploy);
             steps.Add(dockerComposeUpStep);
+
+            var dockerComposeDestroyStep = new PipelineStep
+            {
+                Name = $"destroy-compose-{Name}",
+                Description = $"Confirms and destroys the Docker Compose environment {Name}.",
+                Action = async ctx =>
+                {
+                    // Check deployment state to verify this environment was actually deployed
+                    var deploymentStateManager = ctx.Services.GetRequiredService<IDeploymentStateManager>();
+                    var stateSection = await deploymentStateManager.AcquireSectionAsync($"DockerCompose:{Name}", ctx.CancellationToken).ConfigureAwait(false);
+                    var savedComposeFilePath = stateSection.Data["ComposeFilePath"]?.ToString();
+
+                    if (string.IsNullOrEmpty(savedComposeFilePath))
+                    {
+                        await ctx.ReportingStep.CompleteAsync(
+                            $"No Docker Compose deployment state found for '{Name}'. Nothing to destroy.",
+                            CompletionState.Completed,
+                            ctx.CancellationToken).ConfigureAwait(false);
+                        return;
+                    }
+
+                    await ConfirmDestroyAsync(ctx, Name).ConfigureAwait(false);
+
+                    // Use saved state to build the compose context — don't recompute from current model
+                    // Only use the project name for down — the compose file may not be valid for down
+                    // (e.g., services with build contexts that no longer exist)
+                    var savedOutputPath = stateSection.Data["OutputPath"]?.ToString() ?? Path.GetDirectoryName(savedComposeFilePath)!;
+                    var savedProjectName = stateSection.Data["ProjectName"]?.ToString() ?? GetDockerComposeProjectName(ctx, this);
+
+                    var runtime = await ctx.Services.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(ctx.CancellationToken).ConfigureAwait(false);
+
+                    var composeContext = new ComposeOperationContext
+                    {
+                        ProjectName = savedProjectName,
+                        WorkingDirectory = savedOutputPath
+                    };
+
+                    var deployTask = await ctx.ReportingStep.CreateTaskAsync(
+                        new MarkdownString($"Running compose down for **{Name}** using **{runtime.Name}**"),
+                        ctx.CancellationToken).ConfigureAwait(false);
+                    await using (deployTask.ConfigureAwait(false))
+                    {
+                        await runtime.ComposeDownAsync(composeContext, ctx.CancellationToken).ConfigureAwait(false);
+                        await deployTask.CompleteAsync(
+                            new MarkdownString($"Compose shutdown complete for **{Name}** ({runtime.Name})"),
+                            CompletionState.Completed,
+                            ctx.CancellationToken).ConfigureAwait(false);
+                    }
+
+                    ctx.Summary.Add("🗑️ Compose", Name);
+
+                    // Clean up deployment state only after successful teardown
+                    await deploymentStateManager.DeleteSectionAsync(stateSection, ctx.CancellationToken).ConfigureAwait(false);
+                },
+                DependsOnSteps = [WellKnownPipelineSteps.DestroyPrereq]
+            };
+            dockerComposeDestroyStep.RequiredBy(WellKnownPipelineSteps.Destroy);
+            steps.Add(dockerComposeDestroyStep);
 
             var dockerComposeDownStep = new PipelineStep
             {
@@ -236,6 +298,14 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
 
                 await runtime.ComposeUpAsync(composeContext, context.CancellationToken).ConfigureAwait(false);
 
+                // Persist deployment state so destroy can find the compose file and project name
+                var deploymentStateManager = context.Services.GetRequiredService<IDeploymentStateManager>();
+                var stateSection = await deploymentStateManager.AcquireSectionAsync($"DockerCompose:{Name}", context.CancellationToken).ConfigureAwait(false);
+                stateSection.Data["OutputPath"] = outputPath;
+                stateSection.Data["ProjectName"] = composeContext.ProjectName;
+                stateSection.Data["ComposeFilePath"] = composeContext.ComposeFilePath;
+                await deploymentStateManager.SaveSectionAsync(stateSection, context.CancellationToken).ConfigureAwait(false);
+
                 await deployTask.CompleteAsync(
                     new MarkdownString($"Service **{Name}** is now running with Docker Compose locally (runtime: {runtime.Name})"),
                     CompletionState.Completed,
@@ -256,7 +326,9 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
 
         if (!File.Exists(dockerComposeFilePath))
         {
-            throw new InvalidOperationException($"Docker Compose file not found at {dockerComposeFilePath}");
+            throw new InvalidOperationException(
+                $"Docker Compose file not found at '{dockerComposeFilePath}'. " +
+                $"If you deployed with a custom --output-path, pass the same path to the destroy command.");
         }
 
         var runtime = await context.Services.GetRequiredService<IContainerRuntimeResolver>().ResolveAsync(context.CancellationToken).ConfigureAwait(false);
@@ -281,6 +353,41 @@ public class DockerComposeEnvironmentResource : Resource, IComputeEnvironmentRes
             {
                 await deployTask.CompleteAsync($"Compose shutdown failed ({runtime.Name}): {ex.Message}", CompletionState.CompletedWithError, context.CancellationToken).ConfigureAwait(false);
                 throw;
+            }
+        }
+    }
+
+    private static async Task ConfirmDestroyAsync(PipelineStepContext context, string environmentName)
+    {
+        var options = context.Services.GetRequiredService<IOptions<PipelineOptions>>();
+
+        if (!options.Value.SkipConfirmation)
+        {
+            var interactionService = context.Services.GetRequiredService<IInteractionService>();
+
+            if (!interactionService.IsAvailable)
+            {
+                throw new InvalidOperationException(
+                    "Cannot perform destructive operation without confirmation. Use --yes to skip the confirmation prompt in non-interactive mode.");
+            }
+
+            var result = await interactionService.PromptNotificationAsync(
+                "Destroy environment",
+                $"Shut down Docker Compose environment '{environmentName}'? This will stop and remove all containers, networks, and volumes.",
+                new NotificationInteractionOptions
+                {
+                    Intent = MessageIntent.Confirmation,
+                    ShowSecondaryButton = true,
+                    ShowDismiss = false,
+                    PrimaryButtonText = "Destroy",
+                    SecondaryButtonText = "Cancel"
+                },
+                context.CancellationToken).ConfigureAwait(false);
+
+            if (result.Canceled || !result.Data)
+            {
+                context.Logger.LogInformation("User canceled the destroy operation.");
+                throw new OperationCanceledException("Destroy operation canceled by user.");
             }
         }
     }

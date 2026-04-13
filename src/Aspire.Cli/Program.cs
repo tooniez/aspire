@@ -471,6 +471,7 @@ public class Program
         builder.Services.AddTransient<DashboardRunCommand>();
         builder.Services.AddTransient<UpdateCommand>();
         builder.Services.AddTransient<DeployCommand>();
+        builder.Services.AddTransient<DestroyCommand>();
         builder.Services.AddTransient<DoCommand>();
         builder.Services.AddTransient<ExecCommand>();
         builder.Services.AddTransient<McpCommand>();
