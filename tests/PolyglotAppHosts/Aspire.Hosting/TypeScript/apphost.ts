@@ -82,6 +82,10 @@ await container.withImageRegistry("docker.io");
 // ===================================================================
 
 await dockerContainer.withHttpEndpoint({ name: "http", targetPort: 80 });
+await dockerContainer.withHttpEndpointCallback(async (updateContext) => {
+    await updateContext.port.set(8080);
+    await updateContext.isProxied.set(false);
+}, { name: "http", createIfNotExists: false });
 const endpoint = await dockerContainer.getEndpoint("http");
 const expr = refExpr`Host=${endpoint}`;
 
@@ -429,12 +433,40 @@ await container.withEnvironment("MY_VAR", "value");
 
 // withEndpoint
 await container.withEndpoint();
+await container.withEndpoint({ name: "callback-endpoint" });
+await container.withEndpointCallback("callback-endpoint", async (updateContext) => {
+    await updateContext.port.set(5001);
+    await updateContext.targetPort.set(5002);
+    await updateContext.isExternal.set(false);
+}, { createIfNotExists: false });
 
 // withHttpEndpoint
 await container.withHttpEndpoint();
+await container.withHttpEndpoint({ name: "callback-http" });
+await container.withHttpEndpointCallback(async (updateContext) => {
+    await updateContext.port.set(8081);
+    await updateContext.targetPort.set(8082);
+    await updateContext.isProxied.set(false);
+}, { name: "callback-http", createIfNotExists: false });
+await container.withHttpEndpointCallback(async (updateContext) => {
+    await updateContext.port.set(8083);
+    await updateContext.targetPort.set(8084);
+    await updateContext.isProxied.set(false);
+}, { name: "created-http" });
 
 // withHttpsEndpoint
 await container.withHttpsEndpoint();
+await container.withHttpsEndpoint({ name: "callback-https" });
+await container.withHttpsEndpointCallback(async (updateContext) => {
+    await updateContext.port.set(8444);
+    await updateContext.targetPort.set(8443);
+    await updateContext.isProxied.set(false);
+}, { name: "callback-https", createIfNotExists: false });
+await container.withHttpsEndpointCallback(async (updateContext) => {
+    await updateContext.port.set(8445);
+    await updateContext.targetPort.set(8446);
+    await updateContext.isProxied.set(false);
+}, { name: "created-https" });
 
 // withExternalHttpEndpoints
 await container.withExternalHttpEndpoints();

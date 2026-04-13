@@ -94,6 +94,9 @@ type EndpointReferenceHandle = Handle<'Aspire.Hosting/Aspire.Hosting.Application
 /** Handle to EndpointReferenceExpression */
 type EndpointReferenceExpressionHandle = Handle<'Aspire.Hosting/Aspire.Hosting.ApplicationModel.EndpointReferenceExpression'>;
 
+/** Handle to EndpointUpdateContext */
+type EndpointUpdateContextHandle = Handle<'Aspire.Hosting/Aspire.Hosting.ApplicationModel.EndpointUpdateContext'>;
+
 /** Handle to EnvironmentCallbackContext */
 type EnvironmentCallbackContextHandle = Handle<'Aspire.Hosting/Aspire.Hosting.ApplicationModel.EnvironmentCallbackContext'>;
 
@@ -668,6 +671,10 @@ export interface WithDockerfileOptions {
     stage?: string;
 }
 
+export interface WithEndpointCallbackOptions {
+    createIfNotExists?: boolean;
+}
+
 export interface WithEndpointOptions {
     port?: number;
     targetPort?: number;
@@ -682,6 +689,11 @@ export interface WithEndpointOptions {
 export interface WithExternalServiceHttpHealthCheckOptions {
     path?: string;
     statusCode?: number;
+}
+
+export interface WithHttpEndpointCallbackOptions {
+    name?: string;
+    createIfNotExists?: boolean;
 }
 
 export interface WithHttpEndpointOptions {
@@ -710,6 +722,11 @@ export interface WithHttpProbeOptions {
 
 export interface WithHttpsDeveloperCertificateOptions {
     password?: Awaitable<ParameterResource>;
+}
+
+export interface WithHttpsEndpointCallbackOptions {
+    name?: string;
+    createIfNotExists?: boolean;
 }
 
 export interface WithHttpsEndpointOptions {
@@ -1670,6 +1687,242 @@ class EndpointReferenceExpressionImpl implements EndpointReferenceExpression {
                 { context: this._handle }
             );
         },
+    };
+
+}
+
+// ============================================================================
+// EndpointUpdateContext
+// ============================================================================
+
+export interface EndpointUpdateContext {
+    toJSON(): MarshalledHandle;
+    name: {
+        get: () => Promise<string>;
+    };
+    protocol: {
+        get: () => Promise<ProtocolType>;
+        set: (value: ProtocolType) => Promise<void>;
+    };
+    port: {
+        get: () => Promise<number>;
+        set: (value: number) => Promise<void>;
+    };
+    targetPort: {
+        get: () => Promise<number>;
+        set: (value: number) => Promise<void>;
+    };
+    uriScheme: {
+        get: () => Promise<string>;
+        set: (value: string) => Promise<void>;
+    };
+    targetHost: {
+        get: () => Promise<string>;
+        set: (value: string) => Promise<void>;
+    };
+    transport: {
+        get: () => Promise<string>;
+        set: (value: string) => Promise<void>;
+    };
+    isExternal: {
+        get: () => Promise<boolean>;
+        set: (value: boolean) => Promise<void>;
+    };
+    isProxied: {
+        get: () => Promise<boolean>;
+        set: (value: boolean) => Promise<void>;
+    };
+    excludeReferenceEndpoint: {
+        get: () => Promise<boolean>;
+        set: (value: boolean) => Promise<void>;
+    };
+    tlsEnabled: {
+        get: () => Promise<boolean>;
+        set: (value: boolean) => Promise<void>;
+    };
+}
+
+// ============================================================================
+// EndpointUpdateContextImpl
+// ============================================================================
+
+/**
+ * Type class for EndpointUpdateContext.
+ */
+class EndpointUpdateContextImpl implements EndpointUpdateContext {
+    constructor(private _handle: EndpointUpdateContextHandle, private _client: AspireClientRpc) {}
+
+    /** Serialize for JSON-RPC transport */
+    toJSON(): MarshalledHandle { return this._handle.toJSON(); }
+
+    /** Gets the Name property */
+    name = {
+        get: async (): Promise<string> => {
+            return await this._client.invokeCapability<string>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.name',
+                { context: this._handle }
+            );
+        },
+    };
+
+    /** Gets the Protocol property */
+    protocol = {
+        get: async (): Promise<ProtocolType> => {
+            return await this._client.invokeCapability<ProtocolType>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.protocol',
+                { context: this._handle }
+            );
+        },
+        set: async (value: ProtocolType): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setProtocol',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the Port property */
+    port = {
+        get: async (): Promise<number> => {
+            return await this._client.invokeCapability<number>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.port',
+                { context: this._handle }
+            );
+        },
+        set: async (value: number): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setPort',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the TargetPort property */
+    targetPort = {
+        get: async (): Promise<number> => {
+            return await this._client.invokeCapability<number>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.targetPort',
+                { context: this._handle }
+            );
+        },
+        set: async (value: number): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setTargetPort',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the UriScheme property */
+    uriScheme = {
+        get: async (): Promise<string> => {
+            return await this._client.invokeCapability<string>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.uriScheme',
+                { context: this._handle }
+            );
+        },
+        set: async (value: string): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setUriScheme',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the TargetHost property */
+    targetHost = {
+        get: async (): Promise<string> => {
+            return await this._client.invokeCapability<string>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.targetHost',
+                { context: this._handle }
+            );
+        },
+        set: async (value: string): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setTargetHost',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the Transport property */
+    transport = {
+        get: async (): Promise<string> => {
+            return await this._client.invokeCapability<string>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.transport',
+                { context: this._handle }
+            );
+        },
+        set: async (value: string): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setTransport',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the IsExternal property */
+    isExternal = {
+        get: async (): Promise<boolean> => {
+            return await this._client.invokeCapability<boolean>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.isExternal',
+                { context: this._handle }
+            );
+        },
+        set: async (value: boolean): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setIsExternal',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the IsProxied property */
+    isProxied = {
+        get: async (): Promise<boolean> => {
+            return await this._client.invokeCapability<boolean>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.isProxied',
+                { context: this._handle }
+            );
+        },
+        set: async (value: boolean): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setIsProxied',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the ExcludeReferenceEndpoint property */
+    excludeReferenceEndpoint = {
+        get: async (): Promise<boolean> => {
+            return await this._client.invokeCapability<boolean>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.excludeReferenceEndpoint',
+                { context: this._handle }
+            );
+        },
+        set: async (value: boolean): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setExcludeReferenceEndpoint',
+                { context: this._handle, value }
+            );
+        }
+    };
+
+    /** Gets the TlsEnabled property */
+    tlsEnabled = {
+        get: async (): Promise<boolean> => {
+            return await this._client.invokeCapability<boolean>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.tlsEnabled',
+                { context: this._handle }
+            );
+        },
+        set: async (value: boolean): Promise<void> => {
+            await this._client.invokeCapability<void>(
+                'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setTlsEnabled',
+                { context: this._handle, value }
+            );
+        }
     };
 
 }
@@ -8405,6 +8658,9 @@ export interface ContainerResource {
     withReferenceUri(name: string, uri: string): ContainerResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): ContainerResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ContainerResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ContainerResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ContainerResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ContainerResourcePromise;
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ContainerResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ContainerResourcePromise;
@@ -8512,6 +8768,9 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     withReferenceUri(name: string, uri: string): ContainerResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): ContainerResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ContainerResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ContainerResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ContainerResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ContainerResourcePromise;
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ContainerResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ContainerResourcePromise;
@@ -9205,6 +9464,76 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<ContainerResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ContainerResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new ContainerResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ContainerResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ContainerResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ContainerResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ContainerResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ContainerResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ContainerResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -10596,6 +10925,21 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
     }
 
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
+    }
+
     /** Adds a network endpoint */
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
@@ -10961,6 +11305,9 @@ export interface CSharpAppResource {
     withReferenceUri(name: string, uri: string): CSharpAppResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): CSharpAppResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): CSharpAppResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): CSharpAppResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): CSharpAppResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): CSharpAppResourcePromise;
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): CSharpAppResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): CSharpAppResourcePromise;
@@ -11053,6 +11400,9 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
     withReferenceUri(name: string, uri: string): CSharpAppResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): CSharpAppResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): CSharpAppResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): CSharpAppResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): CSharpAppResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): CSharpAppResourcePromise;
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): CSharpAppResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): CSharpAppResourcePromise;
@@ -11512,6 +11862,76 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<CSharpAppResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): CSharpAppResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new CSharpAppResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<CSharpAppResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): CSharpAppResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new CSharpAppResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<CSharpAppResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): CSharpAppResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new CSharpAppResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -12825,6 +13245,21 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
     }
 
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
+    }
+
     /** Adds a network endpoint */
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
@@ -13197,6 +13632,9 @@ export interface DotnetToolResource {
     withReferenceUri(name: string, uri: string): DotnetToolResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): DotnetToolResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): DotnetToolResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): DotnetToolResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): DotnetToolResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): DotnetToolResourcePromise;
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): DotnetToolResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): DotnetToolResourcePromise;
@@ -13295,6 +13733,9 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
     withReferenceUri(name: string, uri: string): DotnetToolResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): DotnetToolResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): DotnetToolResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): DotnetToolResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): DotnetToolResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): DotnetToolResourcePromise;
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): DotnetToolResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): DotnetToolResourcePromise;
@@ -13856,6 +14297,76 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<DotnetToolResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): DotnetToolResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new DotnetToolResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<DotnetToolResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): DotnetToolResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new DotnetToolResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<DotnetToolResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): DotnetToolResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new DotnetToolResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -15188,6 +15699,21 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
     }
 
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
+    }
+
     /** Adds a network endpoint */
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
@@ -15549,6 +16075,9 @@ export interface ExecutableResource {
     withReferenceUri(name: string, uri: string): ExecutableResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): ExecutableResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ExecutableResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ExecutableResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ExecutableResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ExecutableResourcePromise;
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ExecutableResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ExecutableResourcePromise;
@@ -15641,6 +16170,9 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
     withReferenceUri(name: string, uri: string): ExecutableResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): ExecutableResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ExecutableResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ExecutableResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ExecutableResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ExecutableResourcePromise;
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ExecutableResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ExecutableResourcePromise;
@@ -16112,6 +16644,76 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<ExecutableResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ExecutableResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new ExecutableResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ExecutableResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ExecutableResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ExecutableResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ExecutableResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ExecutableResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ExecutableResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -17412,6 +18014,21 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
     }
 
     /** Adds a network endpoint */
@@ -20076,6 +20693,9 @@ export interface ProjectResource {
     withReferenceUri(name: string, uri: string): ProjectResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): ProjectResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ProjectResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ProjectResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ProjectResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ProjectResourcePromise;
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ProjectResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ProjectResourcePromise;
@@ -20168,6 +20788,9 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
     withReferenceUri(name: string, uri: string): ProjectResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): ProjectResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ProjectResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ProjectResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ProjectResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ProjectResourcePromise;
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ProjectResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ProjectResourcePromise;
@@ -20627,6 +21250,76 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<ProjectResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ProjectResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new ProjectResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ProjectResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ProjectResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ProjectResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ProjectResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ProjectResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ProjectResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -21940,6 +22633,21 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
     }
 
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
+    }
+
     /** Adds a network endpoint */
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
@@ -22320,6 +23028,9 @@ export interface TestDatabaseResource {
     withReferenceUri(name: string, uri: string): TestDatabaseResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): TestDatabaseResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestDatabaseResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestDatabaseResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestDatabaseResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestDatabaseResourcePromise;
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestDatabaseResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestDatabaseResourcePromise;
@@ -22427,6 +23138,9 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     withReferenceUri(name: string, uri: string): TestDatabaseResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): TestDatabaseResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestDatabaseResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestDatabaseResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestDatabaseResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestDatabaseResourcePromise;
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestDatabaseResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestDatabaseResourcePromise;
@@ -23120,6 +23834,76 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<TestDatabaseResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestDatabaseResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestDatabaseResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<TestDatabaseResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestDatabaseResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestDatabaseResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<TestDatabaseResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestDatabaseResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestDatabaseResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -24511,6 +25295,21 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
     }
 
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
+    }
+
     /** Adds a network endpoint */
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
@@ -24894,6 +25693,9 @@ export interface TestRedisResource {
     withReferenceUri(name: string, uri: string): TestRedisResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): TestRedisResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestRedisResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestRedisResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestRedisResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestRedisResourcePromise;
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestRedisResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestRedisResourcePromise;
@@ -25017,6 +25819,9 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     withReferenceUri(name: string, uri: string): TestRedisResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): TestRedisResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestRedisResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestRedisResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestRedisResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestRedisResourcePromise;
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestRedisResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestRedisResourcePromise;
@@ -25762,6 +26567,76 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<TestRedisResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestRedisResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestRedisResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<TestRedisResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestRedisResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestRedisResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<TestRedisResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestRedisResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestRedisResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -27357,6 +28232,21 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
     }
 
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
+    }
+
     /** Adds a network endpoint */
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
@@ -27802,6 +28692,9 @@ export interface TestVaultResource {
     withReferenceUri(name: string, uri: string): TestVaultResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): TestVaultResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestVaultResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestVaultResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestVaultResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestVaultResourcePromise;
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestVaultResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestVaultResourcePromise;
@@ -27910,6 +28803,9 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     withReferenceUri(name: string, uri: string): TestVaultResourcePromise;
     withReferenceExternalService(externalService: Awaitable<ExternalServiceResource>): TestVaultResourcePromise;
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestVaultResourcePromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestVaultResourcePromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestVaultResourcePromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestVaultResourcePromise;
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestVaultResourcePromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): TestVaultResourcePromise;
@@ -28604,6 +29500,76 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._withReferenceEndpointInternal(endpointReference), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<TestVaultResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestVaultResourcePromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestVaultResourcePromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<TestVaultResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestVaultResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestVaultResourcePromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<TestVaultResource> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestVaultResourcePromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new TestVaultResourcePromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -30008,6 +30974,21 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
     /** Adds a reference to an endpoint */
     withReferenceEndpoint(endpointReference: Awaitable<EndpointReference>): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withReferenceEndpoint(endpointReference)), this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
     }
 
     /** Adds a network endpoint */
@@ -31981,6 +32962,9 @@ class ResourceWithContainerFilesPromiseImpl implements ResourceWithContainerFile
 export interface ResourceWithEndpoints {
     toJSON(): MarshalledHandle;
     withMcpServer(options?: WithMcpServerOptions): ResourceWithEndpointsPromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ResourceWithEndpointsPromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ResourceWithEndpointsPromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ResourceWithEndpointsPromise;
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ResourceWithEndpointsPromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ResourceWithEndpointsPromise;
@@ -31996,6 +32980,9 @@ export interface ResourceWithEndpoints {
 
 export interface ResourceWithEndpointsPromise extends PromiseLike<ResourceWithEndpoints> {
     withMcpServer(options?: WithMcpServerOptions): ResourceWithEndpointsPromise;
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ResourceWithEndpointsPromise;
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ResourceWithEndpointsPromise;
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ResourceWithEndpointsPromise;
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise;
     withHttpEndpoint(options?: WithHttpEndpointOptions): ResourceWithEndpointsPromise;
     withHttpsEndpoint(options?: WithHttpsEndpointOptions): ResourceWithEndpointsPromise;
@@ -32035,6 +33022,76 @@ class ResourceWithEndpointsImpl extends ResourceBuilderBase<IResourceWithEndpoin
         const path = options?.path;
         const endpointName = options?.endpointName;
         return new ResourceWithEndpointsPromiseImpl(this._withMcpServerInternal(path, endpointName), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointCallbackInternal(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, createIfNotExists?: boolean): Promise<ResourceWithEndpoints> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, endpointName, callback: callbackId };
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withEndpointCallback',
+            rpcArgs
+        );
+        return new ResourceWithEndpointsImpl(result, this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ResourceWithEndpointsPromise {
+        const createIfNotExists = options?.createIfNotExists;
+        return new ResourceWithEndpointsPromiseImpl(this._withEndpointCallbackInternal(endpointName, callback, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ResourceWithEndpoints> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withHttpEndpointCallback',
+            rpcArgs
+        );
+        return new ResourceWithEndpointsImpl(result, this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ResourceWithEndpointsPromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ResourceWithEndpointsPromiseImpl(this._withHttpEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
+    }
+
+    /** @internal */
+    private async _withHttpsEndpointCallbackInternal(callback: (obj: EndpointUpdateContext) => Promise<void>, name?: string, createIfNotExists?: boolean): Promise<ResourceWithEndpoints> {
+        const callbackId = registerCallback(async (objData: unknown) => {
+            const objHandle = wrapIfHandle(objData) as EndpointUpdateContextHandle;
+            const obj = new EndpointUpdateContextImpl(objHandle, this._client);
+            await callback(obj);
+        });
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, callback: callbackId };
+        if (name !== undefined) rpcArgs.name = name;
+        if (createIfNotExists !== undefined) rpcArgs.createIfNotExists = createIfNotExists;
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withHttpsEndpointCallback',
+            rpcArgs
+        );
+        return new ResourceWithEndpointsImpl(result, this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ResourceWithEndpointsPromise {
+        const name = options?.name;
+        const createIfNotExists = options?.createIfNotExists;
+        return new ResourceWithEndpointsPromiseImpl(this._withHttpsEndpointCallbackInternal(callback, name, createIfNotExists), this._client);
     }
 
     /** @internal */
@@ -32285,6 +33342,21 @@ class ResourceWithEndpointsPromiseImpl implements ResourceWithEndpointsPromise {
     /** Configures an MCP server endpoint on the resource */
     withMcpServer(options?: WithMcpServerOptions): ResourceWithEndpointsPromise {
         return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withMcpServer(options)), this._client);
+    }
+
+    /** Updates a named endpoint via callback */
+    withEndpointCallback(endpointName: string, callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithEndpointCallbackOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withEndpointCallback(endpointName, callback, options)), this._client);
+    }
+
+    /** Updates an HTTP endpoint via callback */
+    withHttpEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpEndpointCallbackOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpEndpointCallback(callback, options)), this._client);
+    }
+
+    /** Updates an HTTPS endpoint via callback */
+    withHttpsEndpointCallback(callback: (obj: EndpointUpdateContext) => Promise<void>, options?: WithHttpsEndpointCallbackOptions): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withHttpsEndpointCallback(callback, options)), this._client);
     }
 
     /** Adds a network endpoint */
@@ -33150,6 +34222,7 @@ registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.DistributedApplicationExecu
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.DistributedApplicationModel', (handle, client) => new DistributedApplicationModelImpl(handle as DistributedApplicationModelHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.EndpointReference', (handle, client) => new EndpointReferenceImpl(handle as EndpointReferenceHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.EndpointReferenceExpression', (handle, client) => new EndpointReferenceExpressionImpl(handle as EndpointReferenceExpressionHandle, client));
+registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.EndpointUpdateContext', (handle, client) => new EndpointUpdateContextImpl(handle as EndpointUpdateContextHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.EnvironmentCallbackContext', (handle, client) => new EnvironmentCallbackContextImpl(handle as EnvironmentCallbackContextHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.ExecuteCommandContext', (handle, client) => new ExecuteCommandContextImpl(handle as ExecuteCommandContextHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.InitializeResourceEvent', (handle, client) => new InitializeResourceEventImpl(handle as InitializeResourceEventHandle, client));
