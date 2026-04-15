@@ -117,7 +117,10 @@ param(
     [switch]$SkipPath,
 
     [Parameter(HelpMessage = "Keep downloaded archive files after installation")]
-    [switch]$KeepArchive
+    [switch]$KeepArchive,
+
+    [Parameter(HelpMessage = "Show help information")]
+    [switch]$Help
 )
 
 # Global constants
@@ -1324,6 +1327,35 @@ function Start-DownloadAndInstall {
 # =============================================================================
 
 try {
+    # Show help if requested
+    if ($Help) {
+        Write-Message @"
+Aspire CLI PR Download Script
+
+DESCRIPTION:
+    Downloads and installs the Aspire CLI from a specific pull request's latest successful build.
+    Automatically detects the current platform and architecture.
+
+Usage:
+    get-aspire-cli-pr.ps1 <PRNumber> [OPTIONS]
+    iex "& { `$(irm <url>/get-aspire-cli-pr.ps1) } <PRNumber> [OPTIONS]"
+
+OPTIONS:
+    -PRNumber <int>         Pull request number (required, positional)
+    -WorkflowRunId <long>   Workflow run ID to download from (optional)
+    -InstallPath <string>   Directory prefix to install
+    -OS <string>            Override OS detection (win, linux, linux-musl, osx)
+    -Architecture <string>  Override architecture detection (x64, arm64)
+    -HiveOnly               Only install NuGet packages to the hive, skip CLI download
+    -SkipExtension          Skip VS Code extension download and installation
+    -UseInsiders            Install extension to VS Code Insiders instead of VS Code
+    -SkipPath               Do not add the install path to PATH environment variable
+    -KeepArchive            Keep downloaded archive files after installation
+    -Help                   Show this help information
+"@ -Level Info
+        if ($InvokedFromFile) { exit 0 } else { return 0 }
+    }
+
     # Validate PRNumber is provided when not showing help
     if ($PRNumber -le 0) {
         Write-Message "Error: PRNumber parameter is required" -Level Error
