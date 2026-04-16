@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using System.Xml.Linq;
-using Aspire.Cli.Resources;
 using Aspire.Cli.Tests.Utils;
 using Hex1b.Automation;
 
@@ -541,7 +540,7 @@ internal static class CliE2EAutomatorHelpers
         timeout ??= TimeSpan.FromMinutes(2);
         await auto.TypeAsync("aspire destroy --yes");
         await auto.EnterAsync();
-        await auto.WaitUntilTextAsync(ConsoleActivityLoggerStrings.PipelineSucceeded, timeout: timeout.Value);
+        await auto.WaitForPipelineSuccessAsync(timeout: timeout.Value);
         await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(1));
     }
 }
