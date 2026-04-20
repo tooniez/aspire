@@ -630,14 +630,31 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
 
         if (resourceName is not null)
         {
-            var resource = appModel.Resources.FirstOrDefault(r => string.Equals(r.Name, resourceName, StringComparisons.ResourceName));
-            if (resource is null)
+            // Match by logical name (stream all instances) or resolved instance name like
+            // "apiservice-abc123" (stream just that one) — MCP advertises the resolved form.
+            foreach (var resource in appModel.Resources)
+            {
+                var resolvedNames = resource.GetResolvedResourceNames();
+
+                if (string.Equals(resource.Name, resourceName, StringComparisons.ResourceName))
+                {
+                    resourcesToLog.AddRange(resolvedNames);
+                    break;
+                }
+
+                var matchedInstance = resolvedNames.FirstOrDefault(n => string.Equals(n, resourceName, StringComparisons.ResourceName));
+                if (matchedInstance is not null)
+                {
+                    resourcesToLog.Add(matchedInstance);
+                    break;
+                }
+            }
+
+            if (resourcesToLog.Count == 0)
             {
                 logger.LogWarning("Resource '{ResourceName}' not found. No logs will be returned.", resourceName);
                 yield break;
             }
-
-            resourcesToLog.AddRange(resource.GetResolvedResourceNames());
         }
         else
         {
