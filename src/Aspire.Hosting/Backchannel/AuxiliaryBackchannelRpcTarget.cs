@@ -381,7 +381,7 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
 
     private WaitTargetResolutionResult ResolveWaitTarget(ResourceNotificationService notificationService, string requestedResourceName)
     {
-        var appModel = serviceProvider.GetService<DistributedApplicationModel>();
+        var appModel = serviceProvider.GetRequiredService<DistributedApplicationModel>();
         if (notificationService.TryGetCurrentState(requestedResourceName, out var resourceEvent))
         {
             return WaitTargetResolutionResult.Success(new WaitResourceTarget(
@@ -392,11 +392,6 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
 
         // During startup the resource may not have published its first snapshot yet, so fall back to
         // the app model to resolve the requested logical name or resolved resource id.
-        if (appModel is null)
-        {
-            return WaitTargetResolutionResult.Success(new WaitResourceTarget(requestedResourceName, requestedResourceName, requestedResourceName));
-        }
-
         var matchingResource = appModel.Resources.SingleOrDefault(resource => string.Equals(resource.Name, requestedResourceName, StringComparisons.ResourceName));
         if (matchingResource is not null)
         {
@@ -426,13 +421,8 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
         };
     }
 
-    private static string ResolveDisplayName(DistributedApplicationModel? appModel, string requestedResourceName, string resolvedResourceName)
+    private static string ResolveDisplayName(DistributedApplicationModel appModel, string requestedResourceName, string resolvedResourceName)
     {
-        if (appModel is null)
-        {
-            return requestedResourceName;
-        }
-
         var matchingResource = appModel.Resources
             .Select(resource => new { Resource = resource, ResolvedResourceNames = resource.GetResolvedResourceNames() })
             .SingleOrDefault(match => match.ResolvedResourceNames.Any(resourceName => string.Equals(resourceName, resolvedResourceName, StringComparisons.ResourceName)));
@@ -550,14 +540,9 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
     /// <returns>A list of resource snapshots.</returns>
     public async Task<List<ResourceSnapshot>> GetResourceSnapshotsAsync(CancellationToken cancellationToken = default)
     {
-        var appModel = serviceProvider.GetService<DistributedApplicationModel>();
+        var appModel = serviceProvider.GetRequiredService<DistributedApplicationModel>();
         var notificationService = serviceProvider.GetRequiredService<ResourceNotificationService>();
         var results = new List<ResourceSnapshot>();
-
-        if (appModel is null)
-        {
-            return results;
-        }
 
         // Get current state for each resource directly using TryGetCurrentState
         foreach (var resource in appModel.Resources)
@@ -763,42 +748,14 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
         var appModel = serviceProvider.GetRequiredService<DistributedApplicationModel>();
 
         // Step 1: Calculate the resource names
-        var resourcesToLog = new List<string>();
+        var resourcesToLog = resourceName is not null
+            ? ResolveResourceIds(appModel, resourceName)
+            : ResolveAllResourceIds(appModel);
 
-        if (resourceName is not null)
+        if (resourceName is not null && resourcesToLog.Count == 0)
         {
-            // Match by logical name (stream all instances) or resolved instance name like
-            // "apiservice-abc123" (stream just that one) — MCP advertises the resolved form.
-            foreach (var resource in appModel.Resources)
-            {
-                var resolvedNames = resource.GetResolvedResourceNames();
-
-                if (string.Equals(resource.Name, resourceName, StringComparisons.ResourceName))
-                {
-                    resourcesToLog.AddRange(resolvedNames);
-                    break;
-                }
-
-                var matchedInstance = resolvedNames.FirstOrDefault(n => string.Equals(n, resourceName, StringComparisons.ResourceName));
-                if (matchedInstance is not null)
-                {
-                    resourcesToLog.Add(matchedInstance);
-                    break;
-                }
-            }
-
-            if (resourcesToLog.Count == 0)
-            {
-                logger.LogWarning("Resource '{ResourceName}' not found. No logs will be returned.", resourceName);
-                yield break;
-            }
-        }
-        else
-        {
-            foreach (var resource in appModel.Resources)
-            {
-                resourcesToLog.AddRange(resource.GetResolvedResourceNames());
-            }
+            logger.LogWarning("Resource '{ResourceName}' not found. No logs will be returned.", resourceName);
+            yield break;
         }
 
         if (resourcesToLog.Count == 0)
@@ -875,11 +832,7 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
         ArgumentException.ThrowIfNullOrWhiteSpace(resourceName);
         ArgumentException.ThrowIfNullOrWhiteSpace(toolName);
 
-        var appModel = serviceProvider.GetService<DistributedApplicationModel>();
-        if (appModel is null)
-        {
-            throw new InvalidOperationException("Application model not found.");
-        }
+        var appModel = serviceProvider.GetRequiredService<DistributedApplicationModel>();
 
         var resource = appModel.Resources
             .OfType<IResourceWithEndpoints>()
@@ -1071,5 +1024,44 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
 
         // Fall back to double for floating point
         return element.GetDouble();
+    }
+
+    /// <summary>
+    /// Resolves a resource name (logical or resolved instance name) to the list of matching resource IDs.
+    /// Matches by logical name first (returning all instances), then falls back to matching a specific
+    /// resolved instance name like "apiservice-abc123".
+    /// </summary>
+    private static List<string> ResolveResourceIds(DistributedApplicationModel appModel, string resourceName)
+    {
+        foreach (var resource in appModel.Resources)
+        {
+            var resolvedNames = resource.GetResolvedResourceNames();
+
+            if (string.Equals(resource.Name, resourceName, StringComparisons.ResourceName))
+            {
+                return [.. resolvedNames];
+            }
+
+            var matchedInstance = resolvedNames.FirstOrDefault(n => string.Equals(n, resourceName, StringComparisons.ResourceName));
+            if (matchedInstance is not null)
+            {
+                return [matchedInstance];
+            }
+        }
+
+        return [];
+    }
+
+    /// <summary>
+    /// Returns the resolved resource IDs for all resources in the application model.
+    /// </summary>
+    private static List<string> ResolveAllResourceIds(DistributedApplicationModel appModel)
+    {
+        var result = new List<string>();
+        foreach (var resource in appModel.Resources)
+        {
+            result.AddRange(resource.GetResolvedResourceNames());
+        }
+        return result;
     }
 }
