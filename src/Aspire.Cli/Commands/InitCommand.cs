@@ -299,7 +299,7 @@ internal sealed class InitCommand : BaseCommand, IPackageMetaPrefetchingCommand
                                 # Add ServiceDefaults reference to selected projects?
 
                                 Do you want to add a reference to the ServiceDefaults project to
-                                the executable projects that will be added to the AppHost? The 
+                                the executable projects that will be added to the AppHost? The
                                 ServiceDefaults project contains helper code to make it easier
                                 for you to configure telemetry and service discovery in Aspire.
                                 """;

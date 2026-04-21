@@ -643,20 +643,20 @@ internal class DotNetTemplateFactory(
     private async Task<(NuGetPackage Package, PackageChannel Channel)> GetProjectTemplatesVersionAsync(TemplateInputs inputs, CancellationToken cancellationToken)
     {
         var allChannels = await packagingService.GetChannelsAsync(cancellationToken);
-        
+
         // Check if channel was provided via inputs (highest priority)
         var channelName = inputs.Channel;
-        
+
         // If no channel in inputs, check for global channel setting
         if (string.IsNullOrEmpty(channelName))
         {
             channelName = await configurationService.GetConfigurationAsync("channel", cancellationToken);
         }
-        
+
         IEnumerable<PackageChannel> channels;
         var hasPrHives = executionContext.GetPrHiveCount() > 0;
         bool hasChannelSetting = !string.IsNullOrEmpty(channelName);
-        
+
         if (hasChannelSetting)
         {
             // If --channel option is provided or global channel setting exists, find the matching channel
@@ -673,7 +673,7 @@ internal class DotNetTemplateFactory(
             // If there are hives (PR build directories), include all channels.
             // Otherwise, only use the implicit/default channel to avoid prompting.
             channels = hasPrHives
-                ? allChannels 
+                ? allChannels
                 : allChannels.Where(c => c.Type is PackageChannelType.Implicit);
         }
 
