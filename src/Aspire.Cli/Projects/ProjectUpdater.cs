@@ -392,9 +392,10 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
 
     internal static async Task UpdateSdkVersionInAppHostAsync(FileInfo projectFile, NuGetPackageCli package, IInteractionService interactionService, SdkMigrationInfo migrationInfo)
     {
-        if (string.Equals(projectFile.Extension, ".csproj", StringComparison.OrdinalIgnoreCase))
+        // Handles .cs|fs|vbproj files
+        if (ProjectFileExtensions.Supported.Contains(projectFile.Extension))
         {
-            await UpdateSdkVersionInCsprojAppHostAsync(projectFile, package);
+            await UpdateSdkVersionInProjectAppHostAsync(projectFile, package);
 
             // Display migration feedback messages
             if (migrationInfo.WillMigrateToNewFormat)
@@ -419,7 +420,7 @@ internal sealed partial class ProjectUpdater(ILogger<ProjectUpdater> logger, IDo
         }
     }
 
-    internal static async Task UpdateSdkVersionInCsprojAppHostAsync(FileInfo projectFile, NuGetPackageCli package)
+    internal static async Task UpdateSdkVersionInProjectAppHostAsync(FileInfo projectFile, NuGetPackageCli package)
     {
         var projectDocument = new XmlDocument();
         projectDocument.PreserveWhitespace = true;
