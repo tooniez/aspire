@@ -1461,7 +1461,7 @@ public class CSharpAppResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public CSharpAppResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -1473,7 +1473,7 @@ public class CSharpAppResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private CSharpAppResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -4328,7 +4328,7 @@ public class ContainerResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public ContainerResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -4340,7 +4340,7 @@ public class ContainerResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private ContainerResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -6624,7 +6624,7 @@ public class DotnetToolResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public DotnetToolResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -6636,7 +6636,7 @@ public class DotnetToolResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private DotnetToolResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -8691,7 +8691,7 @@ public class ExecutableResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public ExecutableResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -8703,7 +8703,7 @@ public class ExecutableResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private ExecutableResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -14083,7 +14083,7 @@ public class ProjectResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public ProjectResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -14095,7 +14095,7 @@ public class ProjectResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private ProjectResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -16479,7 +16479,7 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public TestDatabaseResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -16491,7 +16491,7 @@ public class TestDatabaseResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private TestDatabaseResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -18362,7 +18362,7 @@ public class TestRedisResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public TestRedisResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -18374,7 +18374,7 @@ public class TestRedisResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private TestRedisResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));
@@ -20398,7 +20398,7 @@ public class TestVaultResource extends ResourceBuilderBase {
         super(handle, client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     public TestVaultResource withBrowserLogs(WithBrowserLogsOptions options) {
         var browser = options == null ? null : options.getBrowser();
         var profile = options == null ? null : options.getProfile();
@@ -20410,7 +20410,7 @@ public class TestVaultResource extends ResourceBuilderBase {
         return withBrowserLogs(null);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     private TestVaultResource withBrowserLogsImpl(String browser, String profile, BrowserUserDataMode userDataMode) {
         Map<String, Object> reqArgs = new HashMap<>();
         reqArgs.put("builder", AspireClient.serializeValue(getHandle()));

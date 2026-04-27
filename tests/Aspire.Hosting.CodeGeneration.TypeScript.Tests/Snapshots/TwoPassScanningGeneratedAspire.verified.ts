@@ -8621,7 +8621,7 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
         return new ContainerResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ContainerResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -10434,7 +10434,7 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -11170,7 +11170,7 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
         return new CSharpAppResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): CSharpAppResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -12724,7 +12724,7 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -13390,7 +13390,7 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
         return new DotnetToolResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): DotnetToolResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -15016,7 +15016,7 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -15695,7 +15695,7 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
         return new ExecutableResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ExecutableResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -17231,7 +17231,7 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -20170,7 +20170,7 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
         return new ProjectResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ProjectResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -21724,7 +21724,7 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -22412,7 +22412,7 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
         return new TestDatabaseResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): TestDatabaseResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -24225,7 +24225,7 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -25025,7 +25025,7 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
         return new TestRedisResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): TestRedisResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -27066,7 +27066,7 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -27916,7 +27916,7 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
         return new TestVaultResourceImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): TestVaultResourcePromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -29744,7 +29744,7 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
@@ -31982,7 +31982,7 @@ class ResourceWithEndpointsImpl extends ResourceBuilderBase<IResourceWithEndpoin
         return new ResourceWithEndpointsImpl(result, this._client);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ResourceWithEndpointsPromise {
         const browser = options?.browser;
         const profile = options?.profile;
@@ -32304,7 +32304,7 @@ class ResourceWithEndpointsPromiseImpl implements ResourceWithEndpointsPromise {
         return this._promise.then(onfulfilled, onrejected);
     }
 
-    /** Adds a child browser logs resource that opens tracked browser sessions and captures browser logs. */
+    /** Adds a child browser logs resource that opens tracked browser sessions, captures browser logs, and captures screenshots. */
     withBrowserLogs(options?: WithBrowserLogsOptions): ResourceWithEndpointsPromise {
         return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withBrowserLogs(options)), this._client);
     }
