@@ -53,8 +53,8 @@ export type ViewMode = 'workspace' | 'global';
  *
  * Owns two independent data sources:
  *  - `aspire describe --follow` (workspace mode) — streams resource updates
- *    via NDJSON.  Runs unconditionally from activation so workspace data is
- *    available across the extension.
+ *    via NDJSON.  Only active while the tree-view panel is visible **and**
+ *    workspace mode is selected.
  *  - `aspire ps` polling (global mode) — periodically fetches all running
  *    app hosts.  Only active while the tree-view panel is visible **and**
  *    global mode is selected.
@@ -70,10 +70,11 @@ export class AppHostDataRepository {
     // ── Workspace mode state (describe --follow) ──
     private _workspaceResources: Map<string, ResourceJson> = new Map();
     private _describeProcess: ChildProcessWithoutNullStreams | undefined;
-    private _describeRestarting = false;
     private _describeRestartDelay = 5000;
     private _describeRestartTimer: ReturnType<typeof setTimeout> | undefined;
     private _describeReceivedData = false;
+    private _describeStartPending = false;
+    private _describeStartVersion = 0;
 
     // ── Global mode state (ps polling) ──
     private _appHosts: AppHostDisplayInfo[] = [];
@@ -163,7 +164,9 @@ export class AppHostDataRepository {
         this._setError(undefined);
         this._updateWorkspaceContext();
         this._describeRestartDelay = 5000;
-        this._startDescribeWatch();
+        if (this._shouldWatchWorkspace) {
+            this._startDescribeWatch();
+        }
         if (this._shouldPoll) {
             this._fetchAppHosts();
         }
@@ -171,7 +174,7 @@ export class AppHostDataRepository {
 
     activate(): void {
         vscode.commands.executeCommand('setContext', 'aspire.viewMode', this._viewMode);
-        this._startDescribeWatch();
+        this._syncPolling();
     }
 
     dispose(): void {
@@ -189,10 +192,21 @@ export class AppHostDataRepository {
         return this._panelVisible && this._viewMode === 'global';
     }
 
+    private get _shouldWatchWorkspace(): boolean {
+        return this._panelVisible && this._viewMode === 'workspace';
+    }
+
     private _syncPolling(): void {
         if (this._disposed) {
             return;
         }
+
+        if (this._shouldWatchWorkspace) {
+            this._startDescribeWatch();
+        } else {
+            this._stopDescribeWatch({ clearWorkspaceResources: true });
+        }
+
         if (this._shouldPoll) {
             this._startPsPolling();
         } else {
@@ -260,12 +274,17 @@ export class AppHostDataRepository {
     // ── Workspace mode: describe --follow ──
 
     private _startDescribeWatch(): void {
-        if (this._describeProcess || this._disposed) {
+        if (this._describeProcess || this._describeStartPending || this._disposed) {
             return;
         }
 
+        this._loadingWorkspace = true;
+        this._updateLoadingContext();
+        this._describeStartPending = true;
+        const startVersion = ++this._describeStartVersion;
+
         this._terminalProvider.getAspireCliExecutablePath().then(cliPath => {
-            if (this._disposed) {
+            if (this._disposed || !this._shouldWatchWorkspace || startVersion !== this._describeStartVersion) {
                 return;
             }
 
@@ -274,16 +293,23 @@ export class AppHostDataRepository {
             extensionLogOutputChannel.info('Starting aspire describe --follow for workspace resources');
 
             this._describeReceivedData = false;
-            this._describeProcess = spawnCliProcess(this._terminalProvider, cliPath, args, {
+            const describeProcess = spawnCliProcess(this._terminalProvider, cliPath, args, {
                 noExtensionVariables: true,
                 lineCallback: (line) => {
+                    if (this._describeProcess !== describeProcess) {
+                        return;
+                    }
                     this._handleDescribeLine(line);
                 },
                 exitCallback: (code) => {
+                    if (this._describeProcess !== describeProcess) {
+                        return;
+                    }
+
                     extensionLogOutputChannel.info(`aspire describe --follow exited with code ${code}`);
                     this._describeProcess = undefined;
 
-                    if (!this._disposed && !this._describeRestarting) {
+                    if (!this._disposed) {
                         if (!this._describeReceivedData && code !== 0) {
                             // The process exited with a non-zero code without ever producing valid data.
                             // This is expected when no apphost is running. Don't set the error state
@@ -303,42 +329,68 @@ export class AppHostDataRepository {
                             extensionLogOutputChannel.info(`Restarting describe --follow in ${delay}ms`);
                             this._describeRestartTimer = setTimeout(() => {
                                 this._describeRestartTimer = undefined;
-                                if (!this._disposed) {
+                                if (!this._disposed && this._shouldWatchWorkspace) {
                                     this._startDescribeWatch();
                                 }
                             }, delay);
                         }
                     }
-                    this._describeRestarting = false;
                 },
                 errorCallback: (error) => {
+                    if (this._describeProcess !== describeProcess) {
+                        return;
+                    }
+
                     extensionLogOutputChannel.warn(`aspire describe --follow error: ${error.message}`);
                     this._describeProcess = undefined;
-                    if (!this._disposed && !this._describeRestarting) {
+                    if (!this._disposed) {
                         this._loadingWorkspace = false;
                         this._updateLoadingContext();
                         this._setError(errorFetchingAppHosts(error.message));
                     }
                 }
             });
+            this._describeProcess = describeProcess;
         }).catch(error => {
+            if (this._disposed || !this._shouldWatchWorkspace || startVersion !== this._describeStartVersion) {
+                return;
+            }
             extensionLogOutputChannel.warn(`Failed to start describe watch: ${error}`);
             this._loadingWorkspace = false;
             this._updateLoadingContext();
             this._setError(errorFetchingAppHosts(String(error)));
+        }).finally(() => {
+            if (startVersion === this._describeStartVersion) {
+                this._describeStartPending = false;
+            }
         });
     }
 
-    private _stopDescribeWatch(): void {
+    private _stopDescribeWatch(options?: { clearWorkspaceResources?: boolean }): void {
+        this._describeStartVersion++;
+        this._describeStartPending = false;
         if (this._describeRestartTimer) {
             clearTimeout(this._describeRestartTimer);
             this._describeRestartTimer = undefined;
         }
         if (this._describeProcess) {
-            this._describeRestarting = true;
-            this._describeProcess.kill();
+            const describeProcess = this._describeProcess;
+            extensionLogOutputChannel.info('Stopping aspire describe --follow for workspace resources');
             this._describeProcess = undefined;
+            describeProcess.kill();
         }
+        if (options?.clearWorkspaceResources) {
+            this._clearWorkspaceResources();
+        }
+    }
+
+    private _clearWorkspaceResources(): void {
+        if (this._workspaceResources.size === 0) {
+            return;
+        }
+
+        this._workspaceResources.clear();
+        this._updateWorkspaceContext();
     }
 
     private _handleDescribeLine(line: string): void {
@@ -388,6 +440,7 @@ export class AppHostDataRepository {
         if (this._pollingInterval) {
             clearInterval(this._pollingInterval);
             this._pollingInterval = undefined;
+            extensionLogOutputChannel.info(`aspire ps polling stopped`);
         }
     }
 
