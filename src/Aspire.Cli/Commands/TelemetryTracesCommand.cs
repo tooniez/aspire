@@ -13,6 +13,7 @@ using Aspire.Otlp.Serialization;
 using Aspire.Cli.Utils;
 using Aspire.Dashboard.Otlp.Model;
 using Aspire.Dashboard.Utils;
+using Aspire.Shared.ConsoleLogs;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
 
@@ -153,8 +154,20 @@ internal sealed class TelemetryTracesCommand : BaseCommand
 
         if (format == OutputFormat.Json)
         {
-            // Structured output always goes to stdout.
-            _interactionService.DisplayRawText(json, ConsoleOutput.Standard);
+            var apiResponse = JsonSerializer.Deserialize(json, OtlpJsonSerializerContext.Default.TelemetryApiResponse);
+            var resourceSpans = apiResponse?.Data?.ResourceSpans;
+            var traces = SharedAIHelpers.GetTracesFromOtlpData(resourceSpans);
+            var trace = traces.FirstOrDefault();
+            if (trace is null)
+            {
+                // Shouldn't happen since API would return 404 if trace not found.
+                _interactionService.DisplayRawText("[]", ConsoleOutput.Standard);
+            }
+            else
+            {
+                Func<IOtlpResource, string> getResourceName = s => OtlpHelpers.GetResourceName(s, allOtlpResources);
+                _interactionService.DisplayRawText(SharedAIHelpers.SerializeTraceToJson(trace, getResourceName, dashboardUrl), ConsoleOutput.Standard);
+            }
         }
         else
         {
@@ -202,8 +215,10 @@ internal sealed class TelemetryTracesCommand : BaseCommand
 
         if (format == OutputFormat.Json)
         {
-            // Structured output always goes to stdout.
-            _interactionService.DisplayRawText(json, ConsoleOutput.Standard);
+            var apiResponse = JsonSerializer.Deserialize(json, OtlpJsonSerializerContext.Default.TelemetryApiResponse);
+            var resourceSpans = apiResponse?.Data?.ResourceSpans;
+            Func<IOtlpResource, string> getResourceName = s => OtlpHelpers.GetResourceName(s, allOtlpResources);
+            _interactionService.DisplayRawText(SharedAIHelpers.SerializeTracesToJson(resourceSpans, getResourceName, dashboardUrl), ConsoleOutput.Standard);
         }
         else
         {
