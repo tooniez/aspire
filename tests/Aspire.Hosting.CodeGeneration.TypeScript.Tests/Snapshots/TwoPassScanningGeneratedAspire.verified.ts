@@ -2280,6 +2280,8 @@ export interface EndpointReference {
     url(): Promise<string>;
     /** Gets the URL of the endpoint asynchronously */
     getValueAsync(options?: GetValueAsyncOptions): Promise<string>;
+    /** Gets the specified property expression of the endpoint */
+    property(property: EndpointProperty): Promise<EndpointReferenceExpression>;
     /** Gets a conditional expression that resolves to the enabledValue when TLS is enabled on the endpoint, or to the disabledValue otherwise. */
     getTlsValue(enabledValue: ReferenceExpression, disabledValue: ReferenceExpression): Promise<ReferenceExpression>;
 }
@@ -2315,6 +2317,8 @@ export interface EndpointReferencePromise extends PromiseLike<EndpointReference>
     url(): Promise<string>;
     /** Gets the URL of the endpoint asynchronously */
     getValueAsync(options?: GetValueAsyncOptions): Promise<string>;
+    /** Gets the specified property expression of the endpoint */
+    property(property: EndpointProperty): Promise<EndpointReferenceExpression>;
     /** Gets a conditional expression that resolves to the enabledValue when TLS is enabled on the endpoint, or to the disabledValue otherwise. */
     getTlsValue(enabledValue: ReferenceExpression, disabledValue: ReferenceExpression): Promise<ReferenceExpression>;
 }
@@ -2456,6 +2460,14 @@ class EndpointReferenceImpl implements EndpointReference {
         );
     }
 
+    async property(property: EndpointProperty): Promise<EndpointReferenceExpression> {
+        const rpcArgs: Record<string, unknown> = { context: this._handle, property };
+        return await this._client.invokeCapability<EndpointReferenceExpression>(
+            'Aspire.Hosting.ApplicationModel/EndpointReference.property',
+            rpcArgs
+        );
+    }
+
     async getTlsValue(enabledValue: ReferenceExpression, disabledValue: ReferenceExpression): Promise<ReferenceExpression> {
         const rpcArgs: Record<string, unknown> = { context: this._handle, enabledValue, disabledValue };
         return await this._client.invokeCapability<ReferenceExpression>(
@@ -2539,6 +2551,10 @@ class EndpointReferencePromiseImpl implements EndpointReferencePromise {
 
     getValueAsync(options?: GetValueAsyncOptions): Promise<string> {
         return this._promise.then(obj => obj.getValueAsync(options));
+    }
+
+    property(property: EndpointProperty): Promise<EndpointReferenceExpression> {
+        return this._promise.then(obj => obj.property(property));
     }
 
     getTlsValue(enabledValue: ReferenceExpression, disabledValue: ReferenceExpression): Promise<ReferenceExpression> {

@@ -3855,6 +3855,16 @@ class EndpointReference:
         )
         return result
 
+    def property(self, property: EndpointProperty) -> EndpointReferenceExpression:
+        """Gets the specified property expression of the endpoint"""
+        rpc_args: dict[str, typing.Any] = {'context': self._handle}
+        rpc_args['property'] = property
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/EndpointReference.property',
+            rpc_args,
+        )
+        return typing.cast(EndpointReferenceExpression, result)
+
     def get_tls_value(self, enabled_value: ReferenceExpression, disabled_value: ReferenceExpression) -> ReferenceExpression:
         """Gets a conditional expression that resolves to the enabledValue when TLS is enabled on the endpoint, or to the disabledValue otherwise."""
         rpc_args: dict[str, typing.Any] = {'context': self._handle}
