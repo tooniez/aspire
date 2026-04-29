@@ -10923,6 +10923,19 @@ func (s *IUserSecretsManager) TrySetSecret(name string, value string) (*bool, er
 	return result.(*bool), nil
 }
 
+// TryDeleteSecret attempts to delete a user secret value
+func (s *IUserSecretsManager) TryDeleteSecret(name string) (*bool, error) {
+	reqArgs := map[string]any{
+		"context": SerializeValue(s.Handle()),
+	}
+	reqArgs["name"] = SerializeValue(name)
+	result, err := s.Client().InvokeCapability("Aspire.Hosting/IUserSecretsManager.tryDeleteSecret", reqArgs)
+	if err != nil {
+		return nil, err
+	}
+	return result.(*bool), nil
+}
+
 // SaveStateJson saves state to user secrets from a JSON string
 func (s *IUserSecretsManager) SaveStateJson(json string, cancellationToken *CancellationToken) error {
 	reqArgs := map[string]any{

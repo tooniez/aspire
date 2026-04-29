@@ -7489,6 +7489,8 @@ export interface UserSecretsManager {
     filePath(): Promise<string>;
     /** Attempts to set a user secret value */
     trySetSecret(name: string, value: string): Promise<boolean>;
+    /** Attempts to delete a user secret value */
+    tryDeleteSecret(name: string): Promise<boolean>;
     /** Saves state to user secrets from a JSON string */
     saveStateJson(json: string, options?: SaveStateJsonOptions): UserSecretsManagerPromise;
     /** Gets a secret value if it exists, or sets it to the provided value if it does not */
@@ -7502,6 +7504,8 @@ export interface UserSecretsManagerPromise extends PromiseLike<UserSecretsManage
     filePath(): Promise<string>;
     /** Attempts to set a user secret value */
     trySetSecret(name: string, value: string): Promise<boolean>;
+    /** Attempts to delete a user secret value */
+    tryDeleteSecret(name: string): Promise<boolean>;
     /** Saves state to user secrets from a JSON string */
     saveStateJson(json: string, options?: SaveStateJsonOptions): UserSecretsManagerPromise;
     /** Gets a secret value if it exists, or sets it to the provided value if it does not */
@@ -7539,6 +7543,14 @@ class UserSecretsManagerImpl implements UserSecretsManager {
         const rpcArgs: Record<string, unknown> = { context: this._handle, name, value };
         return await this._client.invokeCapability<boolean>(
             'Aspire.Hosting/IUserSecretsManager.trySetSecret',
+            rpcArgs
+        );
+    }
+
+    async tryDeleteSecret(name: string): Promise<boolean> {
+        const rpcArgs: Record<string, unknown> = { context: this._handle, name };
+        return await this._client.invokeCapability<boolean>(
+            'Aspire.Hosting/IUserSecretsManager.tryDeleteSecret',
             rpcArgs
         );
     }
@@ -7601,6 +7613,10 @@ class UserSecretsManagerPromiseImpl implements UserSecretsManagerPromise {
 
     trySetSecret(name: string, value: string): Promise<boolean> {
         return this._promise.then(obj => obj.trySetSecret(name, value));
+    }
+
+    tryDeleteSecret(name: string): Promise<boolean> {
+        return this._promise.then(obj => obj.tryDeleteSecret(name));
     }
 
     saveStateJson(json: string, options?: SaveStateJsonOptions): UserSecretsManagerPromise {

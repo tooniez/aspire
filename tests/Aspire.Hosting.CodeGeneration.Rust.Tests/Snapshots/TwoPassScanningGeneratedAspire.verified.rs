@@ -10175,6 +10175,15 @@ impl IUserSecretsManager {
         Ok(serde_json::from_value(result)?)
     }
 
+    /// Attempts to delete a user secret value
+    pub fn try_delete_secret(&self, name: &str) -> Result<bool, Box<dyn std::error::Error>> {
+        let mut args: HashMap<String, Value> = HashMap::new();
+        args.insert("context".to_string(), self.handle.to_json());
+        args.insert("name".to_string(), serde_json::to_value(&name).unwrap_or(Value::Null));
+        let result = self.client.invoke_capability("Aspire.Hosting/IUserSecretsManager.tryDeleteSecret", args)?;
+        Ok(serde_json::from_value(result)?)
+    }
+
     /// Saves state to user secrets from a JSON string
     pub fn save_state_json(&self, json: &str, cancellation_token: Option<&CancellationToken>) -> Result<(), Box<dyn std::error::Error>> {
         let mut args: HashMap<String, Value> = HashMap::new();
