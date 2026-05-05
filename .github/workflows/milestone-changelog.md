@@ -1,6 +1,6 @@
 ---
 description: |
-  Generates and maintains a changelog for a configured Aspire milestone by
+  Generates and maintains a changelog for a configured milestone by
   analyzing merged pull requests.
   Creates or updates a wiki page named "<milestone>-Change-log" with a list
   of new features, improvements, and notable bug fixes. A companion GitHub issue collects
@@ -36,6 +36,8 @@ description: |
 # ──────────────────────────────────────────────────────────
 
 env:
+  PRODUCT: "Aspire"
+  REPO: "microsoft/aspire"
   MILESTONE: "13.3"
   BATCH_SIZE: "20"
 
@@ -226,7 +228,8 @@ permissions:
 network: defaults
 
 tools:
-  bash: [":*"]
+  # Default safe commands + commands observed in actual workflow runs
+  bash: ["cat", "cd", "cp", "date", "echo", "gh", "grep", "head", "jq", "ls", "mkdir", "mv", "python3", "pwd", "rm", "sort", "tail", "uniq", "wc", "xargs", "xxd"]
   github:
     toolsets: [repos, issues, pull_requests, search]
     # Allow reading PR data from external contributors. These PRs have already
@@ -357,19 +360,29 @@ steps:
 
 # Milestone Changelog Generator
 
-Generate and maintain a changelog for the **Aspire ${MILESTONE} milestone** as a wiki page.
+Generate and maintain a changelog for the **${PRODUCT} ${MILESTONE} milestone** as a wiki page.
 Each run appends newly merged changes to the existing content while preserving
 previous entries. A companion feedback issue collects editorial comments.
 
-> **Note:** `${MILESTONE}` and `${BATCH_SIZE}` refer to values set in the workflow's
-> `env` block (currently **`13.3`** and **`20`**). All file names, titles, and
+> **Note:** `${PRODUCT}`, `${REPO}`, `${MILESTONE}`, and `${BATCH_SIZE}` refer to values set in the workflow's
+> `env` block (currently **`Aspire`**, **`microsoft/aspire`**, **`13.3`**, and **`20`**). All file names, titles, and
 > references below derive from those values.
 
 ## Important: available tools
 
-All shell commands are available via the `bash` tool. Prefer `cat` and `jq` for
-JSON processing (parsing, filtering, counting, transforming). Do **not** `cat`
-large JSON files in their entirety — use `jq` to extract only the fields you need.
+Only the commands in the `bash` allow list above are available — **not** all shell
+commands. Prefer `cat` and `jq` for JSON processing (parsing, filtering, counting,
+transforming). Do **not** `cat` large JSON files in their entirety — use `jq` to
+extract only the fields you need.
+
+**Shell syntax restriction:** The bash tool does **not** support shell builtins or
+syntax constructs like `for`, `while`, `if`, function definitions, or heredocs.
+These will be denied. To perform batch operations (e.g., writing multiple files),
+use one of these patterns:
+- Pipe data through `xargs` (e.g., `echo '...' | xargs -I{} sh -c '...'` is NOT
+  allowed — instead issue one `bash` call per file)
+- Use `python3 -c '...'` for complex batch logic
+- Issue separate `bash` tool calls for each file (preferred for clarity)
 
 ## Configuration
 
@@ -442,7 +455,7 @@ unprocessed PRs, sorted by `mergedAt` ascending (oldest first). Each entry conta
 1. **Exclude bot-authored PRs** — remove any PR whose `author.is_bot` is `true`,
    **except** these cases which should be processed normally:
    - `app/copilot-swe-agent` — makes product changes on behalf of developers.
-   - **Backport PRs** — PRs whose body contains the word `backport` or `port`
+   - **Backport PRs** — PRs whose body contains the word `backport`
      and, upon inspection, appears to be a backport of another PR (e.g.,
      references an original PR number). These are created by backport bots
      and contain the same meaningful changes as their source PRs, just
@@ -460,16 +473,18 @@ total number of changed lines (additions + deletions).
 ### 3a. Processing backport PRs
 
 Backport PRs are identified by checking whether the PR body contains the word
-`backport` or `port` (case-insensitive). If either word is present, inspect the
-body text to determine whether the PR is actually a backport of another PR —
-look for references to an original PR number (e.g., "Backport of #1234",
-"port of #5678", a markdown link to another PR, etc.). Their body typically
+`backport` (case-insensitive). Do **not** match on the standalone word `port` —
+it appears too frequently in non-backport contexts (e.g., "containerPort",
+"port binding", "transport"). If `backport` is present, inspect the body text
+to determine whether the PR is actually a backport of another PR — look for
+references to an original PR number (e.g., "Backport of #1234", a markdown
+link to another PR, etc.). Their body typically
 contains only this backport reference plus a shiproom template that may be unfilled
 or partially filled. To process them:
 
 1. **Extract the original PR number** from the body by inspecting the text for
-   a reference to the source PR (e.g., "Backport of #1234", "#1234", or a
-   full URL like `https://github.com/microsoft/aspire/pull/1234`).
+   a reference to the source PR (e.g., "Backport of #1234", or a full URL
+   like `https://github.com/${REPO}/pull/1234`).
 2. **Fetch the original PR** using `pull_request_read` to get its full title,
    body/description, labels, and changed file paths. Use the original PR's
    content as the primary source for generating the changelog entry.
@@ -501,8 +516,7 @@ conditions are true:
 1. The PR title is vague or generic (e.g., "Fix", "Update", "Cleanup", "Address feedback",
    "Misc changes").
 2. The PR body/description is empty or contains only a template with no filled-in details.
-3. The changed file paths don't align with what the title/body describe (e.g., title says
-   "Dashboard fix" but files are in `src/Aspire.Cli/`).
+3. The changed file paths don't align with what the title/body describe.
 
 When reading the diff, **ignore generated files and playground app changes** — files matching these patterns:
 - `*/api/*.cs` (public API surface files)
@@ -549,7 +563,7 @@ bug fix in the Dashboard) should produce a separate entry for each. Every entry
 references the same PR number in its Changes line. Because the changelog is
 published to a **wiki page** (not an issue or PR), GitHub does not auto-link
 `#1234`-style shorthand references. Always use full markdown links:
-`[#1234](https://github.com/microsoft/aspire/pull/1234)`.
+`[#1234](https://github.com/${REPO}/pull/1234)`.
 
 ### 5a. Determine product area
 
@@ -587,7 +601,7 @@ Then determine whether either of these optional flags applies:
 | Flag | Emoji | When to set |
 |------|-------|-------------|
 | **Breaking change** | ⚠️ | Removed or renamed API, changed default behavior, migration required |
-| **Docs required** | 📝 | Change needs documentation on aspire.dev (new feature, changed behavior, new config options) |
+| **Docs required** | 📝 | Change needs documentation (new feature, changed behavior, new config options) |
 | **Community contribution** | 🌍 | PR author's `author_association` is not `MEMBER` or `OWNER`, **and** the PR's `author.is_bot` (from the batch data) is not `true` — i.e., the author is a human external community contributor. For **backport PRs** (Step 3a), use the original PR author's `author_association` and ignore the backport bot's `is_bot` flag. |
 
 > **Important — verifying `author_association`:** The `pull_request_read` MCP tool
@@ -596,7 +610,7 @@ Then determine whether either of these optional flags applies:
 > explicitly using the `bash` tool:
 >
 > ```bash
-> gh api "repos/microsoft/aspire/pulls/<NUMBER>" --jq '.author_association'
+> gh api "repos/${REPO}/pulls/<NUMBER>" --jq '.author_association'
 > ```
 >
 > **Never infer community-contributor status from fork origin, username, or any
@@ -607,7 +621,7 @@ A change can have zero or more flags. When present, show each flag on its own
 indented line below the Changes line:
 
 ```
-  Changes: [#1234](https://github.com/microsoft/aspire/pull/1234)  
+  Changes: [#1234](https://github.com/${REPO}/pull/1234)  
   ⚠️ **Breaking change**  
   📝 **Documentation required**  
   🌍 **Community contribution** by [@username](https://github.com/username)  
@@ -839,8 +853,8 @@ After the Table of Contents, add a **What's New** section that lists the
 of their most recent PR.
 Each item is a link to the area heading, using the format:
 `- [<date> — <change-emoji> <Name>](#<area-slug>)`
-where `<date>` is the merge date of the last PR in `YYYY-M-D HH:mm` format
-(no leading zeroes on month/day, 24-hour UTC time), `<change-emoji>` is the
+where `<date>` is the merge date of the last PR in `YYYY-MM-DD HH:mm` format
+(zero-padded month/day, 24-hour UTC time), `<change-emoji>` is the
 entry's individual emoji, `<Name>` is the changelog entry name, and
 `<area-slug>` is the GitHub-generated slug for that area's `##` heading
 (e.g., `-apphost`, `-cli`, `-dashboard`). The `#` before the slug is mandatory
@@ -867,9 +881,9 @@ Use this exact format:
 
 ## What's New
 
-- [2026-4-22 22:48 — 🧭 Feature name](#-apphost)
-- [2026-4-21 07:30 — 🆕 New CLI command](#-cli)
-- [2026-4-20 23:05 — 🚀 Another feature](#-apphost)
+- [2026-04-22 22:48 — 🧭 Feature name](#-apphost)
+- [2026-04-21 07:30 — 🆕 New CLI command](#-cli)
+- [2026-04-20 23:05 — 🚀 Another feature](#-apphost)
 
 ## 🏠 AppHost
 
@@ -877,22 +891,22 @@ Use this exact format:
 
 #### New features
 
-- **🧭 Feature name**  
+1. **🧭 Feature name**  
   Brief user-facing description  
-  Changes: [#1234](https://github.com/microsoft/aspire/pull/1234), [#1235](https://github.com/microsoft/aspire/pull/1235)  
+  Changes: [#1234](https://github.com/${REPO}/pull/1234), [#1235](https://github.com/${REPO}/pull/1235)  
   ⚠️ **Breaking change**  
   📝 **Documentation required**  
 
-- **🚀 Another feature**  
+1. **🚀 Another feature**  
   What this means for users  
-  Changes: [#1236](https://github.com/microsoft/aspire/pull/1236)  
+  Changes: [#1236](https://github.com/${REPO}/pull/1236)  
   📝 **Documentation required**  
 
 #### Improvements
 
-- **⚡ Performance boost**  
+1. **⚡ Performance boost**  
   Faster startup for container resources  
-  Changes: [#1238](https://github.com/microsoft/aspire/pull/1238)  
+  Changes: [#1238](https://github.com/${REPO}/pull/1238)  
 
 ## 💻 CLI
 
@@ -900,15 +914,15 @@ Use this exact format:
 
 #### New features
 
-- **🆕 New CLI command**  
+1. **🆕 New CLI command**  
   Added a new command for scaffolding resources  
-  Changes: [#1240](https://github.com/microsoft/aspire/pull/1240)  
+  Changes: [#1240](https://github.com/${REPO}/pull/1240)  
 
 #### Bug fixes
 
-- **🐛 Fix crash on init**  
-  Resolved a crash when running aspire init in an empty directory  
-  Changes: [#1239](https://github.com/microsoft/aspire/pull/1239)  
+1. **🐛 Fix crash on init**  
+  Resolved a crash when running init in an empty directory  
+  Changes: [#1239](https://github.com/${REPO}/pull/1239)  
   ⚠️ **Breaking change**  
   🌍 **Community contribution** by [@contributor](https://github.com/contributor)  
 
@@ -918,9 +932,9 @@ Use this exact format:
 
 #### Improvements
 
-- **🎨 Dashboard improvement**  
+1. **🎨 Dashboard improvement**  
   Description of the change  
-  Changes: [#1237](https://github.com/microsoft/aspire/pull/1237)  
+  Changes: [#1237](https://github.com/${REPO}/pull/1237)  
 
 ---
 
@@ -929,8 +943,8 @@ Use this exact format:
 (e.g., "Exclude PR #1234", "Rename: X → Y", "Merge PRs #1234 and #5678").*
 
 **PRs processed:** ✅ 6 included · ❌ 1 excluded · ⏳ 93 unprocessed · 100 total merged in milestone
-([View full PR tracker](https://github.com/microsoft/aspire/blob/memory/milestone-changelog/${MILESTONE}/prs/))
-**PRs analyzed through:** [#<number>](https://github.com/microsoft/aspire/pull/<number>) merged <merge date of the newest PR processed in this run, in UTC>
+([View full PR tracker](https://github.com/${REPO}/blob/memory/milestone-changelog/${MILESTONE}/prs/))
+**PRs analyzed through:** [#<number>](https://github.com/${REPO}/pull/<number>) merged <YYYY-MM-DD HH:mm> UTC
 ```
 
 At the bottom of the page (after the footer), include a **PRs processed** summary
@@ -939,8 +953,8 @@ through** line showing the newest PR processed in this run:
 
 ```
 **PRs processed:** ✅ <N> included · ❌ <N> excluded · ⏳ <N> unprocessed · <N> total merged in milestone
-([View full PR tracker](https://github.com/microsoft/aspire/blob/memory/milestone-changelog/${MILESTONE}/prs/))
-**PRs analyzed through:** [#<number>](https://github.com/microsoft/aspire/pull/<number>) merged <date>
+([View full PR tracker](https://github.com/${REPO}/blob/memory/milestone-changelog/${MILESTONE}/prs/))
+**PRs analyzed through:** [#<number>](https://github.com/${REPO}/pull/<number>) merged <YYYY-MM-DD HH:mm> UTC
 ```
 
 Compute the counts:
