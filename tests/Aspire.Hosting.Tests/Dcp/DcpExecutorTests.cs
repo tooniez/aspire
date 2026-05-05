@@ -294,6 +294,96 @@ public class DcpExecutorTests
         Assert.Equal(effectiveArgs, GetEnumerablePropertyValue<string>(snapshot, KnownProperties.Container.Args).ToArray());
     }
 
+    [Theory]
+    [InlineData("aspire")]
+    [InlineData("ASPIRE")]
+    public async Task RunApplicationAsync_ThrowsWhenContainerResourceNameConflictsWithContainerTunnelName(string containerName)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer(containerName, "image");
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: new TestKubernetesService(),
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = true });
+
+        var ex = await Assert.ThrowsAsync<DistributedApplicationException>(() => appExecutor.RunApplicationAsync());
+        Assert.Contains("container tunnel container name", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("aspire")]
+    [InlineData("ASPIRE")]
+    public async Task RunApplicationAsync_ThrowsWhenExplicitContainerNameConflictsWithContainerTunnelName(string containerName)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("aContainer", "image")
+            .WithContainerName(containerName);
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: new TestKubernetesService(),
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = true });
+
+        var ex = await Assert.ThrowsAsync<DistributedApplicationException>(() => appExecutor.RunApplicationAsync());
+        Assert.Contains("container tunnel container name", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("aspire")]
+    [InlineData("ASPIRE")]
+    public async Task RunApplicationAsync_ThrowsWhenNetworkAliasConflictsWithContainerTunnelName(string alias)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("aContainer", "image")
+            .WithContainerNetworkAlias(alias);
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: new TestKubernetesService(),
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = true });
+
+        var ex = await Assert.ThrowsAsync<DistributedApplicationException>(() => appExecutor.RunApplicationAsync());
+        Assert.Contains("container tunnel container name", ex.Message);
+    }
+
+    [Fact]
+    public async Task RunApplicationAsync_AllowsContainerNameMatchingContainerTunnelNameWhenContainerTunnelDisabled()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("aspire", "image");
+        builder.AddContainer("aContainer", "image")
+            .WithContainerName("ASPIRE");
+        builder.AddContainer("bContainer", "image")
+            .WithContainerNetworkAlias("ASPIRE");
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: kubernetesService,
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = false });
+
+        await appExecutor.RunApplicationAsync();
+
+        Assert.Equal(3, kubernetesService.CreatedResources.OfType<Container>().Count());
+    }
+
     [Fact]
     public async Task ResourceRestarted_EnvironmentCallbacksApplied()
     {
