@@ -293,9 +293,7 @@ internal sealed class RunCommand : BaseCommand
 
             if (dashboardUrls.DashboardHealthy is false)
             {
-                runActivity?.SetTag(TelemetryConstants.Tags.ErrorType, "dashboard_failed");
-                InteractionService.DisplayError(RunCommandStrings.DashboardFailedToStart);
-                return ExitCodeConstants.DashboardFailure;
+                InteractionService.DisplayMessage(KnownEmojis.Warning, RunCommandStrings.DashboardFailedToStart);
             }
 
             // Display the UX
@@ -385,7 +383,11 @@ internal sealed class RunCommand : BaseCommand
 
             if (ExtensionHelper.IsExtensionHost(InteractionService, out var extInteractionService, out _))
             {
-                extInteractionService.DisplayDashboardUrls(dashboardUrls);
+                if (dashboardUrls.DashboardHealthy is true)
+                {
+                    extInteractionService.DisplayDashboardUrls(dashboardUrls);
+                }
+
                 extInteractionService.NotifyAppHostStartupCompleted();
             }
 
