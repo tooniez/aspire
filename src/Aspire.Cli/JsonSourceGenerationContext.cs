@@ -47,6 +47,7 @@ namespace Aspire.Cli;
 [JsonSerializable(typeof(ApiSearchResult[]))]
 [JsonSerializable(typeof(ApiContent))]
 [JsonSerializable(typeof(IntegrationSearchResult[]))]
+[JsonSerializable(typeof(string[]))]
 internal partial class JsonSourceGenerationContext : JsonSerializerContext
 {
     private static JsonSourceGenerationContext? s_relaxedEscaping;
