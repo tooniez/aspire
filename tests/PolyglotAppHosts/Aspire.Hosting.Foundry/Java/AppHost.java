@@ -117,7 +117,7 @@ server.listen(port, '127.0.0.1');
             }));
 
         var api = builder.addContainer("api", "nginx");
-        foundry.withRoleAssignments(registry, new AzureContainerRegistryRole[] {
+        foundry.withContainerRegistryRoleAssignments(registry, new AzureContainerRegistryRole[] {
             AzureContainerRegistryRole.ACR_PULL
         });
 

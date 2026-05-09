@@ -124,7 +124,7 @@ await hostedAgent.publishAsHostedAgent({
 });
 
 const api = await builder.addContainer('api', 'nginx');
-await foundry.withRoleAssignments(registry, [AzureContainerRegistryRole.AcrPull]);
+await foundry.withContainerRegistryRoleAssignments(registry, [AzureContainerRegistryRole.AcrPull]);
 
 const _deploymentName = await chat.deploymentName.get();
 const _modelName = await chat.modelName.get();
