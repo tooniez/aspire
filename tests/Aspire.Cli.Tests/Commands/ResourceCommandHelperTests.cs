@@ -214,6 +214,36 @@ public class ResourceCommandHelperTests
         Assert.Equal(ExitCodeConstants.FailedToExecuteResourceCommand, exitCode);
         var error = Assert.Single(interactionService.DisplayedErrors);
         Assert.Contains("Command argument validation failed.", error);
-        Assert.Contains("target: Target must not be prod.", error);
+        Assert.Contains("--target: Target must not be prod.", error);
+    }
+
+    [Fact]
+    public async Task ExecuteGenericCommandAsync_WhenValidationErrorsIsNull_DisplaysCommandError()
+    {
+        var connection = new TestAppHostAuxiliaryBackchannel
+        {
+            ExecuteResourceCommandResult = new ExecuteResourceCommandResponse
+            {
+                Success = false,
+                Message = "Command 'ss' not available for resource 'test-resource'.",
+                ValidationErrors = null!
+            }
+        };
+
+        var interactionService = new TestInteractionService();
+
+        var exitCode = await ResourceCommandHelper.ExecuteGenericCommandAsync(
+            connection,
+            interactionService,
+            NullLogger.Instance,
+            "test-resource",
+            "ss",
+            arguments: null,
+            cancellationToken: CancellationToken.None).DefaultTimeout();
+
+        Assert.Equal(ExitCodeConstants.FailedToExecuteResourceCommand, exitCode);
+        var error = Assert.Single(interactionService.DisplayedErrors);
+        Assert.Contains("Failed to execute command 'ss' on resource 'test-resource'", error);
+        Assert.Contains("Command 'ss' not available for resource 'test-resource'.", error);
     }
 }

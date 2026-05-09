@@ -163,14 +163,48 @@ internal static class ResourceCommandHelper
         return string.IsNullOrEmpty(errorMessage) ? "Unknown error occurred." : errorMessage;
     }
 
-    private static string AppendValidationErrors(string errorMessage, ResourceCommandArgumentValidationError[] validationErrors)
+    private static string AppendValidationErrors(string errorMessage, ResourceCommandArgumentValidationError[]? validationErrors)
     {
-        if (validationErrors.Length == 0)
+        if (validationErrors is not { Length: > 0 })
         {
             return errorMessage;
         }
 
-        var errors = validationErrors.Select(error => $"{error.ArgumentName}: {error.ErrorMessage}");
+        var errors = validationErrors.Select(error => $"{FormatArgumentNameForDisplay(error.ArgumentName)}: {error.ErrorMessage}");
         return $"{errorMessage}{Environment.NewLine}{string.Join(Environment.NewLine, errors)}";
+    }
+
+    internal static string FormatArgumentNameForDisplay(string argumentName)
+    {
+        return argumentName.StartsWith("-", StringComparison.Ordinal) ? argumentName : $"--{ToKebabCase(argumentName)}";
+    }
+
+    private static string ToKebabCase(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        var builder = new System.Text.StringBuilder(value.Length + 4);
+        for (var i = 0; i < value.Length; i++)
+        {
+            var ch = value[i];
+            if (char.IsUpper(ch))
+            {
+                if (i > 0 && builder[^1] != '-')
+                {
+                    builder.Append('-');
+                }
+
+                builder.Append(char.ToLowerInvariant(ch));
+            }
+            else
+            {
+                builder.Append(ch);
+            }
+        }
+
+        return builder.ToString();
     }
 }

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Aspire.Cli.Backchannel;
+using Aspire.Cli.Commands;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -129,9 +130,9 @@ internal sealed class ExecuteResourceCommandTool(
 #pragma warning disable CS0618 // Type or member is obsolete
                 var message = (response.Message ?? response.ErrorMessage) is { Length: > 0 } errorMsg ? errorMsg : "Unknown error. See logs for details.";
 #pragma warning restore CS0618 // Type or member is obsolete
-                if (response.ValidationErrors.Length > 0)
+                if (response.ValidationErrors is { Length: > 0 })
                 {
-                    message = $"{message}{Environment.NewLine}{string.Join(Environment.NewLine, response.ValidationErrors.Select(error => $"{error.ArgumentName}: {error.ErrorMessage}"))}";
+                    message = $"{message}{Environment.NewLine}{string.Join(Environment.NewLine, response.ValidationErrors.Select(error => $"{ResourceCommandHelper.FormatArgumentNameForDisplay(error.ArgumentName)}: {error.ErrorMessage}"))}";
                 }
 
                 var content = new List<TextContentBlock>

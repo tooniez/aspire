@@ -175,6 +175,29 @@ public class ExecuteResourceCommandToolTests
     }
 
     [Fact]
+    public async Task ExecuteResourceCommandTool_ReturnsError_WhenCommandFailsWithNullValidationErrors()
+    {
+        var monitor = new TestAuxiliaryBackchannelMonitor();
+        var connection = new TestAppHostAuxiliaryBackchannel
+        {
+            ExecuteResourceCommandResult = new ExecuteResourceCommandResponse
+            {
+                Success = false,
+                Message = "Resource not found",
+                ValidationErrors = null!
+            }
+        };
+        monitor.AddConnection("hash1", "socket.hash1", connection);
+
+        var tool = new ExecuteResourceCommandTool(monitor, NullLogger<ExecuteResourceCommandTool>.Instance);
+
+        var result = await tool.CallToolAsync(CallToolContextTestHelper.Create(CreateArguments("nonexistent", "start")), CancellationToken.None).DefaultTimeout();
+
+        Assert.True(result.IsError);
+        Assert.Contains(result.Content, c => c is ModelContextProtocol.Protocol.TextContentBlock t && t.Text.Contains("Resource not found"));
+    }
+
+    [Fact]
     public async Task ExecuteResourceCommandTool_ReturnsValidationErrors_WhenCommandArgumentsAreInvalid()
     {
         var monitor = new TestAuxiliaryBackchannelMonitor();
@@ -203,7 +226,7 @@ public class ExecuteResourceCommandToolTests
         Assert.True(result.IsError);
         Assert.Contains(result.Content, c => c is ModelContextProtocol.Protocol.TextContentBlock t &&
             t.Text.Contains("Command argument validation failed.") &&
-            t.Text.Contains("target: Target must not be prod."));
+            t.Text.Contains("--target: Target must not be prod."));
     }
 
     [Fact]

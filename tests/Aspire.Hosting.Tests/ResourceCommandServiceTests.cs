@@ -732,6 +732,80 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public async Task ExecuteCommandAsync_LoadsDependentChoiceOptionsBeforeBuiltInValidation()
+    {
+        using var builder = TestDistributedApplicationBuilder.Create(testOutputHelper);
+
+        var executed = false;
+        var loadCount = 0;
+        var custom = builder.AddResource(new CustomResource("myResource"));
+        custom.WithCommand(name: "mycommand",
+                displayName: "My command",
+                executeCommand: _ =>
+                {
+                    executed = true;
+                    return Task.FromResult(CommandResults.Success());
+                },
+                commandOptions: new CommandOptions
+                {
+                    Arguments =
+                    [
+                        new InteractionInput
+                        {
+                            Name = "subscription",
+                            InputType = InputType.Choice,
+                            Required = true,
+                            Options = [KeyValuePair.Create("sub-a", "Subscription A")]
+                        },
+                        new InteractionInput
+                        {
+                            Name = "location",
+                            InputType = InputType.Choice,
+                            Required = true,
+                            DynamicLoading = new InputLoadOptions
+                            {
+                                DependsOnInputs = ["subscription"],
+                                LoadCallback = context =>
+                                {
+                                    loadCount++;
+                                    Assert.Equal("sub-a", context.AllInputs.GetString("subscription"));
+                                    context.Input.Options = [KeyValuePair.Create("westus", "West US")];
+
+                                    return Task.CompletedTask;
+                                }
+                            }
+                        }
+                    ]
+                });
+
+        var app = builder.Build();
+        await app.StartAsync();
+
+        var result = await app.ResourceCommands.ExecuteCommandAsync(
+            "myResource",
+            "mycommand",
+            new ResourceCommandExecutionOptions
+            {
+                ArgumentValues = new Dictionary<string, string?>
+                {
+                    ["subscription"] = "sub-a",
+                    ["location"] = "centralus"
+                },
+                ArgumentsProvided = true,
+                NonInteractive = true
+            },
+            CancellationToken.None).DefaultTimeout();
+
+        Assert.False(result.Success);
+        Assert.False(executed);
+        Assert.Equal(1, loadCount);
+        Assert.NotNull(result.InvalidArguments);
+        var invalidArgument = Assert.Single(result.InvalidArguments, argument => argument.ValidationErrors.Count > 0);
+        Assert.Equal("location", invalidArgument.Name);
+        Assert.Equal("Value must be one of the provided options.", Assert.Single(invalidArgument.ValidationErrors));
+    }
+
+    [Fact]
     public async Task ExecuteCommandAsync_UnknownNamedArgumentValues_DoesNotExecuteCommand()
     {
         using var builder = TestDistributedApplicationBuilder.Create(testOutputHelper);

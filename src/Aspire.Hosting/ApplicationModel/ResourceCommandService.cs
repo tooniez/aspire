@@ -288,6 +288,10 @@ public class ResourceCommandService
 
                     arguments = promptedArguments!;
                 }
+                else
+                {
+                    await LoadDynamicCommandArgumentsAsync(arguments, cancellationToken).ConfigureAwait(false);
+                }
 
                 if (!await ValidateArgumentsAsync(annotation, arguments, cancellationToken).ConfigureAwait(false))
                 {
@@ -359,6 +363,8 @@ public class ResourceCommandService
         }
 
         var normalizedArguments = NormalizeCommandArguments(annotation, arguments);
+        await LoadDynamicCommandArgumentsAsync(normalizedArguments, cancellationToken).ConfigureAwait(false);
+
         return await ValidateArgumentsAsync(annotation, normalizedArguments, cancellationToken).ConfigureAwait(false)
             ? CommandResults.Success()
             : new ExecuteCommandResult
@@ -495,6 +501,41 @@ public class ResourceCommandService
         }
 
         return !context.HasErrors;
+    }
+
+    private async Task LoadDynamicCommandArgumentsAsync(InteractionInputCollection arguments, CancellationToken cancellationToken)
+    {
+        foreach (var argument in arguments)
+        {
+            if (argument.DynamicLoading is { } dynamicLoading && ShouldLoadDynamicCommandArgument(dynamicLoading, arguments))
+            {
+                await dynamicLoading.LoadCallback(new LoadInputContext
+                {
+                    AllInputs = arguments,
+                    Input = argument,
+                    Services = _serviceProvider,
+                    CancellationToken = cancellationToken
+                }).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static bool ShouldLoadDynamicCommandArgument(InputLoadOptions dynamicLoading, InteractionInputCollection arguments)
+    {
+        if (dynamicLoading.AlwaysLoadOnStart || dynamicLoading.DependsOnInputs is not { Count: > 0 } dependencies)
+        {
+            return true;
+        }
+
+        foreach (var dependency in dependencies)
+        {
+            if (!arguments.TryGetByName(dependency, out var input) || string.IsNullOrEmpty(input.Value))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private async Task<(InteractionInputCollection? Arguments, ExecuteCommandResult? Result)> PromptForCommandArgumentsAsync(ResourceCommandAnnotation annotation, InteractionInputCollection arguments, CancellationToken cancellationToken)
