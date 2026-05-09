@@ -226,6 +226,20 @@ public static class CommandResults
     public static ExecuteCommandResult Success(string message, string result, CommandResultFormat resultFormat = CommandResultFormat.Text) => new() { Success = true, Message = message, Data = new CommandResultData { Value = result, Format = resultFormat } };
 
     /// <summary>
+    /// Produces a success result with a message and result data.
+    /// </summary>
+    /// <param name="message">The message associated with the result.</param>
+    /// <param name="result">The result data.</param>
+    /// <param name="resultFormat">The format of the result data.</param>
+    /// <param name="displayImmediately">A value indicating whether the result data should be displayed immediately in the dashboard.</param>
+    /// <remarks>
+    /// When <paramref name="displayImmediately"/> is <see langword="true"/>, the dashboard opens the result dialog
+    /// automatically when the command completes. Other clients can still read the result data from
+    /// <see cref="ExecuteCommandResult.Data"/>.
+    /// </remarks>
+    public static ExecuteCommandResult Success(string message, string result, CommandResultFormat resultFormat, bool displayImmediately) => new() { Success = true, Message = message, Data = new CommandResultData { Value = result, Format = resultFormat, DisplayImmediately = displayImmediately } };
+
+    /// <summary>
     /// Produces a success result with a message and a value.
     /// </summary>
     /// <param name="message">The message associated with the result.</param>

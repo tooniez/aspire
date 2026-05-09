@@ -1056,6 +1056,18 @@ public class ResourceCommandServiceTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public void CommandResults_SuccessWithResultAndDisplayImmediately_ProducesCorrectResult()
+    {
+        var result = CommandResults.Success("Success.", "{\"key\": \"value\"}", CommandResultFormat.Json, displayImmediately: true);
+
+        Assert.True(result.Success);
+        Assert.NotNull(result.Data);
+        Assert.Equal("{\"key\": \"value\"}", result.Data.Value);
+        Assert.Equal(CommandResultFormat.Json, result.Data.Format);
+        Assert.True(result.Data.DisplayImmediately);
+    }
+
+    [Fact]
     public void CommandResults_SuccessWithTextResult_DefaultsToText()
     {
         var result = CommandResults.Success("Success.", "hello world");
