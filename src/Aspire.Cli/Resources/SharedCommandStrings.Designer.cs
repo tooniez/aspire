@@ -194,5 +194,11 @@ namespace Aspire.Cli.Resources {
                 return ResourceManager.GetString("PipelineStepsSummaryTitle", resourceCulture);
             }
         }
+
+        internal static string NonInteractiveRequiresYesFormat {
+            get {
+                return ResourceManager.GetString("NonInteractiveRequiresYesFormat", resourceCulture);
+            }
+        }
     }
 }
