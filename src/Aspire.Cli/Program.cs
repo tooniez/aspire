@@ -501,7 +501,6 @@ public class Program
         builder.Services.AddTransient<DeployCommand>();
         builder.Services.AddTransient<DestroyCommand>();
         builder.Services.AddTransient<DoCommand>();
-        builder.Services.AddTransient<ExecCommand>();
         builder.Services.AddTransient<McpCommand>();
         builder.Services.AddTransient<McpStartCommand>();
         builder.Services.AddTransient<McpInitCommand>();

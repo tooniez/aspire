@@ -739,20 +739,6 @@ internal class BackchannelLogEntry
     public required string CategoryName { get; set; }
 }
 
-internal class CommandOutput
-{
-    public required string Text { get; init; }
-    public bool IsErrorMessage { get; init; }
-    public int? LineNumber { get; init; }
-    /// <summary>
-    /// Additional info about type of the message.
-    /// Should be used for controlling the display style.
-    /// </summary>
-    public string? Type { get; init; }
-
-    public int? ExitCode { get; init; }
-}
-
 internal class PublishingPromptInputAnswer
 {
     public string? Name { get; set; }
