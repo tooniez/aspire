@@ -11,8 +11,10 @@ import {
     refExpr,
 } from './.modules/aspire.js';
 import type { DockerfileBuilderCallbackContext } from './.modules/aspire.js';
+import { fileURLToPath } from 'node:url';
 
 const builder = await createBuilder();
+const processCommandStdinScriptPath = fileURLToPath(new URL("./process-command-scripts/stdin.js", import.meta.url));
 
 // ===================================================================
 // Factory methods on builder
@@ -635,6 +637,28 @@ await container.withHealthCheck("http");
 // withCommand
 await container.withCommand("restart", "Restart", async (_ctx) => {
     return { success: true };
+});
+
+// withProcessCommand
+await container.withProcessCommand("dotnet-version", "Show .NET version", {
+    executablePath: "dotnet",
+    arguments: ["--version"],
+    commandOptions: {
+        description: "Runs dotnet --version from a TypeScript AppHost.",
+        iconName: "WindowConsole",
+    },
+    maxOutputLineCount: 10,
+    displayImmediately: false,
+});
+await container.withProcessCommand("node-stdin", "Node stdin", {
+    executablePath: "node",
+    arguments: [processCommandStdinScriptPath],
+    standardInputContent: "hello-from-typescript",
+    commandOptions: {
+        description: "Runs node and writes command input to stdin.",
+        iconName: "WindowConsole",
+    },
+    maxOutputLineCount: 10,
 });
 
 // withHttpCommand
