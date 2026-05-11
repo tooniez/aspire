@@ -157,7 +157,7 @@ public class AzureHostedAgentResource : Resource, IResourceWithEnvironment
         var projectClient = new AIProjectClient(new Uri(projectEndpoint), credential);
         var result = await projectClient.AgentAdministrationClient.CreateAgentVersionAsync(
             Name,
-            def.ToProjectsAgentVersionCreationOptions(),
+            def.ToProjectsAgentVersionCreationOptions(Target.Name),
             cancellationToken: context.CancellationToken
         ).ConfigureAwait(false);
 
