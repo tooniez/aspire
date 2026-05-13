@@ -6,10 +6,12 @@ using System.Globalization;
 using Aspire.Cli.Backchannel;
 using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
+using Aspire.Cli.Layout;
 using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Telemetry;
 using Aspire.Cli.Utils;
+using Aspire.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace Aspire.Cli.Commands;
@@ -22,6 +24,8 @@ internal sealed class StopCommand : BaseCommand
     private readonly AppHostConnectionResolver _connectionResolver;
     private readonly ILogger<StopCommand> _logger;
     private readonly ICliHostEnvironment _hostEnvironment;
+    private readonly ILayoutDiscovery _layoutDiscovery;
+    private readonly LayoutProcessRunner _layoutProcessRunner;
     private readonly ProfilingTelemetry _profilingTelemetry;
     private readonly TimeProvider _timeProvider;
 
@@ -40,6 +44,8 @@ internal sealed class StopCommand : BaseCommand
         CliExecutionContext executionContext,
         IProjectLocator projectLocator,
         ICliHostEnvironment hostEnvironment,
+        ILayoutDiscovery layoutDiscovery,
+        LayoutProcessRunner layoutProcessRunner,
         ILogger<StopCommand> logger,
         AspireCliTelemetry telemetry,
         ProfilingTelemetry profilingTelemetry,
@@ -49,6 +55,8 @@ internal sealed class StopCommand : BaseCommand
         _interactionService = interactionService;
         _connectionResolver = new AppHostConnectionResolver(backchannelMonitor, interactionService, projectLocator, executionContext, logger, profilingTelemetry);
         _hostEnvironment = hostEnvironment;
+        _layoutDiscovery = layoutDiscovery;
+        _layoutProcessRunner = layoutProcessRunner;
         _logger = logger;
         _profilingTelemetry = profilingTelemetry;
         _timeProvider = timeProvider ?? TimeProvider.System;
@@ -206,16 +214,27 @@ internal sealed class StopCommand : BaseCommand
 
         if (appHostInfo?.CliProcessId is int cliPid)
         {
-            _logger.LogDebug("Sending stop signal to CLI process (PID {Pid})", cliPid);
             try
             {
-                SendStopSignal(cliPid, appHostInfo?.CliStartedAt);
+                if (OperatingSystem.IsWindows())
+                {
+                    _logger.LogDebug("Stopping AppHost process tree via DCP (root CLI PID {Pid})", cliPid);
+                    // CliStartedAt is recorded with second-level precision, so validate it locally with tolerance
+                    // instead of passing it to DCP's millisecond-precision process-start-time option.
+                    if (!await TryStopProcessTreeWithDcpAsync(cliPid, appHostInfo.CliStartedAt, includeStartTime: false, cancellationToken).ConfigureAwait(false))
+                    {
+                        ForceKillProcess(appHostInfo.ProcessId, appHostInfo.StartedAt);
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug("Sending stop signal to CLI process (PID {Pid})", cliPid);
+                    SendStopSignal(cliPid, appHostInfo?.CliStartedAt);
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "Failed to send stop signal to CLI process {Pid}", cliPid);
-                _interactionService.DisplayError(string.Format(CultureInfo.CurrentCulture, StopCommandStrings.FailedToStopAppHost, appHostIdentifier));
-                return CompleteStopActivity(activity, ExitCodeConstants.FailedToDotnetRunAppHost);
+                _logger.LogWarning(ex, "Failed to send stop signal to CLI process {Pid}. Will attempt force-kill.", cliPid);
             }
         }
         else
@@ -235,16 +254,24 @@ internal sealed class StopCommand : BaseCommand
             // If RPC didn't work, try sending a stop signal to the AppHost process directly.
             if (!rpcSucceeded && appHostInfo?.ProcessId is int appHostPid)
             {
-                _logger.LogDebug("RPC stop not available, sending SIGTERM to AppHost PID {Pid}", appHostPid);
+                _logger.LogDebug("RPC stop not available, sending stop signal to AppHost PID {Pid}", appHostPid);
                 try
                 {
-                    SendStopSignal(appHostPid, appHostInfo?.StartedAt);
+                    if (OperatingSystem.IsWindows())
+                    {
+                        if (!await TryStopProcessTreeWithDcpAsync(appHostPid, appHostInfo.StartedAt, includeStartTime: true, cancellationToken).ConfigureAwait(false))
+                        {
+                            ForceKillProcess(appHostPid, appHostInfo.StartedAt);
+                        }
+                    }
+                    else
+                    {
+                        SendStopSignal(appHostPid, appHostInfo.StartedAt);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "Failed to send stop signal to process {Pid}", appHostPid);
-                    _interactionService.DisplayError(string.Format(CultureInfo.CurrentCulture, StopCommandStrings.FailedToStopAppHost, appHostIdentifier));
-                    return CompleteStopActivity(activity, ExitCodeConstants.FailedToDotnetRunAppHost);
+                    _logger.LogWarning(ex, "Failed to send stop signal to process {Pid}. Will attempt force-kill.", appHostPid);
                 }
             }
             else if (!rpcSucceeded)
@@ -355,11 +382,78 @@ internal sealed class StopCommand : BaseCommand
 
     /// <summary>
     /// Sends a best-effort graceful shutdown signal to the target process.
-    /// Uses Ctrl-Break on Windows and SIGTERM on non-Windows.
+    /// Uses SIGTERM on non-Windows.
     /// </summary>
     private void SendStopSignal(int pid, DateTimeOffset? startTime)
     {
         ProcessSignaler.RequestGracefulShutdown(pid, startTime, _logger);
+    }
+
+    private async Task<bool> TryStopProcessTreeWithDcpAsync(int pid, DateTimeOffset? startTime, bool includeStartTime, CancellationToken cancellationToken)
+    {
+        using var process = ProcessSignaler.TryGetRunningProcess(pid, startTime, _logger);
+        if (process is null)
+        {
+            return true;
+        }
+
+        var dcpDirectory = _layoutDiscovery.GetComponentPath(LayoutComponent.Dcp, ExecutionContext.WorkingDirectory.FullName);
+        if (dcpDirectory is null)
+        {
+            _logger.LogWarning("Could not find DCP in the Aspire layout.");
+            return false;
+        }
+
+        var dcpPath = BundleDiscovery.GetDcpExecutablePath(dcpDirectory);
+        if (!File.Exists(dcpPath))
+        {
+            _logger.LogWarning("Could not find DCP executable at '{DcpPath}'.", dcpPath);
+            return false;
+        }
+
+        // Ensure we only stop the target process and not all children to allow DCP to avoid accidentally killing the child DCP instance
+        var arguments = new List<string>
+        {
+            "stop-process-tree",
+            "--skip-descendants",
+            "--pid",
+            pid.ToString(CultureInfo.InvariantCulture)
+        };
+
+        if (includeStartTime && startTime is not null)
+        {
+            arguments.Add("--process-start-time");
+            arguments.Add(FormatDcpProcessStartTime(startTime.Value));
+        }
+
+        var (exitCode, output, error) = await _layoutProcessRunner.RunAsync(
+            dcpPath,
+            arguments,
+            workingDirectory: ExecutionContext.WorkingDirectory.FullName,
+            ct: cancellationToken).ConfigureAwait(false);
+
+        if (!string.IsNullOrWhiteSpace(output))
+        {
+            _logger.LogDebug("DCP stop-process-tree stdout: {Output}", output.Trim());
+        }
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            _logger.LogDebug("DCP stop-process-tree stderr: {Error}", error.Trim());
+        }
+
+        if (exitCode != 0)
+        {
+            _logger.LogWarning("DCP stop-process-tree exited with code {ExitCode}.", exitCode);
+            return false;
+        }
+
+        return true;
+    }
+
+    private static string FormatDcpProcessStartTime(DateTimeOffset startTime)
+    {
+        return startTime.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture);
     }
 
     /// <summary>
