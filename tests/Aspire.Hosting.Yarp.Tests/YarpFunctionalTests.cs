@@ -8,6 +8,7 @@ using Aspire.Hosting.Yarp.Transforms;
 using Aspire.TestUtilities;
 
 namespace Aspire.Hosting.Yarp.Tests;
+
 public class YarpFunctionalTests(ITestOutputHelper testOutputHelper)
 {
     // The floating aspnetapp tag can move to a platform-specific manifest; pin
@@ -16,6 +17,7 @@ public class YarpFunctionalTests(ITestOutputHelper testOutputHelper)
 
     [Fact]
     [RequiresFeature(TestFeature.Docker)]
+    [QuarantinedTest("https://github.com/microsoft/aspire/issues/17020")]
     public async Task VerifyYarpResourceExtensionsConfig()
     {
         await VerifyYarpResource((yarp, endpoint) =>
