@@ -189,6 +189,8 @@ internal sealed class DoctorCommand : BaseCommand
         return category switch
         {
             "sdk" => DoctorCommandStrings.SdkCategoryHeader,
+            "aspire" => DoctorCommandStrings.AspireCategoryHeader,
+            "apphost" => DoctorCommandStrings.AppHostCategoryHeader,
             "container" => DoctorCommandStrings.ContainerCategoryHeader,
             "environment" => DoctorCommandStrings.EnvironmentCategoryHeader,
             _ => category
@@ -199,9 +201,11 @@ internal sealed class DoctorCommand : BaseCommand
     {
         return category switch
         {
-            "sdk" => 1,
-            "container" => 2,
-            "environment" => 3,
+            "aspire" => 0,
+            "apphost" => 1,
+            "sdk" => 2,
+            "container" => 3,
+            "environment" => 4,
             _ => 99
         };
     }
