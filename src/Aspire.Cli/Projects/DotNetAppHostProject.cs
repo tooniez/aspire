@@ -262,8 +262,8 @@ internal sealed class DotNetAppHostProject : IAppHostProject
         // Enable debug logging in the app host so that debug-level output is
         // captured in the CLI log file for diagnostics. Defaults to Debug but
         // can be overridden via --log-level.
-        var appHostLogLevel = _loggingOptions.ConsoleLogLevel ?? LogLevel.Debug;
-        env["Logging__LogLevel__Default"] = appHostLogLevel.ToString();
+        var aspireLogLevel = _loggingOptions.ConsoleLogLevel ?? LogLevel.Debug;
+        env[KnownConfigNames.AspireLogLevel] = aspireLogLevel.ToString();
 
         if (context.WaitForDebugger)
         {

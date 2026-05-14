@@ -511,7 +511,7 @@ internal sealed class PrebuiltAppHostServer : IAppHostServerProject
 
         if (debug)
         {
-            startInfo.Environment["Logging__LogLevel__Default"] = "Debug";
+            startInfo.Environment[KnownConfigNames.AspireLogLevel] = "Debug";
         }
 
         startInfo.RedirectStandardOutput = true;
