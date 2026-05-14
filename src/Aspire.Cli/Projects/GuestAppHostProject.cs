@@ -588,8 +588,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         {
             // Signal that build/preparation failed so RunCommand doesn't hang waiting
             context.BuildCompletionSource?.TrySetResult(false);
-            _interactionService.DisplayCancellationMessage();
-            return ExitCodeConstants.Success;
+            return ExitCodeConstants.Cancelled;
         }
         catch (Exception ex)
         {
@@ -1017,8 +1016,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         }
         catch (OperationCanceledException)
         {
-            _interactionService.DisplayCancellationMessage();
-            return ExitCodeConstants.Success;
+            return ExitCodeConstants.Cancelled;
         }
         catch (Exception ex)
         {
