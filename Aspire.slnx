@@ -178,6 +178,10 @@
     <Project Path="playground/AksDemo/AksDemo.ApiService/AksDemo.ApiService.csproj" />
     <Project Path="playground/AksDemo/AksDemo.AppHost/AksDemo.AppHost.csproj" />
   </Folder>
+  <Folder Name="/playground/CertManagerDemo/">
+    <Project Path="playground/CertManagerDemo/CertManagerDemo.ApiService/CertManagerDemo.ApiService.csproj" />
+    <Project Path="playground/CertManagerDemo/CertManagerDemo.AppHost/CertManagerDemo.AppHost.csproj" />
+  </Folder>
   <Folder Name="/playground/AzureStorageEndToEnd/">
     <Project Path="playground/AzureStorageEndToEnd/AzureStorageEndToEnd.ApiService/AzureStorageEndToEnd.ApiService.csproj" />
     <Project Path="playground/AzureStorageEndToEnd/AzureStorageEndToEnd.AppHost/AzureStorageEndToEnd.AppHost.csproj" />

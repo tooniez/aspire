@@ -312,11 +312,20 @@ public static partial class KubernetesHelmChartExtensions
             // See KubernetesHelmChartExtensions.WithForceConflicts for the full rationale.
             //
             // --server-side is REQUIRED alongside --force-conflicts: helm only registers
-            // the --force-conflicts flag in server-side-apply mode. Without --server-side,
-            // helm rejects the unknown flag with "Error: unknown flag: --force-conflicts"
-            // before it even attempts to install the chart. Both flags arrived together
-            // in helm v3.18.
-            arguments.Append(" --server-side --force-conflicts");
+            // the --force-conflicts flag in server-side-apply mode. Both flags arrived
+            // together in helm v3.18.
+            //
+            // We pass --server-side=true (with explicit value) rather than the bare
+            // --server-side flag because helm v4 changed --server-side from a bool flag
+            // to a string flag with "true"|"false"|"auto" values
+            // (https://github.com/helm/helm/pull/13649). The bare form would consume the
+            // following --force-conflicts as the flag value under v4, poisoning the
+            // release metadata with the literal string "--force-conflicts" and breaking
+            // every subsequent `helm upgrade` with
+            // "invalid/unknown release server-side apply method: --force-conflicts".
+            // The =true form parses identically under helm v3.18+ (where the bool flag
+            // also accepts an explicit value) and helm v4.
+            arguments.Append(" --server-side=true --force-conflicts");
         }
 
         if (environment.KubeConfigPath is not null)
