@@ -3,6 +3,7 @@
 
 using System.CommandLine;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -123,14 +124,15 @@ internal sealed class LogsCommand : BaseCommand
         AspireCliTelemetry telemetry,
         ICliHostEnvironment hostEnvironment,
         ResourceColorMap resourceColorMap,
-        ILogger<LogsCommand> logger)
+        ILogger<LogsCommand> logger,
+        ProfilingTelemetry profilingTelemetry)
         : base("logs", LogsCommandStrings.Description, features, updateNotifier, executionContext, interactionService, telemetry)
     {
         _resourceColorMap = resourceColorMap;
         _interactionService = interactionService;
         _hostEnvironment = hostEnvironment;
         _logger = logger;
-        _connectionResolver = new AppHostConnectionResolver(backchannelMonitor, interactionService, projectLocator, executionContext, logger);
+        _connectionResolver = new AppHostConnectionResolver(backchannelMonitor, interactionService, projectLocator, executionContext, logger, profilingTelemetry);
 
         Arguments.Add(s_resourceArgument);
         Options.Add(s_appHostOption);
@@ -247,15 +249,16 @@ internal sealed class LogsCommand : BaseCommand
         // Collect all logs, parsing into LogEntry with resolved resource names sorted by timestamp
         var entries = await _interactionService.ShowStatusAsync(
             LogsCommandStrings.GettingLogs,
-            async () => await CollectLogsAsync(connection, resourceWatcher, resourceName, cancellationToken).ConfigureAwait(false));
+            async () => await CollectLogsAsync(connection, resourceWatcher, resourceName, tail, search, cancellationToken).ConfigureAwait(false));
 
-        // Apply full-text search filter on log content
+        // Keep the client-side search and tail passes even when a v2 AppHost already applied
+        // them. Older AppHosts fall back to the legacy log stream, and this also preserves the
+        // CLI's parsed-log search semantics for any edge cases the server-side pre-filter misses.
         if (!string.IsNullOrEmpty(search))
         {
             entries = entries.Where(e => MatchesSearch(e, search)).ToList();
         }
 
-        // Apply tail filter (tail.Value is guaranteed >= 1 by earlier validation)
         if (tail.HasValue && entries.Count > tail.Value)
         {
             entries = entries.Skip(entries.Count - tail.Value).ToList();
@@ -307,7 +310,7 @@ internal sealed class LogsCommand : BaseCommand
         {
             var entries = await _interactionService.ShowStatusAsync(
                 LogsCommandStrings.GettingLogs,
-                async () => await CollectLogsAsync(connection, resourceWatcher, resourceName, cancellationToken).ConfigureAwait(false));
+                async () => await CollectLogsAsync(connection, resourceWatcher, resourceName, tail, search, cancellationToken).ConfigureAwait(false));
 
             // Apply full-text search filter before tail so tail count reflects matching entries
             if (!string.IsNullOrEmpty(search))
@@ -327,7 +330,15 @@ internal sealed class LogsCommand : BaseCommand
         }
 
         // Now stream new logs
-        await foreach (var logLine in connection.GetResourceLogsAsync(resourceName, follow: true, cancellationToken).ConfigureAwait(false))
+        var followRequest = new GetConsoleLogsRequest
+        {
+            ResourceName = resourceName,
+            Follow = true,
+            Search = search,
+            IncludeHidden = resourceName is not null || resourceWatcher.IncludeHidden
+        };
+
+        await foreach (var logLine in GetConsoleLogLinesAsync(connection, followRequest, cancellationToken).ConfigureAwait(false))
         {
             // When streaming all resources, skip logs from hidden resources.
             // We filter by exclusion so that new resources appearing after the
@@ -364,13 +375,27 @@ internal sealed class LogsCommand : BaseCommand
         IAppHostAuxiliaryBackchannel connection,
         ResourceSnapshotWatcher resourceWatcher,
         string? resourceName,
+        int? tail,
+        string? search,
         CancellationToken cancellationToken)
     {
         var logParser = new LogParser(ConsoleColor.Black);
         var logEntries = new LogEntries(int.MaxValue) { BaseLineNumber = 1 };
         // Snapshot the resource list once for the non-follow path since it doesn't change.
         var allSnapshots = resourceWatcher.GetAllResources().ToList();
-        await foreach (var logLine in connection.GetResourceLogsAsync(resourceName, follow: false, cancellationToken).ConfigureAwait(false))
+        // For named resources, V2 AppHosts use Search/Tail to avoid sending non-matching
+        // logs over JSON-RPC. The client still applies the same filters after parsing for
+        // all-resource compatibility and to keep final output semantics centralized here.
+        var request = new GetConsoleLogsRequest
+        {
+            ResourceName = resourceName,
+            Follow = false,
+            Search = search,
+            Tail = tail,
+            IncludeHidden = resourceName is not null || resourceWatcher.IncludeHidden
+        };
+
+        await foreach (var logLine in GetConsoleLogLinesAsync(connection, request, cancellationToken).ConfigureAwait(false))
         {
             // When streaming all resources, skip logs from hidden resources
             if (resourceName is null && !resourceWatcher.IncludeHidden)
@@ -385,6 +410,23 @@ internal sealed class LogsCommand : BaseCommand
             logEntries.InsertSorted(ParseLogLine(logLine, logParser, allSnapshots));
         }
         return logEntries.GetEntries();
+    }
+
+    private static async IAsyncEnumerable<ResourceLogLine> GetConsoleLogLinesAsync(
+        IAppHostAuxiliaryBackchannel connection,
+        GetConsoleLogsRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // The batch RPC is capability-gated by the connection. Older AppHosts fall back through
+        // the line-streaming/legacy RPC paths, while newer AppHosts can reduce JSON-RPC overhead
+        // by sending many log lines per stream item.
+        await foreach (var batch in connection.GetConsoleLogBatchesAsync(request, cancellationToken).ConfigureAwait(false))
+        {
+            foreach (var logLine in batch.Lines)
+            {
+                yield return logLine;
+            }
+        }
     }
 
     /// <summary>
@@ -437,7 +479,8 @@ internal sealed class LogsCommand : BaseCommand
         var content = entry.RawContent ?? entry.Content ?? string.Empty;
         var prefix = entry.ResourcePrefix ?? string.Empty;
         return content.Contains(search, StringComparisons.FullTextSearch) ||
-               prefix.Contains(search, StringComparisons.FullTextSearch);
+               prefix.Contains(search, StringComparisons.FullTextSearch) ||
+               AnsiParser.StripControlSequences(content).Contains(search, StringComparisons.FullTextSearch);
     }
 
     private static string ResolveResourceName(string resourceName, IEnumerable<ResourceSnapshot> snapshots)

@@ -1886,17 +1886,17 @@ public class RunCommandTests(ITestOutputHelper outputHelper)
         using var source = new ActivitySource("test-detached-child-environment");
         using var activity = source.StartActivity("parent");
         Assert.NotNull(activity);
-        activity.SetBaggage(ProfilingTelemetry.SessionIdBaggageName, "session-1");
+        activity.SetBaggage(ProfilingTelemetry.Baggage.SessionId, "session-1");
         activity.TraceStateString = "state-1";
 
         var environment = AppHostLauncher.CreateDetachedChildEnvironment(activity);
 
         Assert.Equal("true", environment[KnownConfigNames.CliRunDetached]);
-        Assert.Equal("true", environment[ProfilingTelemetry.EnabledEnvironmentVariable]);
-        Assert.Equal("session-1", environment[ProfilingTelemetry.SessionIdEnvironmentVariable]);
+        Assert.Equal("true", environment[ProfilingTelemetry.EnvironmentVariables.Enabled]);
+        Assert.Equal("session-1", environment[ProfilingTelemetry.EnvironmentVariables.SessionId]);
         Assert.Equal("session-1", environment[KnownConfigNames.Legacy.StartupOperationId]);
-        Assert.Equal(activity.Id, environment[ProfilingTelemetry.TraceParentEnvironmentVariable]);
-        Assert.Equal("state-1", environment[ProfilingTelemetry.TraceStateEnvironmentVariable]);
+        Assert.Equal(activity.Id, environment[ProfilingTelemetry.EnvironmentVariables.TraceParent]);
+        Assert.Equal("state-1", environment[ProfilingTelemetry.EnvironmentVariables.TraceState]);
     }
 
     [Fact]
@@ -1905,10 +1905,10 @@ public class RunCommandTests(ITestOutputHelper outputHelper)
         var environment = AppHostLauncher.CreateDetachedChildEnvironment(null);
 
         Assert.Equal("true", environment[KnownConfigNames.CliRunDetached]);
-        Assert.False(environment.ContainsKey(ProfilingTelemetry.EnabledEnvironmentVariable));
-        Assert.False(environment.ContainsKey(ProfilingTelemetry.SessionIdEnvironmentVariable));
-        Assert.False(environment.ContainsKey(ProfilingTelemetry.TraceParentEnvironmentVariable));
-        Assert.False(environment.ContainsKey(ProfilingTelemetry.TraceStateEnvironmentVariable));
+        Assert.False(environment.ContainsKey(ProfilingTelemetry.EnvironmentVariables.Enabled));
+        Assert.False(environment.ContainsKey(ProfilingTelemetry.EnvironmentVariables.SessionId));
+        Assert.False(environment.ContainsKey(ProfilingTelemetry.EnvironmentVariables.TraceParent));
+        Assert.False(environment.ContainsKey(ProfilingTelemetry.EnvironmentVariables.TraceState));
     }
 
     [Theory]

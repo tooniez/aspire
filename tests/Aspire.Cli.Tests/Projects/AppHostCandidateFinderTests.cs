@@ -140,8 +140,8 @@ public class AppHostCandidateFinderTests(ITestOutputHelper outputHelper)
         var startedActivities = new List<Activity>();
         using var listener = CreateProfilingActivityListener(startedActivities.Add);
         using var profilingTelemetry = CreateProfilingTelemetry(
-            (ProfilingTelemetry.EnabledEnvironmentVariable, "true"),
-            (ProfilingTelemetry.SessionIdEnvironmentVariable, "session-1"));
+            (ProfilingTelemetry.EnvironmentVariables.Enabled, "true"),
+            (ProfilingTelemetry.EnvironmentVariables.SessionId, "session-1"));
 
         var appHost = await WriteFileAsync(workspace.WorkspaceRoot, "App/AppHost.csproj");
         var gitRepository = CreateGitRepository(appHost.FullName);
@@ -196,8 +196,8 @@ public class AppHostCandidateFinderTests(ITestOutputHelper outputHelper)
         var startedActivities = new List<Activity>();
         using var listener = CreateProfilingActivityListener(startedActivities.Add);
         using var profilingTelemetry = CreateProfilingTelemetry(
-            (ProfilingTelemetry.EnabledEnvironmentVariable, "true"),
-            (ProfilingTelemetry.SessionIdEnvironmentVariable, "session-1"));
+            (ProfilingTelemetry.EnvironmentVariables.Enabled, "true"),
+            (ProfilingTelemetry.EnvironmentVariables.SessionId, "session-1"));
 
         var appHost = await WriteFileAsync(workspace.WorkspaceRoot, "App/AppHost.csproj");
         await WriteFileAsync(workspace.WorkspaceRoot, "node_modules/pkg/AppHost.csproj");
