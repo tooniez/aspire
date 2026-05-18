@@ -1501,6 +1501,8 @@ CommandResultFormat = typing.Literal["Text", "Json", "Markdown"]
 
 ContainerLifetime = typing.Literal["Session", "Persistent"]
 
+ContainerMountType = typing.Literal["BindMount", "Volume"]
+
 DistributedApplicationOperation = typing.Literal["Run", "Publish"]
 
 EndpointProperty = typing.Literal["Url", "Host", "IPV4Host", "Port", "Scheme", "TargetPort", "HostAndPort", "TlsEnabled"]
@@ -1952,6 +1954,15 @@ class AbstractAspireStore:
         """The underlying object reference handle."""
         return self._handle
 
+    @_cached_property
+    def base_path(self) -> str:
+        """Gets the BasePath property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/IAspireStore.basePath',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
     def get_file_name_with_content(self, filename_template: str, source_filename: str) -> str:
         """Gets a deterministic file path for the specified file contents"""
         rpc_args: dict[str, typing.Any] = {'aspireStore': self._handle}
@@ -2029,8 +2040,56 @@ class AbstractConfiguration:
         return result
 
 
-class AbstractConfigurationSection(abc.ABC):
-    """Abstract base class for AbstractConfigurationSection."""
+class AbstractConfigurationSection:
+    """Type class for AbstractConfigurationSection."""
+
+    def __init__(self, handle: Handle, client: AspireClient) -> None:
+        self._handle = handle
+        self._client = client
+
+    def __repr__(self) -> str:
+        return f"AbstractConfigurationSection(handle={self._handle.handle_id})"
+
+    @_uncached_property
+    def handle(self) -> Handle:
+        """The underlying object reference handle."""
+        return self._handle
+
+    @_cached_property
+    def key(self) -> str:
+        """Gets the Key property"""
+        result = self._client.invoke_capability(
+            'Microsoft.Extensions.Configuration/IConfigurationSection.key',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @_cached_property
+    def path(self) -> str:
+        """Gets the Path property"""
+        result = self._client.invoke_capability(
+            'Microsoft.Extensions.Configuration/IConfigurationSection.path',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @_uncached_property
+    def value(self) -> str:
+        """Gets the Value property"""
+        result = self._client.invoke_capability(
+            'Microsoft.Extensions.Configuration/IConfigurationSection.value',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @value.setter
+    def value(self, value: str) -> None:
+        """Sets the Value property"""
+        self._client.invoke_capability(
+            'Microsoft.Extensions.Configuration/IConfigurationSection.setValue',
+            {'context': self._handle, 'value': value}
+        )
+
 
 class AbstractContainerRegistry(abc.ABC):
     """Abstract base class for AbstractContainerRegistry."""
@@ -2613,6 +2672,57 @@ class AbstractHostEnvironment:
         """The underlying object reference handle."""
         return self._handle
 
+    @_uncached_property
+    def env_name(self) -> str:
+        """Gets the EnvironmentName property"""
+        result = self._client.invoke_capability(
+            'Microsoft.Extensions.Hosting/IHostEnvironment.environmentName',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @env_name.setter
+    def env_name(self, value: str) -> None:
+        """Sets the EnvironmentName property"""
+        self._client.invoke_capability(
+            'Microsoft.Extensions.Hosting/IHostEnvironment.setEnvironmentName',
+            {'context': self._handle, 'value': value}
+        )
+
+    @_uncached_property
+    def app_name(self) -> str:
+        """Gets the ApplicationName property"""
+        result = self._client.invoke_capability(
+            'Microsoft.Extensions.Hosting/IHostEnvironment.applicationName',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @app_name.setter
+    def app_name(self, value: str) -> None:
+        """Sets the ApplicationName property"""
+        self._client.invoke_capability(
+            'Microsoft.Extensions.Hosting/IHostEnvironment.setApplicationName',
+            {'context': self._handle, 'value': value}
+        )
+
+    @_uncached_property
+    def content_root_path(self) -> str:
+        """Gets the ContentRootPath property"""
+        result = self._client.invoke_capability(
+            'Microsoft.Extensions.Hosting/IHostEnvironment.contentRootPath',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @content_root_path.setter
+    def content_root_path(self, value: str) -> None:
+        """Sets the ContentRootPath property"""
+        self._client.invoke_capability(
+            'Microsoft.Extensions.Hosting/IHostEnvironment.setContentRootPath',
+            {'context': self._handle, 'value': value}
+        )
+
     def is_development(self) -> bool:
         """Checks if running in Development environment"""
         rpc_args: dict[str, typing.Any] = {'environment': self._handle}
@@ -2895,6 +3005,9 @@ class AbstractReportingTask:
             rpc_args
         )
 
+
+class AbstractResourceAnnotation(abc.ABC):
+    """Abstract base class for AbstractResourceAnnotation."""
 
 class AbstractValueWithReferences(abc.ABC):
     """Abstract base class for AbstractValueWithReferences."""
@@ -3426,6 +3539,126 @@ class ContainerImagePushOptionsCallbackContext:
             {'context': self._handle}
         )
         return typing.cast(ContainerImagePushOptions, result)
+
+
+class ContainerImageReference:
+    """Type class for ContainerImageReference."""
+
+    def __init__(self, handle: Handle, client: AspireClient) -> None:
+        self._handle = handle
+        self._client = client
+
+    def __repr__(self) -> str:
+        return f"ContainerImageReference(handle={self._handle.handle_id})"
+
+    @_uncached_property
+    def handle(self) -> Handle:
+        """The underlying object reference handle."""
+        return self._handle
+
+    @_cached_property
+    def resource(self) -> AbstractResource:
+        """Gets the Resource property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerImageReference.resource',
+            {'context': self._handle}
+        )
+        return typing.cast(AbstractResource, result)
+
+    @_cached_property
+    def value_expression(self) -> str:
+        """Gets the ValueExpression property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerImageReference.valueExpression',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+
+class ContainerMountAnnotation:
+    """Type class for ContainerMountAnnotation."""
+
+    def __init__(self, handle: Handle, client: AspireClient) -> None:
+        self._handle = handle
+        self._client = client
+
+    def __repr__(self) -> str:
+        return f"ContainerMountAnnotation(handle={self._handle.handle_id})"
+
+    @_uncached_property
+    def handle(self) -> Handle:
+        """The underlying object reference handle."""
+        return self._handle
+
+    @_cached_property
+    def source(self) -> str:
+        """Gets the Source property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerMountAnnotation.source',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @_cached_property
+    def target(self) -> str:
+        """Gets the Target property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerMountAnnotation.target',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
+
+    @_cached_property
+    def type(self) -> ContainerMountType:
+        """Gets the Type property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerMountAnnotation.type',
+            {'context': self._handle}
+        )
+        return typing.cast(ContainerMountType, result)
+
+    @_cached_property
+    def is_read_only(self) -> bool:
+        """Gets the IsReadOnly property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerMountAnnotation.isReadOnly',
+            {'context': self._handle}
+        )
+        return typing.cast(bool, result)
+
+
+class ContainerPortReference:
+    """Type class for ContainerPortReference."""
+
+    def __init__(self, handle: Handle, client: AspireClient) -> None:
+        self._handle = handle
+        self._client = client
+
+    def __repr__(self) -> str:
+        return f"ContainerPortReference(handle={self._handle.handle_id})"
+
+    @_uncached_property
+    def handle(self) -> Handle:
+        """The underlying object reference handle."""
+        return self._handle
+
+    @_cached_property
+    def resource(self) -> AbstractResource:
+        """Gets the Resource property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerPortReference.resource',
+            {'context': self._handle}
+        )
+        return typing.cast(AbstractResource, result)
+
+    @_cached_property
+    def value_expression(self) -> str:
+        """Gets the ValueExpression property"""
+        result = self._client.invoke_capability(
+            'Aspire.Hosting.ApplicationModel/ContainerPortReference.valueExpression',
+            {'context': self._handle}
+        )
+        return typing.cast(str, result)
 
 
 class DistributedApplication:
@@ -10853,6 +11086,7 @@ _register_handle_wrapper("Aspire.Hosting/Dict<string,string>", AspireDict)
 _register_handle_wrapper("Aspire.Hosting/Dict<string,number>", AspireDict)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.IAspireStore", AbstractAspireStore)
 _register_handle_wrapper("Microsoft.Extensions.Configuration.Abstractions/Microsoft.Extensions.Configuration.IConfiguration", AbstractConfiguration)
+_register_handle_wrapper("Microsoft.Extensions.Configuration.Abstractions/Microsoft.Extensions.Configuration.IConfigurationSection", AbstractConfigurationSection)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.Eventing.IDistributedApplicationEventing", AbstractDistributedApplicationEventing)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.Pipelines.IDistributedApplicationPipeline", AbstractDistributedApplicationPipeline)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.IExecutionConfigurationBuilder", AbstractExecutionConfigurationBuilder)
@@ -10874,6 +11108,9 @@ _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.Command
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ConnectionStringAvailableEvent", ConnectionStringAvailableEvent)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptions", ContainerImagePushOptions)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImagePushOptionsCallbackContext", ContainerImagePushOptionsCallbackContext)
+_register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerImageReference", ContainerImageReference)
+_register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerMountAnnotation", ContainerMountAnnotation)
+_register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerPortReference", ContainerPortReference)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.DistributedApplication", DistributedApplication)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.Eventing.DistributedApplicationEventSubscription", DistributedApplicationEventSubscription)
 _register_handle_wrapper("Aspire.Hosting/Aspire.Hosting.DistributedApplicationExecutionContext", DistributedApplicationExecutionContext)
