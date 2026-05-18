@@ -1263,10 +1263,19 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 return packageUpdates;
             });
 
+        var explicitChannelName = context.Channel.Type == Packaging.PackageChannelType.Explicit ? context.Channel.Name : null;
+        var explicitChannelChanged = explicitChannelName is not null && !string.Equals(config.Channel, explicitChannelName, StringComparisons.CliInputOrOutput);
+
         if (updates.Count == 0 && newSdkVersion is null)
         {
+            if (explicitChannelChanged)
+            {
+                config.Channel = explicitChannelName;
+                SaveConfiguration(config, directory);
+            }
+
             _interactionService.DisplayMessage(KnownEmojis.CheckMarkButton, UpdateCommandStrings.ProjectUpToDateMessage);
-            return new UpdatePackagesResult { UpdatesApplied = false };
+            return new UpdatePackagesResult { UpdatesApplied = explicitChannelChanged };
         }
 
         // Display pending updates
@@ -1292,17 +1301,14 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         {
             config.SdkVersion = newSdkVersion;
         }
-        // Persist the channel only when the update resolved an explicit channel (--channel,
-        // per-project config, or prompt selection). When the resolved channel is Implicit
-        // — i.e. the user hasn't pinned a channel — leave the project's existing setting
-        // untouched rather than silently pinning the running CLI's identity, which would
-        // propagate dev/PR-build identities into the project file. The scaffolding /
-        // build-time paths intentionally do auto-pin identity (see GuestAppHostProject.cs:354
-        // and ScaffoldingService.cs:208) — but `aspire update` is a no-pin path: the user
-        // is updating, not initialising, and we should not change the channel pin state.
-        if (context.Channel.Type == Packaging.PackageChannelType.Explicit)
+        // Persist the channel when update resolved an explicit channel. That can come from
+        // --channel, per-project/global config, prompt selection, or the UpdateCommand
+        // identity-channel fallback for non-project-reference AppHosts. When the resolved
+        // channel is Implicit — i.e. no explicit channel source matched — leave the project's
+        // existing setting untouched rather than pinning the implicit/default channel.
+        if (explicitChannelName is not null)
         {
-            config.Channel = context.Channel.Name;
+            config.Channel = explicitChannelName;
         }
         foreach (var (packageId, _, newVersion) in updates)
         {
