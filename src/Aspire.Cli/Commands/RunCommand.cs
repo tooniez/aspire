@@ -12,6 +12,7 @@ using Aspire.Cli.Configuration;
 using Aspire.Cli.Diagnostics;
 using Aspire.Cli.DotNet;
 using Aspire.Cli.Interaction;
+using Aspire.Cli.Profiling;
 using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Telemetry;
@@ -141,6 +142,8 @@ internal sealed class RunCommand : BaseCommand
         var format = parseResult.GetValue(AppHostLauncher.s_formatOption);
         var isolated = parseResult.GetValue(AppHostLauncher.s_isolatedOption);
         var isExtensionHost = ExtensionHelper.IsExtensionHost(InteractionService, out _, out _);
+        var captureProfile = parseResult.GetValue(RootCommand.CaptureProfileOption);
+        var captureProfileDelay = TimeSpan.FromSeconds(parseResult.GetValue(RootCommand.CaptureProfileDelayOption));
         var startDebugSession = false;
         if (isExtensionHost)
         {
@@ -264,6 +267,10 @@ internal sealed class RunCommand : BaseCommand
                 BackchannelCompletionSource = backchannelCompletionSource,
             };
             ProfilingTelemetry.AddCurrentContextToEnvironment(context.EnvironmentVariables);
+            if (captureProfile)
+            {
+                ProfileCaptureEnvironment.AddCurrentToEnvironment(context.EnvironmentVariables);
+            }
 
             // Start the project run as a pending task - we'll handle UX while it runs
             Task<int> pendingRun;
@@ -341,7 +348,12 @@ internal sealed class RunCommand : BaseCommand
                               && _configuration["SSH_CONNECTION"] is not null;
             var isRemoteEnvironment = isCodespaces || isRemoteContainers || isSshRemote;
 
-            if (!isRemoteEnvironment)
+            var profileStopRequested = false;
+            if (captureProfile)
+            {
+                profileStopRequested = await RequestAppHostStopForProfileAsync(backchannel, pendingRun, captureProfileDelay, cancellationToken).ConfigureAwait(false);
+            }
+            else if (!isRemoteEnvironment)
             {
                 AppendCtrlCMessage(longestLocalizedLengthWithColon);
             }
@@ -436,6 +448,21 @@ internal sealed class RunCommand : BaseCommand
                 var exitCode = await pendingRun;
                 lifetimeActivity.SetProcessExitCode(exitCode);
 
+                // Capture mode intentionally turns a long-running AppHost startup into a finite command.
+                // Some AppHost implementations, including guest AppHosts, report the teardown exit code
+                // from a helper process that the CLI stops after the AppHost has already started; on
+                // Unix-like systems that surfaces as 128 + signal (e.g., 130 SIGINT, 137 SIGKILL, 143
+                // SIGTERM). These are AppHost process exit codes (not CLI exit codes), so use the raw
+                // signal-based literals here instead of CLI exit-code constants. Treat the known teardown
+                // codes as a successful capture, but propagate any other non-zero exit code so a
+                // genuine AppHost crash during shutdown is not masked.
+                if (profileStopRequested)
+                {
+                    return exitCode is 0 or 130 or 137 or 143
+                        ? CommandResult.Success()
+                        : CommandResult.FromExitCode(exitCode);
+                }
+
                 // Cancelled by user (e.g., Ctrl+C) - treat as successful exit since the user intentionally stopped the AppHost.
                 return exitCode == CliExitCodes.Cancelled
                     ? CommandResult.Cancelled(CliExitCodes.Success)
@@ -514,6 +541,36 @@ internal sealed class RunCommand : BaseCommand
         }
 
         InteractionService.DisplayRenderable(BuildCtrlCRenderable(longestLocalizedLengthWithColon));
+    }
+
+    private static async Task<bool> RequestAppHostStopForProfileAsync(
+        IAppHostCliBackchannel backchannel,
+        Task<int> pendingRun,
+        TimeSpan delay,
+        CancellationToken cancellationToken)
+    {
+        // The backchannel has already connected before this method is called, so startup spans have
+        // been produced. The optional delay is only a warmup window for scenarios that want extra
+        // post-start resource activity, not a telemetry flush mechanism.
+        if (delay > TimeSpan.Zero)
+        {
+            var delayTask = Task.Delay(delay, cancellationToken);
+            var completedTask = await Task.WhenAny(delayTask, pendingRun).ConfigureAwait(false);
+            if (completedTask == pendingRun)
+            {
+                return false;
+            }
+
+            await delayTask.ConfigureAwait(false);
+        }
+
+        if (!pendingRun.IsCompleted)
+        {
+            await backchannel.RequestStopAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -716,6 +773,10 @@ internal sealed class RunCommand : BaseCommand
         var waitForDebugger = parseResult.GetValue(RootCommand.WaitForDebuggerOption);
         var globalArgs = RootCommand.GetChildProcessArgs(parseResult);
         var additionalArgs = parseResult.UnmatchedTokens.Where(t => t != "--detach").ToList();
+        var captureProfile = parseResult.GetValue(RootCommand.CaptureProfileOption);
+        var stopAfterLaunchDelay = captureProfile
+            ? TimeSpan.FromSeconds(parseResult.GetValue(RootCommand.CaptureProfileDelayOption))
+            : (TimeSpan?)null;
 
         if (noBuild)
         {
@@ -730,6 +791,7 @@ internal sealed class RunCommand : BaseCommand
             waitForDebugger,
             globalArgs,
             additionalArgs,
+            stopAfterLaunchDelay,
             cancellationToken);
     }
 

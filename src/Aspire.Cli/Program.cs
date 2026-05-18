@@ -31,6 +31,7 @@ using Aspire.Cli.Mcp;
 using Aspire.Cli.Documentation.Docs;
 using Aspire.Cli.NuGet;
 using Aspire.Cli.Packaging;
+using Aspire.Cli.Profiling;
 using Aspire.Cli.Projects;
 using Aspire.Cli.Resources;
 using Aspire.Cli.Scaffolding;
@@ -407,6 +408,7 @@ public class Program
         builder.Services.AddSingleton<IPackagingService, PackagingService>();
         builder.Services.AddSingleton<IBundlePayloadProvider, EmbeddedBundlePayloadProvider>();
         builder.Services.AddSingleton<IBundleService, BundleService>();
+        builder.Services.AddSingleton<ProfileCaptureService>();
         builder.Services.AddSingleton<IAppHostServerProjectFactory, AppHostServerProjectFactory>();
         builder.Services.AddSingleton<ICliDownloader, CliDownloader>();
         builder.Services.AddSingleton<IFirstTimeUseNoticeSentinel>(_ => new FirstTimeUseNoticeSentinel(GetUsersAspirePath()));
@@ -728,6 +730,14 @@ public class Program
 
         Console.OutputEncoding = Encoding.UTF8;
 
+        // Parse this before building the host because TelemetryManager reads OTEL configuration
+        // during DI startup. Waiting for System.CommandLine binding would be too late: the CLI
+        // profiling ActivitySource would already have been configured without the private exporter.
+        var profileCaptureOptions = ProfileCaptureOptions.TryCreate(args, TimeProvider.System, new DirectoryInfo(Environment.CurrentDirectory));
+        using var profileCaptureEnvironment = profileCaptureOptions is not null
+            ? ProfileCaptureEnvironment.Apply(profileCaptureOptions)
+            : null;
+
         var loggingOptions = ParseLoggingOptions(args);
         var errorWriter = new StartupErrorWriter(loggingOptions.LogFilePath);
         var (loggerFactory, fileLoggerProvider) = CreateLoggerFactory(args, loggingOptions, errorWriter);
@@ -763,6 +773,7 @@ public class Program
         // Immediately get telemetry and telemetry manager so they are created by DI and telemetry is configured.
         var telemetry = app.Services.GetRequiredService<AspireCliTelemetry>();
         var telemetryManager = app.Services.GetRequiredService<TelemetryManager>();
+        var profilingTelemetry = app.Services.GetRequiredService<ProfilingTelemetry>();
 
         // Log feature state at startup for diagnostics
         app.Services.GetRequiredService<IFeatures>().LogFeatureState();
@@ -779,6 +790,7 @@ public class Program
 
         app.Services.GetRequiredService<CliExecutionContext>();
         using var mainActivity = telemetry.StartReportedActivity(TelemetryConstants.Activities.Main, ActivityKind.Internal);
+        ProfileCaptureService.ProfileCaptureSession? profileCaptureSession = null;
 
         if (mainActivity != null)
         {
@@ -790,56 +802,107 @@ public class Program
 
         try
         {
-            // Log command invocation details for debugging
-            var commandLine = args.Length > 0 ? $"aspire {string.Join(" ", args)}" : "aspire";
-            logger.LogInformation("Command: {CommandLine}", commandLine);
+            var exitCode = CliExitCodes.Success;
+            try
+            {
+                if (profileCaptureOptions is not null)
+                {
+                    profileCaptureSession = await app.Services.GetRequiredService<ProfileCaptureService>().StartAsync(profileCaptureOptions, cancellationManager.Token).ConfigureAwait(false);
+                }
 
-            logger.LogDebug("Parsing arguments: {Args}", string.Join(" ", args));
-            var parseResult = rootCommand.Parse(args);
+                // Log command invocation details for debugging
+                var commandLine = args.Length > 0 ? $"aspire {string.Join(" ", args)}" : "aspire";
+                logger.LogInformation("Command: {CommandLine}", commandLine);
 
-            var commandName = GetCommandName(parseResult);
-            logger.LogDebug("Executing command: {CommandName}", commandName);
+                logger.LogDebug("Parsing arguments: {Args}", string.Join(" ", args));
+                var parseResult = rootCommand.Parse(args);
 
-            mainActivity?.SetTag(TelemetryConstants.Tags.CommandName, commandName);
+                var commandName = GetCommandName(parseResult);
+                logger.LogDebug("Executing command: {CommandName}", commandName);
 
-            var exitCode = await parseResult.InvokeAsync(invokeConfig, cancellationManager.Token);
+                mainActivity?.SetTag(TelemetryConstants.Tags.CommandName, commandName);
 
-            // Log exit code for debugging
-            logger.LogInformation("Exit code: {ExitCode}", exitCode);
+                ProfilingTelemetry.ActivityScope profileCommandActivity = default;
+                try
+                {
+                    if (profileCaptureOptions is not null)
+                    {
+                        profileCommandActivity = profilingTelemetry.StartCommand(commandName);
+                    }
+
+                    exitCode = await parseResult.InvokeAsync(invokeConfig, cancellationManager.Token);
+                    profileCommandActivity.SetProcessExitCode(exitCode);
+                    if (exitCode != CliExitCodes.Success)
+                    {
+                        profileCommandActivity.SetError($"Command exited with code {exitCode}.");
+                    }
+                }
+                finally
+                {
+                    profileCommandActivity.Dispose();
+                }
+
+                // Log exit code for debugging
+                logger.LogInformation("Exit code: {ExitCode}", exitCode);
+            }
+            catch (Exception ex)
+            {
+                exitCode = 1;
+                // Catch block is used instead of System.Commandline's default handler behavior.
+                // Allows logging of exceptions to telemetry.
+
+                // Don't log or display cancellation exceptions.
+                // Check both Ctrl+C cancellation (cancellationManager.IsCancellationRequested) and
+                // extension prompt cancellation (ExtensionOperationCanceledException).
+                if (!(ex is OperationCanceledException && cancellationManager.IsCancellationRequested) && ex is not ExtensionOperationCanceledException)
+                {
+                    logger.LogError(ex, "An unexpected error occurred.");
+
+                    telemetry.RecordError("An unexpected error occurred.", ex);
+
+                    errorWriter.WriteLine(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.UnexpectedErrorOccurred, ex.Message));
+                }
+
+                // Log exit code for debugging
+                logger.LogError("Exit code: {ExitCode} (exception)", exitCode);
+
+                mainActivity?.SetTag(TelemetryConstants.Tags.ProcessExitCode, exitCode);
+            }
 
             mainActivity?.SetTag(TelemetryConstants.Tags.ProcessExitCode, exitCode);
             mainActivity?.Stop();
 
-            return exitCode;
-        }
-        catch (Exception ex)
-        {
-            const int unknownErrorExitCode = 1;
-            // Catch block is used instead of System.Commandline's default handler behavior.
-            // Allows logging of exceptions to telemetry.
-
-            // Don't log or display cancellation exceptions.
-            // Check both Ctrl+C cancellation (cancellationManager.IsCancellationRequested) and
-            // extension prompt cancellation (ExtensionOperationCanceledException).
-            if (!(ex is OperationCanceledException && cancellationManager.IsCancellationRequested) && ex is not ExtensionOperationCanceledException)
+            if (profileCaptureSession is not null)
             {
-                logger.LogError(ex, "An unexpected error occurred.");
-
-                telemetry.RecordError("An unexpected error occurred.", ex);
-
-                errorWriter.WriteLine(string.Format(CultureInfo.CurrentCulture, InteractionServiceStrings.UnexpectedErrorOccurred, ex.Message));
+                try
+                {
+                    await telemetryManager.ForceFlushProfilingAsync().ConfigureAwait(false);
+                    var exportExitCode = await profileCaptureSession.ExportAsync(cancellationManager.Token).ConfigureAwait(false);
+                    if (exitCode == CliExitCodes.Success && exportExitCode != CliExitCodes.Success)
+                    {
+                        exitCode = exportExitCode;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to export profile capture.");
+                    errorWriter.WriteLine(string.Format(CultureInfo.CurrentCulture, ExportCommandStrings.FailedToExport, ex.Message));
+                    if (exitCode == CliExitCodes.Success)
+                    {
+                        exitCode = CliExitCodes.DashboardFailure;
+                    }
+                }
             }
 
-            // Log exit code for debugging
-            logger.LogError("Exit code: {ExitCode} (exception)", unknownErrorExitCode);
-
-            mainActivity?.SetTag(TelemetryConstants.Tags.ProcessExitCode, unknownErrorExitCode);
-            mainActivity?.Stop();
-
-            return unknownErrorExitCode;
+            return exitCode;
         }
         finally
         {
+            if (profileCaptureSession is not null)
+            {
+                await profileCaptureSession.DisposeAsync().ConfigureAwait(false);
+            }
+
             // Shutting down telemetry manager to flush any remaining telemetry and will take time.
             // Start shutdown of telemetry manager immediately and run concurrently with app shutdown.
             var shutdownTelemetryTask = telemetryManager.ShutdownAsync();

@@ -67,6 +67,26 @@ internal sealed class RootCommand : BaseRootCommand
         DefaultValueFactory = _ => false
     };
 
+    public static readonly Option<bool> CaptureProfileOption = new("--capture-profile")
+    {
+        Recursive = true,
+        Hidden = true,
+        DefaultValueFactory = _ => false
+    };
+
+    public static readonly Option<FileInfo?> CaptureProfileOutputOption = new("--capture-profile-output")
+    {
+        Recursive = true,
+        Hidden = true
+    };
+
+    public static readonly Option<int> CaptureProfileDelayOption = new("--capture-profile-delay")
+    {
+        Recursive = true,
+        Hidden = true,
+        DefaultValueFactory = _ => 0
+    };
+
     /// <summary>
     /// Global options that should be passed through to child CLI processes when spawning.
     /// Add new global options here to ensure they are forwarded during detached mode execution.
@@ -180,6 +200,9 @@ internal sealed class RootCommand : BaseRootCommand
         Options.Add(BannerOption);
         Options.Add(WaitForDebuggerOption);
         Options.Add(CliWaitForDebuggerOption);
+        Options.Add(CaptureProfileOption);
+        Options.Add(CaptureProfileOutputOption);
+        Options.Add(CaptureProfileDelayOption);
 
         // Handle standalone 'aspire' or 'aspire --banner' (no subcommand)
         this.SetAction((Func<ParseResult, CancellationToken, Task<int>>)((context, cancellationToken) =>
