@@ -675,8 +675,19 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
     /// <returns>The dashboard URL state including health and resolved dashboard URLs.</returns>
     public async Task<DashboardUrlsState> GetDashboardUrlsAsync(CancellationToken cancellationToken = default)
     {
+        using var activity = profilingTelemetry.StartJsonRpcServerCall(nameof(GetDashboardUrlsAsync), streaming: false);
         logger.LogDebug("GetDashboardUrlsAsync called on auxiliary backchannel");
-        return await DashboardUrlsHelper.GetDashboardUrlsAsync(serviceProvider, logger, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var urls = await DashboardUrlsHelper.GetDashboardUrlsAsync(serviceProvider, logger, cancellationToken).ConfigureAwait(false);
+            activity.SetDashboardHealthy(urls.DashboardHealthy);
+            return urls;
+        }
+        catch (Exception ex)
+        {
+            activity.SetError(ex);
+            throw;
+        }
     }
 
     /// <summary>
@@ -1345,7 +1356,7 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
     public IAsyncEnumerable<BackchannelLogEntry> GetAppHostLogEntriesAsync(CancellationToken cancellationToken = default)
     {
         var rpcTarget = serviceProvider.GetRequiredService<AppHostRpcTarget>();
-        return rpcTarget.GetAppHostLogEntriesAsync(cancellationToken);
+        return rpcTarget.GetAppHostLogEntriesAsync(cancellationToken: cancellationToken);
     }
 
     /// <summary>

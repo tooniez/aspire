@@ -94,7 +94,7 @@ internal sealed class AppHostCliBackchannel(
     {
         return InvokeStreamingRpcAsync<BackchannelLogEntry>(
             (rpc, ct) => rpc.InvokeStreamingWithProfilingAsync<BackchannelLogEntry>(
-                profilingTelemetry, "apphost", "GetAppHostLogEntriesAsync", [], ct),
+                profilingTelemetry, "apphost", "GetAppHostLogEntriesAsync", [], ct, ProfilingJsonRpcExtensions.StreamingSpanLifetime.FirstItem),
             "AppHost log entries",
             cancellationToken);
     }

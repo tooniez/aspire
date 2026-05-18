@@ -72,6 +72,16 @@ internal static class KnownCommandVisibility
 internal sealed class BackchannelTraceContext
 {
     /// <summary>
+    /// Gets the W3C traceparent value associated with the caller span.
+    /// </summary>
+    public string? TraceParent { get; init; }
+
+    /// <summary>
+    /// Gets the W3C tracestate value associated with the caller span.
+    /// </summary>
+    public string? TraceState { get; init; }
+
+    /// <summary>
     /// Gets the baggage values associated with the trace.
     /// </summary>
     public Dictionary<string, string> Baggage { get; init; } = [];

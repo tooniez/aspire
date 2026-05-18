@@ -68,7 +68,9 @@ internal sealed class ProcessGuestLauncher : IGuestProcessLauncher
             startInfo.ArgumentList.Add(arg);
         }
 
-        foreach (var (key, value) in environmentVariables)
+        var effectiveEnvironmentVariables = environmentVariables.ToDictionary();
+        ProfilingTelemetry.AddActivityContextToEnvironment(activity, effectiveEnvironmentVariables);
+        foreach (var (key, value) in effectiveEnvironmentVariables)
         {
             startInfo.EnvironmentVariables[key] = value;
         }
