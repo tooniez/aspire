@@ -691,6 +691,21 @@ internal sealed class AuxiliaryBackchannelRpcTarget(
     }
 
     /// <summary>
+    /// Waits until the AppHost has reached its startup readiness point.
+    /// </summary>
+    /// <param name="request">The request (currently unused, for future expansion).</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The startup readiness state.</returns>
+    public async Task<WaitForAppHostReadyResponse> WaitForAppHostReadyAsync(WaitForAppHostReadyRequest? request = null, CancellationToken cancellationToken = default)
+    {
+        using var activity = profilingTelemetry.StartJsonRpcServerCall(nameof(WaitForAppHostReadyAsync), streaming: false, request?.TraceContext);
+
+        var startupState = serviceProvider.GetRequiredService<AppHostStartupState>();
+        await startupState.WaitForReadyAsync(cancellationToken).ConfigureAwait(false);
+        return new WaitForAppHostReadyResponse { IsReady = true };
+    }
+
+    /// <summary>
     /// Preserved for backwards compatibility with older CLI versions that call this RPC method.
     /// Always returns <see langword="null"/> because the dashboard MCP server has been removed.
     /// </summary>

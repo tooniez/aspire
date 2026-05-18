@@ -56,6 +56,64 @@ public class AuxiliaryBackchannelRpcTargetTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public void AppHostStartupState_IsReadyWhenRemoteAppHostSocketIsAbsent()
+    {
+        var configuration = new ConfigurationBuilder().Build();
+
+        var startupState = new AppHostStartupState(configuration);
+
+        Assert.True(startupState.IsReady);
+    }
+
+    [Fact]
+    public void AppHostStartupState_WaitsForReadyWhenRemoteAppHostSocketIsPresent()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["REMOTE_APP_HOST_SOCKET_PATH"] = "aspire-remote.sock"
+            })
+            .Build();
+        var startupState = new AppHostStartupState(configuration);
+
+        Assert.False(startupState.IsReady);
+
+        startupState.MarkReady();
+
+        Assert.True(startupState.IsReady);
+    }
+
+    [Fact]
+    public async Task WaitForAppHostReadyAsync_CompletesWhenStartupStateIsReady()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["REMOTE_APP_HOST_SOCKET_PATH"] = "aspire-remote.sock"
+            })
+            .Build();
+
+        using var services = new ServiceCollection()
+            .AddSingleton<IConfiguration>(configuration)
+            .AddSingleton<ProfilingTelemetry>()
+            .AddSingleton<AppHostStartupState>()
+            .BuildServiceProvider();
+        var target = new AuxiliaryBackchannelRpcTarget(
+            NullLogger<AuxiliaryBackchannelRpcTarget>.Instance,
+            configuration,
+            services.GetRequiredService<ProfilingTelemetry>(),
+            services);
+
+        var waitTask = target.WaitForAppHostReadyAsync();
+        Assert.False(waitTask.IsCompleted);
+
+        services.GetRequiredService<AppHostStartupState>().MarkReady();
+        var ready = await waitTask.DefaultTimeout();
+
+        Assert.True(ready.IsReady);
+    }
+
+    [Fact]
     public async Task GetResourceSnapshotsAsync_EnumeratesResources()
     {
         using var builder = TestDistributedApplicationBuilder.Create(outputHelper);

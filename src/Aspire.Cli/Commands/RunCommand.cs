@@ -72,6 +72,11 @@ internal sealed class RunCommand : BaseCommand
     private readonly ProfilingTelemetry _profilingTelemetry;
     private bool _isDetachMode;
 
+    // Guest AppHosts can bring up the temporary server/backchannel and then fail immediately
+    // afterward when the guest startup process hits a syntax or pre-execute error. Keep the
+    // detached parent waiting briefly so those early failures are reported instead of hidden.
+    private static readonly TimeSpan s_detachedStartupStabilityWindow = TimeSpan.FromSeconds(2);
+
     protected override bool UpdateNotificationsEnabled => !_isDetachMode;
 
     private static readonly Option<bool> s_detachOption = new("--detach")
@@ -331,6 +336,20 @@ internal sealed class RunCommand : BaseCommand
                 InteractionService.DisplayMessage(KnownEmojis.Warning, RunCommandStrings.DashboardFailedToStart);
             }
 
+            if (IsDetachedStartChild())
+            {
+                var observedExitCode = await ObserveEarlyDetachedStartupExitAsync(pendingRun, cancellationToken).ConfigureAwait(false);
+                if (observedExitCode is { } exitCode)
+                {
+                    return exitCode == CliExitCodes.Cancelled
+                        ? CommandResult.Cancelled(CliExitCodes.Success)
+                        : CommandResult.FromExitCode(exitCode);
+                }
+
+            }
+
+            await backchannel.NotifyAppHostReadyAsync(cancellationToken).ConfigureAwait(false);
+
             // Display the UX
             var appHostRelativePath = Path.GetRelativePath(ExecutionContext.WorkingDirectory.FullName, effectiveAppHostFile.FullName);
             var longestLocalizedLengthWithColon = RenderAppHostSummary(
@@ -519,6 +538,24 @@ internal sealed class RunCommand : BaseCommand
         {
             runActivity?.Dispose();
         }
+    }
+
+    private bool IsDetachedStartChild() => _configuration.GetBool(KnownConfigNames.CliRunDetached) is true;
+
+    private static async Task<int?> ObserveEarlyDetachedStartupExitAsync(Task<int> pendingRun, CancellationToken cancellationToken)
+    {
+        var completedTask = await Task.WhenAny(
+            pendingRun,
+            Task.Delay(s_detachedStartupStabilityWindow, cancellationToken)).ConfigureAwait(false);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (completedTask == pendingRun)
+        {
+            return await pendingRun.ConfigureAwait(false);
+        }
+
+        return null;
     }
 
     private static IRenderable BuildCtrlCRenderable(int longestLocalizedLengthWithColon)

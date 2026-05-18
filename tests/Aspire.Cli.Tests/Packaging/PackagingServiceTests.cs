@@ -168,10 +168,10 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
         var tempDir = workspace.WorkspaceRoot;
         var hivesDir = new DirectoryInfo(Path.Combine(tempDir.FullName, ".aspire", "hives"));
         var executionContext = TestExecutionContextHelper.CreateExecutionContext(tempDir, hivesDirectory: hivesDir);
-        
+
         var features = new TestFeatures();
         features.SetFeature(KnownFeatures.StagingChannelEnabled, true);
-        
+
         var testFeedUrl = "https://example.com/nuget/v3/index.json";
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -435,9 +435,9 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
             .Build();
 
         var packagingService = new PackagingService(
-            TestExecutionContextHelper.CreateExecutionContext(tempDir), 
-            new FakeNuGetPackageCache(), 
-            features, 
+            TestExecutionContextHelper.CreateExecutionContext(tempDir),
+            new FakeNuGetPackageCache(),
+            features,
             configuration,
             NullLogger<PackagingService>.Instance);
 
@@ -690,9 +690,9 @@ public class PackagingServiceTests(ITestOutputHelper outputHelper)
             .Build();
 
         var packagingService = new PackagingService(
-            TestExecutionContextHelper.CreateExecutionContext(tempDir), 
-            new FakeNuGetPackageCache(), 
-            features, 
+            TestExecutionContextHelper.CreateExecutionContext(tempDir),
+            new FakeNuGetPackageCache(),
+            features,
             configuration,
             NullLogger<PackagingService>.Instance);
 
