@@ -2175,6 +2175,164 @@ builder.Build().Run();");
         Assert.Equal(realAppHost.FullName, found[0].AppHostFile.FullName);
     }
 
+    // ---------------------------------------------------------------------
+    // GetAppHostFromSettingsAsync regression tests (issue: `aspire update`
+    // crash when the configured AppHost's SDK pin no longer resolves).
+    //
+    // `aspire update` is the one command whose job is to *repair* an AppHost
+    // whose pinned SDK can't be restored. The strict discovery path
+    // (UseOrFindAppHostProjectFileAsync) calls MSBuild against the configured
+    // path via ValidateAppHostAsync; when MSBuild fails, the configured path
+    // is dropped and discovery cannot find any "buildable" AppHost either,
+    // so the user gets "No buildable AppHosts were found".
+    //
+    // GetAppHostFromSettingsAsync intentionally does NOT MSBuild-validate the
+    // configured path — it only checks file existence and handler presence.
+    // The four tests below lock down the contract:
+    //   * settings lookup returns the configured path when validation would fail;
+    //   * settings lookup still rejects a missing file (returns null);
+    //   * settings lookup still rejects a project with no handler (returns null);
+    //   * strict discovery still rejects an unbuildable configured path (so a
+    //     future change cannot silently weaken `aspire run` / `aspire add`).
+    // ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task GetAppHostFromSettings_ReturnsConfiguredAppHostEvenWhenValidationWouldFail()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var appHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("AppHost");
+        var appHostProjectFile = new FileInfo(Path.Combine(appHostDirectory.FullName, "AppHost.csproj"));
+        await File.WriteAllTextAsync(appHostProjectFile.FullName, "Not a real apphost");
+
+        var workspaceSettingsDirectory = workspace.CreateDirectory(".aspire");
+        var aspireSettingsFile = new FileInfo(Path.Combine(workspaceSettingsDirectory.FullName, "settings.json"));
+
+        using (var writer = aspireSettingsFile.OpenWrite())
+        {
+            await JsonSerializer.SerializeAsync(writer, new
+            {
+                appHostPath = Path.GetRelativePath(aspireSettingsFile.Directory!.FullName, appHostProjectFile.FullName)
+            });
+        }
+
+        // Even if MSBuild validation would fail (simulating an unresolvable SDK pin),
+        // GetAppHostFromSettingsAsync must return the configured path: it doesn't
+        // invoke ValidateAppHostAsync at all. `aspire update` relies on this so it
+        // can rewrite the pin via ProjectUpdater's fallback parser.
+        var projectFactory = new TestAppHostProjectFactory
+        {
+            ValidateAppHostAsyncCallback = (_, _) => Task.FromResult(new AppHostValidationResult(IsValid: false))
+        };
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var projectLocator = CreateProjectLocator(executionContext, projectFactory: projectFactory);
+
+        var foundAppHost = await projectLocator.GetAppHostFromSettingsAsync(CancellationToken.None).DefaultTimeout();
+
+        Assert.NotNull(foundAppHost);
+        Assert.Equal(appHostProjectFile.FullName, foundAppHost!.FullName);
+    }
+
+    [Fact]
+    public async Task GetAppHostFromSettings_ReturnsNullWhenConfiguredFileDoesNotExist()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var workspaceSettingsDirectory = workspace.CreateDirectory(".aspire");
+        var aspireSettingsFile = new FileInfo(Path.Combine(workspaceSettingsDirectory.FullName, "settings.json"));
+
+        using (var writer = aspireSettingsFile.OpenWrite())
+        {
+            await JsonSerializer.SerializeAsync(writer, new
+            {
+                appHostPath = "DoesNotExist/AppHost.csproj"
+            });
+        }
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var projectLocator = CreateProjectLocator(executionContext);
+
+        // Skipping MSBuild validation does not mean accepting paths that
+        // aren't on disk — the existence check still runs.
+        var foundAppHost = await projectLocator.GetAppHostFromSettingsAsync(CancellationToken.None).DefaultTimeout();
+
+        Assert.Null(foundAppHost);
+    }
+
+    [Fact]
+    public async Task GetAppHostFromSettings_ReturnsNullWhenNoHandlerCanProcessFile()
+    {
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var appHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("AppHost");
+        // Use an extension with no registered handler; TryGetProject returns null
+        // for this file. Settings lookup must still reject it: skipping MSBuild
+        // validation is not the same as accepting anything.
+        var appHostProjectFile = new FileInfo(Path.Combine(appHostDirectory.FullName, "AppHost.unknown"));
+        await File.WriteAllTextAsync(appHostProjectFile.FullName, "Not a real apphost");
+
+        var workspaceSettingsDirectory = workspace.CreateDirectory(".aspire");
+        var aspireSettingsFile = new FileInfo(Path.Combine(workspaceSettingsDirectory.FullName, "settings.json"));
+
+        using (var writer = aspireSettingsFile.OpenWrite())
+        {
+            await JsonSerializer.SerializeAsync(writer, new
+            {
+                appHostPath = Path.GetRelativePath(aspireSettingsFile.Directory!.FullName, appHostProjectFile.FullName)
+            });
+        }
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var projectLocator = CreateProjectLocator(executionContext);
+
+        var foundAppHost = await projectLocator.GetAppHostFromSettingsAsync(CancellationToken.None).DefaultTimeout();
+
+        Assert.Null(foundAppHost);
+    }
+
+    [Fact]
+    public async Task UseOrFindAppHostProjectFile_RejectsUnbuildableSettingsAppHost()
+    {
+        // Inverse of the GetAppHostFromSettings tests above: locks down today's
+        // strict UseOrFindAppHostProjectFileAsync behavior so a future change
+        // cannot silently make `aspire run` / `aspire add` trust an unbuildable
+        // configured path. The discovery fallback must also fail (no other
+        // AppHosts on disk), so we expect a ProjectLocatorException.
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+
+        var appHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("AppHost");
+        var appHostProjectFile = new FileInfo(Path.Combine(appHostDirectory.FullName, "AppHost.csproj"));
+        await File.WriteAllTextAsync(appHostProjectFile.FullName, "Not a real apphost");
+
+        var workspaceSettingsDirectory = workspace.CreateDirectory(".aspire");
+        var aspireSettingsFile = new FileInfo(Path.Combine(workspaceSettingsDirectory.FullName, "settings.json"));
+
+        using (var writer = aspireSettingsFile.OpenWrite())
+        {
+            await JsonSerializer.SerializeAsync(writer, new
+            {
+                appHostPath = Path.GetRelativePath(aspireSettingsFile.Directory!.FullName, appHostProjectFile.FullName)
+            });
+        }
+
+        var projectFactory = new TestAppHostProjectFactory
+        {
+            ValidateAppHostAsyncCallback = (_, _) => Task.FromResult(new AppHostValidationResult(IsValid: false))
+        };
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var projectLocator = CreateProjectLocator(executionContext, projectFactory: projectFactory);
+
+        await Assert.ThrowsAsync<ProjectLocatorException>(async () =>
+        {
+            await projectLocator.UseOrFindAppHostProjectFileAsync(
+                projectFile: null,
+                createSettingsFile: false,
+                CancellationToken.None).DefaultTimeout();
+        });
+    }
+
     private static ProjectLocator CreateProjectLocator(
         CliExecutionContext executionContext,
         IInteractionService? interactionService = null,

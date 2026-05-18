@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using Aspire.Cli.Configuration;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Projects;
 using Microsoft.Extensions.Logging;
@@ -56,11 +57,22 @@ internal sealed partial class CliTemplateFactory
                     _logger.LogDebug("Copying embedded Go starter template files to '{OutputPath}'.", outputPath);
                     await CopyTemplateTreeToDiskAsync("go-starter", outputPath, ApplyAllTokens, cancellationToken);
 
-                    // No per-project channel is written here. The Go starter template ships an
-                    // aspire.config.json without a channel pin, and PrebuiltAppHostServer
-                    // aggregates package sources from every registered channel when the project
-                    // doesn't pin one — so daily-feed packages remain reachable on a daily CLI
-                    // without each project carrying a stale channel name across machines.
+                    // Persist the resolved channel into the scaffolded project's aspire.config.json
+                    // when NewCommand resolved an Explicit channel (pr-<N>, daily, staging, local).
+                    // Without this pin, `aspire update` skips the local-config step in its
+                    // channel-resolution precedence and falls through to either an interactive
+                    // prompt (when hives exist) or the Implicit/nuget.org channel — silently
+                    // moving a project scaffolded by a PR or daily CLI onto stable. Implicit
+                    // channel selections are left unwritten so `aspire add`/`aspire restore`
+                    // use the user's ambient NuGet config without a per-project pin. Mirrors
+                    // CliTemplateFactory.TypeScriptStarterTemplate and DotNetTemplateFactory.
+                    if (!string.IsNullOrEmpty(inputs.Channel))
+                    {
+                        var config = AspireConfigFile.LoadOrCreate(outputPath);
+                        config.Channel = inputs.Channel;
+                        config.Save(outputPath);
+                    }
+
                     var appHostProject = _projectFactory.TryGetProject(new FileInfo(Path.Combine(outputPath, "apphost.go")));
                     if (appHostProject is not IGuestAppHostSdkGenerator guestProject)
                     {

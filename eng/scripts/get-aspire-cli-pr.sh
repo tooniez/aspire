@@ -1654,6 +1654,10 @@ main() {
 
     # Add to shell profile for persistent PATH. Default tool installs use 'dotnet tool install -g',
     # which owns any global-tools PATH guidance; explicit tool-path installs use cli_install_dir.
+    # PR installs deliberately skip the persistent profile write: a PR build is a per-session
+    # dogfood activation. Touching ~/.zshrc / ~/.bashrc would silently demote a developer's
+    # daily/stable install on every new terminal until they hunt down the stale `export PATH=`
+    # line. The activation hint printed below shows how to opt in manually.
     if [[ "$HIVE_ONLY" != true ]]; then
         if [[ "$INSTALL_MODE" != "tool" || "$INSTALL_PREFIX_EXPLICIT" == true ]]; then
             if [[ "$SKIP_PATH" == true ]]; then
@@ -1665,7 +1669,11 @@ main() {
                 if path_contains "$path_to_add"; then
                     say_info "Path $path_to_add already exists in \$PATH, skipping addition"
                 else
-                    add_to_shell_profile "$path_to_add" "$path_to_add_unexpanded"
+                    if [[ -n "$PR_NUMBER" ]]; then
+                        say_info "PR install: leaving shell profile untouched; the activation hint below shows the PATH line to use."
+                    else
+                        add_to_shell_profile "$path_to_add" "$path_to_add_unexpanded"
+                    fi
 
                     # Add to current session PATH, if the path is not already in PATH
                     if [[ "$DRY_RUN" == true ]]; then
