@@ -224,9 +224,10 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         IAppHostServerProject appHostServerProject,
         string sdkVersion,
         List<IntegrationReference> integrations,
+        string? requestedChannel,
         CancellationToken cancellationToken)
     {
-        var result = await appHostServerProject.PrepareAsync(sdkVersion, integrations, cancellationToken);
+        var result = await appHostServerProject.PrepareAsync(sdkVersion, integrations, cancellationToken, requestedChannel);
         return (result.Success, result.Output, result.ChannelName, result.NeedsCodeGeneration);
     }
 
@@ -236,14 +237,21 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
     /// <returns><see langword="true"/> if the code was generated successfully; otherwise, <see langword="false"/>.</returns>
     internal async Task<bool> BuildAndGenerateSdkAsync(DirectoryInfo directory, CancellationToken cancellationToken)
     {
+        var config = LoadConfiguration(directory);
+        return await BuildAndGenerateSdkAsync(directory, config, cancellationToken);
+    }
+
+    private async Task<bool> BuildAndGenerateSdkAsync(DirectoryInfo directory, AspireConfigFile config, CancellationToken cancellationToken)
+    {
         var appHostServerProject = await _appHostServerProjectFactory.CreateAsync(directory.FullName, cancellationToken);
 
-        // Step 1: Load config - source of truth for SDK version and packages
-        var config = LoadConfiguration(directory);
+        // Step 1: Use the supplied config as the source of truth. Update uses an
+        // in-memory config here so a failed generation does not leave
+        // aspire.config.json pinned to versions the current CLI cannot run.
         var integrations = await GetIntegrationReferencesAsync(config, directory, cancellationToken);
         var sdkVersion = GetPrepareSdkVersion(config);
 
-        var (buildSuccess, buildOutput, _, _) = await PrepareAppHostServerAsync(appHostServerProject, sdkVersion, integrations, cancellationToken);
+        var (buildSuccess, buildOutput, _, _) = await PrepareAppHostServerAsync(appHostServerProject, sdkVersion, integrations, config.Channel, cancellationToken);
         if (!buildSuccess)
         {
             if (buildOutput is not null)
@@ -356,7 +364,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 async () =>
                 {
                     // Prepare the AppHost server (build for dev mode, restore for prebuilt)
-                    var (prepareSuccess, prepareOutput, channelName, needsCodeGen) = await PrepareAppHostServerAsync(appHostServerProject, sdkVersion, integrations, cancellationToken);
+                    var (prepareSuccess, prepareOutput, channelName, needsCodeGen) = await PrepareAppHostServerAsync(appHostServerProject, sdkVersion, integrations, config.Channel, cancellationToken);
                     if (!prepareSuccess)
                     {
                         return (Success: false, Output: prepareOutput, Error: "Failed to prepare app host.", ChannelName: (string?)null, NeedsCodeGen: false);
@@ -880,7 +888,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
             var sdkVersion = GetPrepareSdkVersion(config);
 
             // Prepare the AppHost server (build for dev mode, restore for prebuilt)
-            var (prepareSuccess, prepareOutput, _, needsCodeGen) = await PrepareAppHostServerAsync(appHostServerProject, sdkVersion, integrations, cancellationToken);
+            var (prepareSuccess, prepareOutput, _, needsCodeGen) = await PrepareAppHostServerAsync(appHostServerProject, sdkVersion, integrations, config.Channel, cancellationToken);
             if (!prepareSuccess)
             {
                 // Set OutputCollector so PipelineCommandBase can display errors
@@ -1190,10 +1198,16 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
 
         // Update configuration with the new package
         config.AddOrUpdatePackage(context.PackageId, context.PackageVersion);
-        SaveConfiguration(config, directory);
 
         // Build and regenerate SDK code with the new package
-        return await BuildAndGenerateSdkAsync(directory, cancellationToken);
+        var regenerateSuccess = await BuildAndGenerateSdkAsync(directory, config, cancellationToken);
+        if (!regenerateSuccess)
+        {
+            return false;
+        }
+
+        SaveConfiguration(config, directory);
+        return true;
     }
 
     /// <inheritdoc />
@@ -1219,11 +1233,7 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
                 // Check for SDK version update (silently - it's an implementation detail)
                 try
                 {
-                    var sdkPackages = await context.Channel.GetPackagesAsync("Aspire.Hosting", directory, cancellationToken);
-                    var latestSdkPackage = sdkPackages
-                        .Where(p => SemVersion.TryParse(p.Version, SemVersionStyles.Strict, out _))
-                        .OrderByDescending(p => SemVersion.Parse(p.Version, SemVersionStyles.Strict), SemVersion.PrecedenceComparer)
-                        .FirstOrDefault();
+                    var latestSdkPackage = await context.Channel.GetLatestGuestAppHostSdkPackageAsync(directory, cancellationToken);
 
                     if (latestSdkPackage is not null && latestSdkPackage.Version != config.SdkVersion)
                     {
@@ -1314,15 +1324,13 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         {
             config.AddOrUpdatePackage(packageId, newVersion);
         }
-        SaveConfiguration(config, directory);
-
         // Rebuild and regenerate SDK code with updated packages
         _interactionService.DisplayEmptyLine();
         var regenerateResult = await _interactionService.ShowStatusAsync(
             UpdateCommandStrings.RegeneratingSdkCode,
             async () =>
             {
-                var regenerateSuccess = await BuildAndGenerateSdkAsync(directory, cancellationToken);
+                var regenerateSuccess = await BuildAndGenerateSdkAsync(directory, config, cancellationToken);
 
                 if (!regenerateSuccess)
                 {
@@ -1336,6 +1344,8 @@ internal sealed class GuestAppHostProject : IAppHostProject, IGuestAppHostSdkGen
         {
             return regenerateResult;
         }
+
+        SaveConfiguration(config, directory);
 
         _interactionService.DisplayMessage(KnownEmojis.Package, UpdateCommandStrings.RegeneratedSdkCode);
 
