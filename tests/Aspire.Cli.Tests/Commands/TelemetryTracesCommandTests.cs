@@ -130,7 +130,7 @@ public class TelemetryTracesCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
-        Assert.Equal(ExitCodeConstants.Success, exitCode);
+        Assert.Equal(CliExitCodes.Success, exitCode);
         Assert.All(requestedHosts, host => Assert.Equal("localhost", host));
 
         var jsonLine = outputWriter.Logs.Single(l => l.TrimStart().StartsWith('['));
@@ -216,7 +216,7 @@ public class TelemetryTracesCommandTests(ITestOutputHelper outputHelper)
 
         var exitCode = await result.InvokeAsync().DefaultTimeout();
 
-        Assert.Equal(ExitCodeConstants.Success, exitCode);
+        Assert.Equal(CliExitCodes.Success, exitCode);
 
         // HTTP requests should be normalized to localhost
         Assert.All(requestedHosts, host => Assert.Equal("localhost", host));
