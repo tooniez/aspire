@@ -128,6 +128,8 @@ internal static class CliTestHelper
         services.AddSingleton(options.PackagingServiceFactory);
         services.AddSingleton(options.CliExecutionContextFactory);
         services.AddSingleton(options.DiskCacheFactory);
+        services.AddSingleton<IAppHostInfoDiskCache, NullAppHostInfoDiskCache>();
+        services.AddSingleton<IAppHostInfoResolver, AppHostInfoResolver>();
         services.AddSingleton(options.CliHostEnvironmentFactory);
         services.AddSingleton(options.CliDownloaderFactory);
         services.AddSingleton(options.FirstTimeUseNoticeSentinelFactory);
