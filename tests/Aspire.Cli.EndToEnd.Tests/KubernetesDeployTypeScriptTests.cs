@@ -17,7 +17,6 @@ public sealed class KubernetesDeployTypeScriptTests(ITestOutputHelper output)
     private const string ProjectName = "K8sTsTest";
 
     [Fact]
-    [ActiveIssue("https://github.com/microsoft/aspire/issues/15335")]
     [CaptureWorkspaceOnFailure]
     public async Task DeployTypeScriptAppToKubernetes()
     {

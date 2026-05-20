@@ -988,6 +988,72 @@ public class AspireExportAnalyzerTests
     }
 
     [Fact]
+    public async Task DtoWithGetOnlyMutableCollectionProperties_ReportsASPIREEXPORT015()
+    {
+        var diagnostic = AspireExportAnalyzer.Diagnostics.s_dtoMutableCollectionPropertyMustBeInitSettable;
+
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using System.Collections.Generic;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            [AspireDto]
+            public class MyDtoType
+            {
+                public List<string> Items { get; } = new();
+                public Dictionary<string, string> Metadata { get; } = new();
+            }
+            """,
+            [
+                new DiagnosticResult(diagnostic).WithSpan(9, 25, 9, 30).WithArguments("MyDtoType.Items"),
+                new DiagnosticResult(diagnostic).WithSpan(10, 39, 10, 47).WithArguments("MyDtoType.Metadata")
+            ]);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task DtoWithInitMutableCollectionProperties_NoDiagnostics()
+    {
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using System.Collections.Generic;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            [AspireDto]
+            public class MyDtoType
+            {
+                public List<string> Items { get; init; } = new();
+                public Dictionary<string, string> Metadata { get; init; } = new();
+            }
+            """, []);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task DtoWithIgnoredGetOnlyMutableCollectionProperties_NoDiagnostics()
+    {
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using System.Collections.Generic;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            [AspireDto]
+            public class MyDtoType
+            {
+                [AspireExportIgnore(Reason = "Not part of the ATS surface.")]
+                public List<string> Items { get; } = new();
+            }
+            """, []);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
     public async Task UnionWithPrimitives_NoDiagnostics()
     {
         var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
@@ -1238,6 +1304,160 @@ public class AspireExportAnalyzerTests
             [
                 CompilerWarning(diagnostic.Id).WithLocation(12, 17),
                 CompilerWarning(diagnostic.Id).WithLocation(14, 17)
+            ]);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task GeneratedMethodNameAliasesExistingExportName_ReportsASPIREEXPORT014()
+    {
+        var diagnostic = AspireExportAnalyzer.Diagnostics.s_duplicateGeneratedMethodName;
+
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using Aspire.Hosting.ApplicationModel;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            public class MyResource : IResource
+            {
+                public string Name => "test";
+                public ResourceAnnotationCollection Annotations { get; } = new();
+            }
+
+            public static class TestExports
+            {
+                [AspireExport]
+                public static IResourceBuilder<MyResource> AddThing(
+                    this IResourceBuilder<MyResource> builder,
+                    string name)
+                    => builder;
+
+                [AspireExport("addThingWithValue", MethodName = "addThing")]
+                public static IResourceBuilder<MyResource> AddThingForValue(
+                    this IResourceBuilder<MyResource> builder,
+                    string name,
+                    string value)
+                    => builder;
+            }
+            """,
+            [
+                CompilerError(diagnostic.Id).WithLocation(14, 6),
+                CompilerError(diagnostic.Id).WithLocation(20, 6)
+            ]);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task GeneratedMethodNameSharedByNonDefaultExports_ReportsASPIREEXPORT014()
+    {
+        var diagnostic = AspireExportAnalyzer.Diagnostics.s_duplicateGeneratedMethodName;
+
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using Aspire.Hosting.ApplicationModel;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            public class MyResource : IResource
+            {
+                public string Name => "test";
+                public ResourceAnnotationCollection Annotations { get; } = new();
+            }
+
+            public static class TestExports
+            {
+                [AspireExport("withStaticFiles1", MethodName = "withStaticFiles")]
+                public static IResourceBuilder<MyResource> WithStaticFiles(
+                    this IResourceBuilder<MyResource> builder)
+                    => builder;
+
+                [AspireExport("withStaticFiles2", MethodName = "withStaticFiles")]
+                public static IResourceBuilder<MyResource> WithStaticFiles(
+                    this IResourceBuilder<MyResource> builder,
+                    string sourcePath)
+                    => builder;
+            }
+            """,
+            [
+                CompilerError(diagnostic.Id).WithLocation(14, 6),
+                CompilerError(diagnostic.Id).WithLocation(19, 6)
+            ]);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task GeneratedMethodNameAliasesExposedPropertyName_ReportsASPIREEXPORT014()
+    {
+        var diagnostic = AspireExportAnalyzer.Diagnostics.s_duplicateGeneratedMethodName;
+
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using Aspire.Hosting.ApplicationModel;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            [AspireExport(ExposeProperties = true)]
+            public class MyResource : IResource
+            {
+                public string Name => "test";
+                public ResourceAnnotationCollection Annotations { get; } = new();
+                public bool PublishAsThing { get; set; }
+            }
+
+            public static class TestExports
+            {
+                [AspireExport("publishAsThingExport", MethodName = "publishAsThing")]
+                public static IResourceBuilder<MyResource> PublishAsThing(
+                    this IResourceBuilder<MyResource> builder)
+                    => builder;
+            }
+            """,
+            [
+                CompilerError(diagnostic.Id).WithLocation(11, 17),
+                CompilerError(diagnostic.Id).WithLocation(16, 6)
+            ]);
+
+        await test.RunAsync();
+    }
+
+    [Fact]
+    public async Task GeneratedMethodNameAliasesInheritedExposedPropertyName_ReportsASPIREEXPORT014()
+    {
+        var diagnostic = AspireExportAnalyzer.Diagnostics.s_duplicateGeneratedMethodName;
+
+        var test = AnalyzerTest.Create<AspireExportAnalyzer>("""
+            using Aspire.Hosting;
+            using Aspire.Hosting.ApplicationModel;
+
+            var builder = DistributedApplication.CreateBuilder(args);
+
+            public abstract class BaseResource : IResource
+            {
+                public string Name => "test";
+                public ResourceAnnotationCollection Annotations { get; } = new();
+                public string Command => "run";
+            }
+
+            [AspireExport(ExposeProperties = true)]
+            public class MyResource : BaseResource
+            {
+            }
+
+            public static class TestExports
+            {
+                [AspireExport("commandExport", MethodName = "command")]
+                public static IResourceBuilder<MyResource> Command(
+                    this IResourceBuilder<MyResource> builder)
+                    => builder;
+            }
+            """,
+            [
+                CompilerError(diagnostic.Id).WithLocation(10, 19),
+                CompilerError(diagnostic.Id).WithLocation(20, 6)
             ]);
 
         await test.RunAsync();

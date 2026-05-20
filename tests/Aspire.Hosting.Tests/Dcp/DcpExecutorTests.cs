@@ -13,6 +13,7 @@ using System.Threading.Channels;
 using Aspire.Dashboard.Model;
 using Aspire.Hosting.Dcp;
 using Aspire.Hosting.Dcp.Model;
+using Aspire.Hosting.Diagnostics;
 using Aspire.Hosting.Tests.Utils;
 using k8s.Models;
 using Microsoft.AspNetCore.InternalTesting;
@@ -292,6 +293,96 @@ public class DcpExecutorTests
 
         Assert.Equal(["--port", "5678"], GetEnumerablePropertyValue<string>(snapshot, KnownProperties.Resource.AppArgs).ToArray());
         Assert.Equal(effectiveArgs, GetEnumerablePropertyValue<string>(snapshot, KnownProperties.Container.Args).ToArray());
+    }
+
+    [Theory]
+    [InlineData("aspire")]
+    [InlineData("ASPIRE")]
+    public async Task RunApplicationAsync_ThrowsWhenContainerResourceNameConflictsWithContainerTunnelName(string containerName)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer(containerName, "image");
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: new TestKubernetesService(),
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = true });
+
+        var ex = await Assert.ThrowsAsync<DistributedApplicationException>(() => appExecutor.RunApplicationAsync());
+        Assert.Contains("container tunnel container name", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("aspire")]
+    [InlineData("ASPIRE")]
+    public async Task RunApplicationAsync_ThrowsWhenExplicitContainerNameConflictsWithContainerTunnelName(string containerName)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("aContainer", "image")
+            .WithContainerName(containerName);
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: new TestKubernetesService(),
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = true });
+
+        var ex = await Assert.ThrowsAsync<DistributedApplicationException>(() => appExecutor.RunApplicationAsync());
+        Assert.Contains("container tunnel container name", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("aspire")]
+    [InlineData("ASPIRE")]
+    public async Task RunApplicationAsync_ThrowsWhenNetworkAliasConflictsWithContainerTunnelName(string alias)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("aContainer", "image")
+            .WithContainerNetworkAlias(alias);
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: new TestKubernetesService(),
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = true });
+
+        var ex = await Assert.ThrowsAsync<DistributedApplicationException>(() => appExecutor.RunApplicationAsync());
+        Assert.Contains("container tunnel container name", ex.Message);
+    }
+
+    [Fact]
+    public async Task RunApplicationAsync_AllowsContainerNameMatchingContainerTunnelNameWhenContainerTunnelDisabled()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+
+        builder.AddContainer("aspire", "image");
+        builder.AddContainer("aContainer", "image")
+            .WithContainerName("ASPIRE");
+        builder.AddContainer("bContainer", "image")
+            .WithContainerNetworkAlias("ASPIRE");
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: kubernetesService,
+            dcpOptions: new DcpOptions { EnableAspireContainerTunnel = false });
+
+        await appExecutor.RunApplicationAsync();
+
+        Assert.Equal(3, kubernetesService.CreatedResources.OfType<Container>().Count());
     }
 
     [Fact]
@@ -923,6 +1014,131 @@ public class DcpExecutorTests
         // Verify the system logs are formatted with [sys] prefix and proper formatting
         Assert.Contains(watchLogsResults, l => l.Content.Contains("[sys] Starting process...: Cmd = bla, Args = []"));
         Assert.Contains(watchLogsResults, l => l.Content.Contains("[sys] Failed to start process: Cmd = bla, Args = [], Error = exec: \"bla\": executable file not found in $PATH"));
+        Assert.Contains(watchLogsResults, l => l.Content.Contains("2024-08-19T06:10:01.0000000Z [sys] Starting process...: Cmd = bla, Args = []"));
+        Assert.Contains(watchLogsResults, l => l.Content.Contains("2024-08-19T06:10:02.0000000Z [sys] Failed to start process: Cmd = bla, Args = [], Error = exec: \"bla\": executable file not found in $PATH"));
+    }
+
+    [Fact]
+    public async Task ResourceLogging_CarriageReturnProgressOutput_NormalizesOverwrittenLines()
+    {
+        var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions
+        {
+            AssemblyName = typeof(DistributedApplicationTests).Assembly.FullName
+        });
+
+        builder.AddContainer("database", "image");
+
+        var kubernetesService = new TestKubernetesService(startStream: (obj, logStreamType) =>
+        {
+            switch (logStreamType)
+            {
+                case Logs.StreamTypeStdOut:
+                    var stdout =
+                        "2024-08-19T06:10:01.000Z   0%\r 50%\r100%" + Environment.NewLine +
+                        "2024-08-19T06:10:02.000Z Windows line" + "\r\n" +
+                        "2024-08-19T06:10:03.000Z Done" + Environment.NewLine;
+                    return new MemoryStream(Encoding.UTF8.GetBytes(stdout));
+                case Logs.StreamTypeStdErr:
+                case Logs.StreamTypeStartupStdOut:
+                case Logs.StreamTypeStartupStdErr:
+                case Logs.StreamTypeSystem:
+                    return new MemoryStream();
+                default:
+                    throw new InvalidOperationException("Unexpected type: " + logStreamType);
+            }
+        });
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var dcpOptions = new DcpOptions { DashboardPath = "./dashboard" };
+        var resourceLoggerService = new ResourceLoggerService();
+        var appExecutor = CreateAppExecutor(distributedAppModel, kubernetesService: kubernetesService, dcpOptions: dcpOptions, resourceLoggerService: resourceLoggerService);
+        await appExecutor.RunApplicationAsync();
+
+        var exeResource = Assert.Single(kubernetesService.CreatedResources.OfType<Container>());
+
+        var watchSubscribers = resourceLoggerService.WatchAnySubscribersAsync();
+        var watchSubscribersEnumerator = watchSubscribers.GetAsyncEnumerator();
+        var watchLogs = resourceLoggerService.WatchAsync(exeResource.Metadata.Name);
+        // Wait for all three stdout records plus the certificate authority message, which can arrive first in CI.
+        var watchLogsTask = ConsoleLoggingTestHelpers.WatchForLogsAsync(watchLogs, targetLogCount: 4);
+
+        await watchSubscribersEnumerator.MoveNextAsync();
+        Assert.Equal(exeResource.Metadata.Name, watchSubscribersEnumerator.Current.Name);
+        Assert.True(watchSubscribersEnumerator.Current.AnySubscribers);
+
+        exeResource.Status = new ContainerStatus { State = ContainerState.Running };
+        kubernetesService.PushResourceModified(exeResource);
+
+        var watchLogsResults = await watchLogsTask;
+
+        Assert.Contains(watchLogsResults, l => l.Content.Contains("2024-08-19T06:10:01.0000000Z 100%"));
+        Assert.Contains(watchLogsResults, l => l.Content.Contains("2024-08-19T06:10:02.0000000Z Windows line"));
+        Assert.Contains(watchLogsResults, l => l.Content.Contains("2024-08-19T06:10:03.0000000Z Done"));
+        Assert.DoesNotContain(watchLogsResults, l => l.Content.Contains("  0%"));
+        Assert.DoesNotContain(watchLogsResults, l => l.Content.Contains("50%"));
+    }
+
+    [Fact]
+    public async Task ResourceLogging_SystemStreamWithCarriageReturnInMessage_ParsesCorrectly()
+    {
+        // Regression test: NormalizeCarriageReturns must not be applied to the full DCP raw line
+        // before parsing; doing so would corrupt the tab-delimited structure and cause the parser
+        // to fail, dropping the [sys] prefix and timestamp.
+        var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions
+        {
+            AssemblyName = typeof(DistributedApplicationTests).Assembly.FullName
+        });
+
+        builder.AddContainer("database", "image");
+
+        var kubernetesService = new TestKubernetesService(startStream: (obj, logStreamType) =>
+        {
+            switch (logStreamType)
+            {
+                case Logs.StreamTypeStdOut:
+                case Logs.StreamTypeStdErr:
+                case Logs.StreamTypeStartupStdOut:
+                case Logs.StreamTypeStartupStdErr:
+                    return new MemoryStream();
+                case Logs.StreamTypeSystem:
+                    // A DCP log line whose message content contains \r (e.g. a progress-style
+                    // overwrite inside a system log message).  The tab-delimited header must
+                    // be parsed first so the \r normalization only applies to the message part.
+                    var systemLogs =
+                        "2024-08-19T06:10:01.000Z\tinfo\tdcp.ExecutableReconciler\tfirst\rsecond\rthird" + Environment.NewLine;
+                    return new MemoryStream(Encoding.UTF8.GetBytes(systemLogs));
+                default:
+                    throw new InvalidOperationException("Unexpected type: " + logStreamType);
+            }
+        });
+
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var dcpOptions = new DcpOptions { DashboardPath = "./dashboard" };
+        var resourceLoggerService = new ResourceLoggerService();
+        var appExecutor = CreateAppExecutor(distributedAppModel, kubernetesService: kubernetesService, dcpOptions: dcpOptions, resourceLoggerService: resourceLoggerService);
+        await appExecutor.RunApplicationAsync();
+
+        var exeResource = Assert.Single(kubernetesService.CreatedResources.OfType<Container>());
+
+        var watchSubscribers = resourceLoggerService.WatchAnySubscribersAsync();
+        var watchSubscribersEnumerator = watchSubscribers.GetAsyncEnumerator();
+        var watchLogs = resourceLoggerService.WatchAsync(exeResource.Metadata.Name);
+        var watchLogsTask = ConsoleLoggingTestHelpers.WatchForLogsAsync(watchLogs, targetLogCount: 2); // 1 DCP system log + 1 certificate authority message
+
+        await watchSubscribersEnumerator.MoveNextAsync();
+        Assert.Equal(exeResource.Metadata.Name, watchSubscribersEnumerator.Current.Name);
+        Assert.True(watchSubscribersEnumerator.Current.AnySubscribers);
+
+        exeResource.Status = new ContainerStatus { State = ContainerState.Running };
+        kubernetesService.PushResourceModified(exeResource);
+
+        var watchLogsResults = await watchLogsTask;
+
+        // The entry should be parsed as a DCP [sys] log (not plain stdout) with the
+        // last \r-overwritten segment ("third") preserved as the message content.
+        Assert.Contains(watchLogsResults, l => l.Content.Contains("[sys] third"));
+        Assert.DoesNotContain(watchLogsResults, l => l.Content.Contains("first"));
     }
 
     private sealed class LogStreamPipes
@@ -3608,7 +3824,8 @@ public class DcpExecutorTests
             dcpEvts,
             appResources,
             executableCreator,
-            containerCreator);
+            containerCreator,
+            new ProfilingTelemetry(configuration));
     }
 
     private static bool RetryTillTrueOrTimeout(Func<bool> check, int timeoutMilliseconds)

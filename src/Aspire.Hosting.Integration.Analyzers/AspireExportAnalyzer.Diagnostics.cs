@@ -142,6 +142,27 @@ public partial class AspireExportAnalyzer
             helpLinkUri: $"https://aka.ms/aspire/diagnostics/{DuplicatePolyglotCapabilityIdId}",
             customTags: [WellKnownDiagnosticTags.CompilationEnd]);
 
+        private const string DuplicateGeneratedMethodNameId = "ASPIREEXPORT014";
+        internal static readonly DiagnosticDescriptor s_duplicateGeneratedMethodName = new(
+            id: DuplicateGeneratedMethodNameId,
+            title: "Duplicate generated polyglot member name",
+            messageFormat: "Generated polyglot member name '{0}' is already used for target type '{1}' by multiple exports: {2}. Use a unique MethodName, or combine overloads into a single export with optional parameters.",
+            category: "Design",
+            DiagnosticSeverity.Error,
+            isEnabledByDefault: true,
+            helpLinkUri: $"https://aka.ms/aspire/diagnostics/{DuplicateGeneratedMethodNameId}",
+            customTags: [WellKnownDiagnosticTags.CompilationEnd]);
+
+        private const string DtoMutableCollectionPropertyMustBeInitSettableId = "ASPIREEXPORT015";
+        internal static readonly DiagnosticDescriptor s_dtoMutableCollectionPropertyMustBeInitSettable = new(
+            id: DtoMutableCollectionPropertyMustBeInitSettableId,
+            title: "AspireDto mutable collection property should be init-settable",
+            messageFormat: "DTO property '{0}' is a get-only mutable collection. Add an init accessor so System.Text.Json replaces the collection during DTO deserialization; otherwise collection values can be merged with initializer defaults.",
+            category: "Design",
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            helpLinkUri: $"https://aka.ms/aspire/diagnostics/{DtoMutableCollectionPropertyMustBeInitSettableId}");
+
         public static readonly ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics = ImmutableArray.Create(
             s_exportMethodMustBeStatic,
             s_invalidExportIdFormat,
@@ -155,7 +176,9 @@ public partial class AspireExportAnalyzer
             s_exportedSyncDelegateInvokedInline,
             s_redundantExportId,
             s_callbackContextTypeMissingExport,
-            s_duplicatePolyglotCapabilityId
+            s_duplicatePolyglotCapabilityId,
+            s_duplicateGeneratedMethodName,
+            s_dtoMutableCollectionPropertyMustBeInitSettable
         );
     }
 }

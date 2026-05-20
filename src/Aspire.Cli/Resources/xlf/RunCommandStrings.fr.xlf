@@ -68,8 +68,8 @@
         <note />
       </trans-unit>
       <trans-unit id="DashboardFailedToStart">
-        <source>Aspire Dashboard failed to start.</source>
-        <target state="translated">Nous n’avons pas pu lancer le tableau de bord Aspire.</target>
+        <source>Aspire Dashboard failed to start or is disabled.</source>
+        <target state="needs-review-translation">Nous n’avons pas pu lancer le tableau de bord Aspire.</target>
         <note />
       </trans-unit>
       <trans-unit id="Description">
@@ -153,13 +153,18 @@
         <note />
       </trans-unit>
       <trans-unit id="ProjectArgumentDescription">
-        <source>The path to the Aspire AppHost project file</source>
+        <source>The path to the Aspire AppHost project file or a directory to search</source>
         <target state="needs-review-translation">Chemin d’accès au fichier projet AppHost Aspire.</target>
         <note />
       </trans-unit>
       <trans-unit id="ProjectCouldNotBeRun">
         <source>The project could not be run. See logs at {0}</source>
         <target state="translated">Désolé, le projet n’a pas pu être exécuté. Consultez les journaux à l’emplacement {0}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="RecentAppHostStartupOutput">
+        <source>Recent AppHost startup output</source>
+        <target state="new">Recent AppHost startup output</target>
         <note />
       </trans-unit>
       <trans-unit id="Resource">
@@ -193,8 +198,13 @@
         <note />
       </trans-unit>
       <trans-unit id="StartingDebugSessionInExtension">
-        <source>Detected aspire run inside the Aspire extension, starting a debug session in VS Code...</source>
-        <target state="translated">Exécution d’Aspire détectée dans l’extension Aspire, démarrage d’une session de débogage dans VS Code...</target>
+        <source>Detected aspire {0} inside the Aspire extension, starting a debug session in VS Code...</source>
+        <target state="new">Detected aspire {0} inside the Aspire extension, starting a debug session in VS Code...</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="StartingRunSessionInExtension">
+        <source>Detected aspire {0} inside the Aspire extension, running app in VS Code. To start a debug session, add --start-debug-session.</source>
+        <target state="new">Detected aspire {0} inside the Aspire extension, running app in VS Code. To start a debug session, add --start-debug-session.</target>
         <note />
       </trans-unit>
       <trans-unit id="State">
