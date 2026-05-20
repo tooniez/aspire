@@ -867,12 +867,9 @@ public class Program
                 // Log exit code for debugging
                 logger.LogInformation("Exit code: {ExitCode}", exitCode);
             }
-            catch (OperationCanceledException ex) when (cancellationManager.IsCancellationRequested || ex is ExtensionOperationCanceledException)
-            {
-                exitCode = CliExitCodes.Cancelled;
-            }
             catch (Exception ex)
             {
+                // Should never get here because RootCommand's handler should catch all exceptions, but log just in case.
                 exitCode = CliExitCodes.InvalidCommand;
 
                 logger.LogError(ex, "An unexpected error occurred.");
