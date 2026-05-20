@@ -1,4 +1,4 @@
-﻿// aspire.ts - Capability-based Aspire SDK
+// aspire.ts - Capability-based Aspire SDK
 // This SDK uses the ATS (Aspire Type System) capability API.
 // Capabilities are endpoints like 'Aspire.Hosting/createBuilder'.
 //
@@ -1404,7 +1404,7 @@ export interface WithEndpointOptions {
     name?: string;
     /** An optional name of the environment variable that will be used to inject the `targetPort`. If the target port is null one will be dynamically generated and assigned to the environment variable. */
     env?: string;
-    /** Specifies if the endpoint will be proxied by DCP. Defaults to true. */
+    /** Specifies if the endpoint will be proxied by DCP. Defaults to `null`. */
     isProxied?: boolean;
     /** Indicates that this endpoint should be exposed externally at publish time. */
     isExternal?: boolean;
@@ -1426,7 +1426,7 @@ export interface WithHttpEndpointOptions {
     name?: string;
     /** An optional name of the environment variable to inject. */
     env?: string;
-    /** Specifies if the endpoint will be proxied by DCP. Defaults to true. */
+    /** Specifies if the endpoint will be proxied by DCP. Defaults to `null`. */
     isProxied?: boolean;
 }
 
@@ -1468,7 +1468,7 @@ export interface WithHttpsEndpointOptions {
     name?: string;
     /** An optional name of the environment variable to inject. */
     env?: string;
-    /** Specifies if the endpoint will be proxied by DCP. Defaults to true. */
+    /** Specifies if the endpoint will be proxied by DCP. Defaults to `null`. */
     isProxied?: boolean;
 }
 
@@ -3772,8 +3772,8 @@ export interface EndpointUpdateContext {
     };
     /** Gets or sets a value indicating whether the endpoint is proxied. */
     isProxied: {
-        get: () => Promise<boolean>;
-        set: (value: boolean) => Promise<void>;
+        get: () => Promise<boolean | null>;
+        set: (value: boolean | null) => Promise<void>;
     };
     /** Gets or sets a value indicating whether the endpoint is excluded from the default reference set. */
     excludeReferenceEndpoint: {
@@ -3911,13 +3911,13 @@ class EndpointUpdateContextImpl implements EndpointUpdateContext {
     };
 
     isProxied = {
-        get: async (): Promise<boolean> => {
-            return await this._client.invokeCapability<boolean>(
+        get: async (): Promise<boolean | null> => {
+            return await this._client.invokeCapability<boolean | null>(
                 'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.isProxied',
                 { context: this._handle }
             );
         },
-        set: async (value: boolean): Promise<void> => {
+        set: async (value: boolean | null): Promise<void> => {
             await this._client.invokeCapability<void>(
                 'Aspire.Hosting.ApplicationModel/EndpointUpdateContext.setIsProxied',
                 { context: this._handle, value }
@@ -10643,6 +10643,56 @@ export interface ContainerRegistryResource {
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerRegistryResourcePromise;
     /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ContainerRegistryResourcePromise;
+    /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
      * The callback will be executed after endpoints have been allocated for this resource.
@@ -10991,6 +11041,56 @@ export interface ContainerRegistryResourcePromise extends PromiseLike<ContainerR
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerRegistryResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ContainerRegistryResourcePromise;
     /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
@@ -11392,6 +11492,109 @@ class ContainerRegistryResourceImpl extends ResourceBuilderBase<ContainerRegistr
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerRegistryResourcePromise {
         const helpLink = options?.helpLink;
         return new ContainerRegistryResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<ContainerRegistryResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ContainerRegistryResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<ContainerRegistryResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ContainerRegistryResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<ContainerRegistryResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ContainerRegistryResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<ContainerRegistryResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ContainerRegistryResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -12390,6 +12593,22 @@ class ContainerRegistryResourcePromiseImpl implements ContainerRegistryResourceP
         return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withUrls(callback: (obj: ResourceUrlsCallbackContext) => Promise<void>): ContainerRegistryResourcePromise {
         return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withUrls(callback)), this._client);
     }
@@ -12656,14 +12875,16 @@ export interface ContainerResource {
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): ContainerResourcePromise;
@@ -12744,17 +12965,6 @@ export interface ContainerResource {
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): ContainerResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -12843,6 +13053,56 @@ export interface ContainerResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ContainerResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ContainerResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ContainerResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ContainerResourcePromise;
     /**
@@ -12895,6 +13155,17 @@ export interface ContainerResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -13514,14 +13785,16 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): ContainerResourcePromise;
@@ -13602,17 +13875,6 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): ContainerResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -13701,6 +13963,56 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ContainerResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ContainerResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ContainerResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ContainerResourcePromise;
     /**
@@ -13753,6 +14065,17 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -14500,14 +14823,16 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): ContainerResourcePromise {
@@ -14692,30 +15017,6 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
         return new ContainerResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths), this._client);
-    }
-
-    /** @internal */
-    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<ContainerResource> {
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
-        const result = await this._client.invokeCapability<ContainerResourceHandle>(
-            'Aspire.Hosting/withEndpointProxySupport',
-            rpcArgs
-        );
-        return new ContainerResourceImpl(result, this._client);
-    }
-
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise {
-        return new ContainerResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -14914,6 +15215,109 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerResourcePromise {
         const helpLink = options?.helpLink;
         return new ContainerResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<ContainerResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -15155,6 +15559,30 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new ContainerResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -16799,10 +17227,6 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)), this._client);
     }
 
-    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise {
-        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
-    }
-
     withDockerfileBuilder(contextPath: string, callback: (arg: DockerfileBuilderCallbackContext) => Promise<void>, options?: WithDockerfileBuilderOptions): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withDockerfileBuilder(contextPath, callback, options)), this._client);
     }
@@ -16829,6 +17253,22 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
 
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
+    }
+
+    withSessionLifetime(): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
     }
 
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ContainerResourcePromise {
@@ -16869,6 +17309,10 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): ContainerResourcePromise {
@@ -17247,6 +17691,56 @@ export interface CSharpAppResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): CSharpAppResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): CSharpAppResourcePromise;
     /**
@@ -17299,6 +17793,17 @@ export interface CSharpAppResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): CSharpAppResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -17929,6 +18434,56 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): CSharpAppResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): CSharpAppResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): CSharpAppResourcePromise;
     /**
@@ -17981,6 +18536,17 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): CSharpAppResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -18744,6 +19310,109 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
     }
 
     /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<CSharpAppResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
+    }
+
+    /** @internal */
     private async _withEnvironmentInternal(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): Promise<CSharpAppResource> {
         value = isPromiseLike(value) ? await value : value;
         const rpcArgs: Record<string, unknown> = { builder: this._handle, name, value };
@@ -18982,6 +19651,30 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new CSharpAppResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -20583,6 +21276,22 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withEnvironment(name, value)), this._client);
     }
@@ -20621,6 +21330,10 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): CSharpAppResourcePromise {
@@ -21007,6 +21720,56 @@ export interface DotnetToolResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): DotnetToolResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): DotnetToolResourcePromise;
     /**
@@ -21059,6 +21822,17 @@ export interface DotnetToolResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): DotnetToolResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -21691,6 +22465,56 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): DotnetToolResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): DotnetToolResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): DotnetToolResourcePromise;
     /**
@@ -21743,6 +22567,17 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): DotnetToolResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -22584,6 +23419,109 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
     }
 
     /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<DotnetToolResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
+    }
+
+    /** @internal */
     private async _withEnvironmentInternal(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): Promise<DotnetToolResource> {
         value = isPromiseLike(value) ? await value : value;
         const rpcArgs: Record<string, unknown> = { builder: this._handle, name, value };
@@ -22822,6 +23760,30 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new DotnetToolResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -24427,6 +25389,22 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withEnvironment(name, value)), this._client);
     }
@@ -24465,6 +25443,10 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): DotnetToolResourcePromise {
@@ -24821,6 +25803,56 @@ export interface ExecutableResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ExecutableResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ExecutableResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ExecutableResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExecutableResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ExecutableResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ExecutableResourcePromise;
     /**
@@ -24873,6 +25905,17 @@ export interface ExecutableResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ExecutableResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -25472,6 +26515,56 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ExecutableResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ExecutableResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ExecutableResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExecutableResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ExecutableResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ExecutableResourcePromise;
     /**
@@ -25524,6 +26617,17 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ExecutableResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -26261,6 +27365,109 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
     }
 
     /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<ExecutableResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
+    }
+
+    /** @internal */
     private async _withEnvironmentInternal(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): Promise<ExecutableResource> {
         value = isPromiseLike(value) ? await value : value;
         const rpcArgs: Record<string, unknown> = { builder: this._handle, name, value };
@@ -26499,6 +27706,30 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new ExecutableResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -28080,6 +29311,22 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withEnvironment(name, value)), this._client);
     }
@@ -28118,6 +29365,10 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): ExecutableResourcePromise {
@@ -28436,6 +29687,56 @@ export interface ExternalServiceResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ExternalServiceResourcePromise;
     /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
@@ -28790,6 +30091,56 @@ export interface ExternalServiceResourcePromise extends PromiseLike<ExternalServ
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExternalServiceResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ExternalServiceResourcePromise;
     /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
@@ -29215,6 +30566,109 @@ class ExternalServiceResourceImpl extends ResourceBuilderBase<ExternalServiceRes
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ExternalServiceResourcePromise {
         const helpLink = options?.helpLink;
         return new ExternalServiceResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<ExternalServiceResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ExternalServiceResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<ExternalServiceResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ExternalServiceResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<ExternalServiceResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ExternalServiceResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<ExternalServiceResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ExternalServiceResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -30217,6 +31671,22 @@ class ExternalServiceResourcePromiseImpl implements ExternalServiceResourcePromi
         return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withUrls(callback: (obj: ResourceUrlsCallbackContext) => Promise<void>): ExternalServiceResourcePromise {
         return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withUrls(callback)), this._client);
     }
@@ -30454,6 +31924,56 @@ export interface ParameterResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ParameterResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ParameterResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ParameterResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ParameterResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ParameterResourcePromise;
     /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
@@ -30816,6 +32336,56 @@ export interface ParameterResourcePromise extends PromiseLike<ParameterResource>
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ParameterResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ParameterResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ParameterResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ParameterResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ParameterResourcePromise;
     /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
@@ -31259,6 +32829,109 @@ class ParameterResourceImpl extends ResourceBuilderBase<ParameterResourceHandle>
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ParameterResourcePromise {
         const helpLink = options?.helpLink;
         return new ParameterResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<ParameterResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ParameterResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ParameterResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<ParameterResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ParameterResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ParameterResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<ParameterResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<ParameterResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ParameterResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<ParameterResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<ParameterResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ParameterResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -32265,6 +33938,22 @@ class ParameterResourcePromiseImpl implements ParameterResourcePromise {
         return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withUrls(callback: (obj: ResourceUrlsCallbackContext) => Promise<void>): ParameterResourcePromise {
         return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withUrls(callback)), this._client);
     }
@@ -32550,6 +34239,56 @@ export interface ProjectResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ProjectResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ProjectResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ProjectResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ProjectResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ProjectResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ProjectResourcePromise;
     /**
@@ -32602,6 +34341,17 @@ export interface ProjectResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ProjectResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -33232,6 +34982,56 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ProjectResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ProjectResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ProjectResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ProjectResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ProjectResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ProjectResourcePromise;
     /**
@@ -33284,6 +35084,17 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ProjectResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -34048,6 +35859,109 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
     }
 
     /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<ProjectResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
+    }
+
+    /** @internal */
     private async _withEnvironmentInternal(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): Promise<ProjectResource> {
         value = isPromiseLike(value) ? await value : value;
         const rpcArgs: Record<string, unknown> = { builder: this._handle, name, value };
@@ -34286,6 +36200,30 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new ProjectResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -35887,6 +37825,22 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withEnvironment(name, value)), this._client);
     }
@@ -35925,6 +37879,10 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): ProjectResourcePromise {
@@ -36284,14 +38242,16 @@ export interface TestDatabaseResource {
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestDatabaseResourcePromise;
@@ -36372,17 +38332,6 @@ export interface TestDatabaseResource {
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestDatabaseResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -36471,6 +38420,56 @@ export interface TestDatabaseResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestDatabaseResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestDatabaseResourcePromise;
     /**
@@ -36523,6 +38522,17 @@ export interface TestDatabaseResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -37142,14 +39152,16 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestDatabaseResourcePromise;
@@ -37230,17 +39242,6 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestDatabaseResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -37329,6 +39330,56 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestDatabaseResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestDatabaseResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestDatabaseResourcePromise;
     /**
@@ -37381,6 +39432,17 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -38127,14 +40189,16 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestDatabaseResourcePromise {
@@ -38319,30 +40383,6 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
         return new TestDatabaseResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths), this._client);
-    }
-
-    /** @internal */
-    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<TestDatabaseResource> {
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
-        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
-            'Aspire.Hosting/withEndpointProxySupport',
-            rpcArgs
-        );
-        return new TestDatabaseResourceImpl(result, this._client);
-    }
-
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -38541,6 +40581,109 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestDatabaseResourcePromise {
         const helpLink = options?.helpLink;
         return new TestDatabaseResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<TestDatabaseResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -38782,6 +40925,30 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new TestDatabaseResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -40426,10 +42593,6 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)), this._client);
     }
 
-    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise {
-        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
-    }
-
     withDockerfileBuilder(contextPath: string, callback: (arg: DockerfileBuilderCallbackContext) => Promise<void>, options?: WithDockerfileBuilderOptions): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withDockerfileBuilder(contextPath, callback, options)), this._client);
     }
@@ -40456,6 +42619,22 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
 
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
+    }
+
+    withSessionLifetime(): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
     }
 
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestDatabaseResourcePromise {
@@ -40496,6 +42675,10 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestDatabaseResourcePromise {
@@ -40855,14 +43038,16 @@ export interface TestRedisResource {
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestRedisResourcePromise;
@@ -40943,17 +43128,6 @@ export interface TestRedisResource {
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestRedisResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -41042,6 +43216,56 @@ export interface TestRedisResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestRedisResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestRedisResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestRedisResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestRedisResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestRedisResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestRedisResourcePromise;
     /**
@@ -41110,6 +43334,17 @@ export interface TestRedisResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -41777,14 +44012,16 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestRedisResourcePromise;
@@ -41865,17 +44102,6 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestRedisResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -41964,6 +44190,56 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestRedisResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestRedisResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestRedisResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestRedisResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestRedisResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestRedisResourcePromise;
     /**
@@ -42032,6 +44308,17 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -42826,14 +45113,16 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestRedisResourcePromise {
@@ -43018,30 +45307,6 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
         return new TestRedisResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths), this._client);
-    }
-
-    /** @internal */
-    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<TestRedisResource> {
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
-        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
-            'Aspire.Hosting/withEndpointProxySupport',
-            rpcArgs
-        );
-        return new TestRedisResourceImpl(result, this._client);
-    }
-
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise {
-        return new TestRedisResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -43240,6 +45505,109 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestRedisResourcePromise {
         const helpLink = options?.helpLink;
         return new TestRedisResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<TestRedisResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -43517,6 +45885,30 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new TestRedisResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -45372,10 +47764,6 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)), this._client);
     }
 
-    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise {
-        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
-    }
-
     withDockerfileBuilder(contextPath: string, callback: (arg: DockerfileBuilderCallbackContext) => Promise<void>, options?: WithDockerfileBuilderOptions): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withDockerfileBuilder(contextPath, callback, options)), this._client);
     }
@@ -45402,6 +47790,22 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
 
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
+    }
+
+    withSessionLifetime(): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
     }
 
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestRedisResourcePromise {
@@ -45450,6 +47854,10 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestRedisResourcePromise {
@@ -45861,14 +48269,16 @@ export interface TestVaultResource {
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestVaultResourcePromise;
@@ -45949,17 +48359,6 @@ export interface TestVaultResource {
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestVaultResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -46048,6 +48447,56 @@ export interface TestVaultResource {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestVaultResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestVaultResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestVaultResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestVaultResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestVaultResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestVaultResourcePromise;
     /**
@@ -46100,6 +48549,17 @@ export interface TestVaultResource {
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -46721,14 +49181,16 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestVaultResourcePromise;
@@ -46809,17 +49271,6 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
      * @returns The updated resource builder.
      */
     withContainerCertificatePaths(options?: WithContainerCertificatePathsOptions): TestVaultResourcePromise;
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise;
     /**
      * Builds the specified container image from a Dockerfile generated by a callback using the `DockerfileBuilder` API.
      *
@@ -46908,6 +49359,56 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestVaultResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestVaultResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestVaultResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestVaultResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestVaultResourcePromise;
     /** Sets an environment variable */
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestVaultResourcePromise;
     /**
@@ -46960,6 +49461,17 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -47708,14 +50220,16 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
     /**
      * Sets the lifetime behavior of the container resource.
      *
+     * Prefer `WithPersistentLifetime``1` or
+     * `WithSessionLifetime``1` for new code.
      * Marking a container resource to have a `Persistent` lifetime.
      * ```
      * var builder = DistributedApplication.CreateBuilder(args);
      * builder.AddContainer("mycontainer", "myimage")
-     * .WithLifetime(ContainerLifetime.Persistent);
+     * .WithPersistentLifetime();
      * builder.Build().Run();
      * ```
-     * @param lifetime The lifetime behavior of the container resource. The defaults behavior is `Session`.
+     * @param lifetime The lifetime behavior of the container resource. The default behavior is `Session`.
      * @returns The `IResourceBuilder`1`.
      */
     withLifetime(lifetime: ContainerLifetime): TestVaultResourcePromise {
@@ -47900,30 +50414,6 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
         const defaultCertificateBundlePaths = options?.defaultCertificateBundlePaths;
         const defaultCertificateDirectoryPaths = options?.defaultCertificateDirectoryPaths;
         return new TestVaultResourcePromiseImpl(this._withContainerCertificatePathsInternal(customCertificatesDestination, defaultCertificateBundlePaths, defaultCertificateDirectoryPaths), this._client);
-    }
-
-    /** @internal */
-    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<TestVaultResource> {
-        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
-        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
-            'Aspire.Hosting/withEndpointProxySupport',
-            rpcArgs
-        );
-        return new TestVaultResourceImpl(result, this._client);
-    }
-
-    /**
-     * Set whether a container resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the container. If set to `false`, endpoints belonging to the container resource will ignore the configured proxy settings and run proxy-less.
-     *
-     * This method is intended to support scenarios with persistent lifetime containers where it is desirable for the container to be accessible over the same
-     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
-     * The user needs to be careful to ensure that container endpoints are using unique ports when disabling proxy support as by default for proxy-less
-     * endpoints, Aspire will allocate the internal container port as the host port, which will increase the chance of port conflicts.
-     * @param proxyEnabled Should endpoints for the container resource support using a proxy?
-     * @returns The `IResourceBuilder`1`.
-     */
-    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise {
-        return new TestVaultResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -48122,6 +50612,109 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestVaultResourcePromise {
         const helpLink = options?.helpLink;
         return new TestVaultResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<TestVaultResource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -48363,6 +50956,30 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new TestVaultResourcePromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -50022,10 +52639,6 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withContainerCertificatePaths(options)), this._client);
     }
 
-    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise {
-        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
-    }
-
     withDockerfileBuilder(contextPath: string, callback: (arg: DockerfileBuilderCallbackContext) => Promise<void>, options?: WithDockerfileBuilderOptions): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withDockerfileBuilder(contextPath, callback, options)), this._client);
     }
@@ -50052,6 +52665,22 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
 
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
+    }
+
+    withSessionLifetime(): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
     }
 
     withEnvironment(name: string, value: string | ReferenceExpression | EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression | Awaitable<EndpointReference | ParameterResource | ResourceWithConnectionString | TestRedisResource | EndpointReferenceExpression>): TestVaultResourcePromise {
@@ -50092,6 +52721,10 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
 
     withEndpoint(options?: WithEndpointOptions): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): TestVaultResourcePromise {
@@ -50746,6 +53379,56 @@ export interface Resource {
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ResourcePromise;
     /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ResourcePromise;
+    /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
      * The callback will be executed after endpoints have been allocated for this resource.
@@ -51094,6 +53777,56 @@ export interface ResourcePromise extends PromiseLike<Resource> {
      * @returns The resource builder.
      */
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ResourcePromise;
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ResourcePromise;
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ResourcePromise;
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ResourcePromise;
     /**
      * Registers a callback to customize the URLs displayed for the resource.
      *
@@ -51496,6 +54229,109 @@ class ResourceImpl extends ResourceBuilderBase<IResourceHandle> implements Resou
     withRequiredCommand(command: string, options?: WithRequiredCommandOptions): ResourcePromise {
         const helpLink = options?.helpLink;
         return new ResourcePromiseImpl(this._withRequiredCommandInternal(command, helpLink), this._client);
+    }
+
+    /** @internal */
+    private async _withSessionLifetimeInternal(): Promise<Resource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<IResourceHandle>(
+            'Aspire.Hosting/withSessionLifetime',
+            rpcArgs
+        );
+        return new ResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a session lifetime.
+     *
+     * Marking a resource to have a session lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithSessionLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withSessionLifetime(): ResourcePromise {
+        return new ResourcePromiseImpl(this._withSessionLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withPersistentLifetimeInternal(): Promise<Resource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<IResourceHandle>(
+            'Aspire.Hosting/withPersistentLifetime',
+            rpcArgs
+        );
+        return new ResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime.
+     *
+     * Marking a resource to have a persistent lifetime.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithPersistentLifetime();
+     * builder.Build().Run();
+     * ```
+     * @returns The `IResourceBuilder`1`.
+     */
+    withPersistentLifetime(): ResourcePromise {
+        return new ResourcePromiseImpl(this._withPersistentLifetimeInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withLifetimeOfInternal(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): Promise<Resource> {
+        sourceBuilder = isPromiseLike(sourceBuilder) ? await sourceBuilder : sourceBuilder;
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, sourceBuilder };
+        const result = await this._client.invokeCapability<IResourceHandle>(
+            'Aspire.Hosting/withLifetimeOf',
+            rpcArgs
+        );
+        return new ResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to match the lifetime of another resource.
+     *
+     * The resource lifetime is evaluated from `sourceBuilder` when the application model is prepared, so later lifetime
+     * changes to the source resource are reflected by this resource.
+     * @param sourceBuilder The resource builder whose lifetime should be used.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ResourcePromise {
+        return new ResourcePromiseImpl(this._withLifetimeOfInternal(sourceBuilder), this._client);
+    }
+
+    /** @internal */
+    private async _withParentProcessLifetimeInternal(parentProcessId: number): Promise<Resource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, parentProcessId };
+        const result = await this._client.invokeCapability<IResourceHandle>(
+            'Aspire.Hosting/withParentProcessLifetime',
+            rpcArgs
+        );
+        return new ResourceImpl(result, this._client);
+    }
+
+    /**
+     * Configures a resource to use a persistent lifetime that ends when a parent process exits.
+     *
+     * The resource is tied to both the configured process ID and the process identity timestamp to avoid accidentally matching a reused process ID.
+     * Configure a resource to remain available across app host restarts, but clean it up when a parent process exits.
+     * ```
+     * var builder = DistributedApplication.CreateBuilder(args);
+     * builder.AddProject<Projects.ApiService>("api")
+     * .WithParentProcessLifetime(parentProcessId: 1234);
+     * builder.Build().Run();
+     * ```
+     * @param parentProcessId The ID of the parent process to monitor.
+     * @returns The `IResourceBuilder`1`.
+     */
+    withParentProcessLifetime(parentProcessId: number): ResourcePromise {
+        return new ResourcePromiseImpl(this._withParentProcessLifetimeInternal(parentProcessId), this._client);
     }
 
     /** @internal */
@@ -52494,6 +55330,22 @@ class ResourcePromiseImpl implements ResourcePromise {
         return new ResourcePromiseImpl(this._promise.then(obj => obj.withRequiredCommand(command, options)), this._client);
     }
 
+    withSessionLifetime(): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withSessionLifetime()), this._client);
+    }
+
+    withPersistentLifetime(): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withPersistentLifetime()), this._client);
+    }
+
+    withLifetimeOf(sourceBuilder: Awaitable<CSharpAppResource | ComputeEnvironmentResource | ComputeResource | ContainerFilesDestinationResource | ContainerRegistryResource | ContainerResource | DotnetToolResource | ExecutableResource | ExternalServiceResource | ParameterResource | ProjectResource | Resource | ResourceWithArgs | ResourceWithConnectionString | ResourceWithContainerFiles | ResourceWithEndpoints | ResourceWithEnvironment | ResourceWithWaitSupport | TestDatabaseResource | TestRedisResource | TestVaultResource>): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withLifetimeOf(sourceBuilder)), this._client);
+    }
+
+    withParentProcessLifetime(parentProcessId: number): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withParentProcessLifetime(parentProcessId)), this._client);
+    }
+
     withUrls(callback: (obj: ResourceUrlsCallbackContext) => Promise<void>): ResourcePromise {
         return new ResourcePromiseImpl(this._promise.then(obj => obj.withUrls(callback)), this._client);
     }
@@ -53141,6 +55993,17 @@ export interface ResourceWithEndpoints {
      */
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise;
     /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ResourceWithEndpointsPromise;
+    /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
      * If an endpoint with the same name already exists on the resource, the existing endpoint is updated
@@ -53244,6 +56107,17 @@ export interface ResourceWithEndpointsPromise extends PromiseLike<ResourceWithEn
      * @returns The `IResourceBuilder`1`.
      */
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise;
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ResourceWithEndpointsPromise;
     /**
      * Exposes an HTTP endpoint on a resource, or updates the existing HTTP endpoint if one with the same name already exists. This endpoint reference can be retrieved using `GetEndpoint``1`. The endpoint name will be "http" if not specified.
      *
@@ -53465,6 +56339,30 @@ class ResourceWithEndpointsImpl extends ResourceBuilderBase<IResourceWithEndpoin
         const isExternal = options?.isExternal;
         const protocol = options?.protocol;
         return new ResourceWithEndpointsPromiseImpl(this._withEndpointInternal(port, targetPort, scheme, name, env, isProxied, isExternal, protocol), this._client);
+    }
+
+    /** @internal */
+    private async _withEndpointProxySupportInternal(proxyEnabled: boolean): Promise<ResourceWithEndpoints> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, proxyEnabled };
+        const result = await this._client.invokeCapability<IResourceWithEndpointsHandle>(
+            'Aspire.Hosting/withEndpointProxySupport',
+            rpcArgs
+        );
+        return new ResourceWithEndpointsImpl(result, this._client);
+    }
+
+    /**
+     * Set whether a resource can use proxied endpoints or whether they should be disabled for all endpoints belonging to the resource. If set to `false`, endpoints belonging to the resource will ignore the configured proxy settings and run proxy-less.
+     *
+     * This method is intended to support scenarios with persistent lifetime resources where it is desirable for the resource to be accessible over the same
+     * port whether the Aspire application is running or not. Proxied endpoints bind ports that are only accessible while the Aspire application is running.
+     * The user needs to be careful to ensure that endpoints are using unique ports when disabling proxy support as by default for proxy-less
+     * endpoints, Aspire will allocate the target port as the host port, which will increase the chance of port conflicts.
+     * @param proxyEnabled Should endpoints for the resource support using a proxy?
+     * @returns The resource builder.
+     */
+    withEndpointProxySupport(proxyEnabled: boolean): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._withEndpointProxySupportInternal(proxyEnabled), this._client);
     }
 
     /** @internal */
@@ -53732,6 +56630,10 @@ class ResourceWithEndpointsPromiseImpl implements ResourceWithEndpointsPromise {
 
     withEndpoint(options?: WithEndpointOptions): ResourceWithEndpointsPromise {
         return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withEndpoint(options)), this._client);
+    }
+
+    withEndpointProxySupport(proxyEnabled: boolean): ResourceWithEndpointsPromise {
+        return new ResourceWithEndpointsPromiseImpl(this._promise.then(obj => obj.withEndpointProxySupport(proxyEnabled)), this._client);
     }
 
     withHttpEndpoint(options?: WithHttpEndpointOptions): ResourceWithEndpointsPromise {
@@ -54725,4 +57627,5 @@ registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.IResourceWithContainerFiles
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResourceWithEndpoints', (handle, client) => new ResourceWithEndpointsImpl(handle as IResourceWithEndpointsHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResourceWithEnvironment', (handle, client) => new ResourceWithEnvironmentImpl(handle as IResourceWithEnvironmentHandle, client));
 registerHandleWrapper('Aspire.Hosting/Aspire.Hosting.ApplicationModel.IResourceWithWaitSupport', (handle, client) => new ResourceWithWaitSupportImpl(handle as IResourceWithWaitSupportHandle, client));
+
 
