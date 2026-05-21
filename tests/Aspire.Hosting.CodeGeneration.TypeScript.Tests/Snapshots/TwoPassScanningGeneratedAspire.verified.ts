@@ -1354,6 +1354,13 @@ export interface WithEndpointOptions {
     protocol?: ProtocolType;
 }
 
+export interface WithHiddenOnCompletionOptions {
+    /** The completion exit code to treat as successful. Defaults to `0`. */
+    exitCode?: number;
+    /** Completion exit codes to treat as successful. If no values are provided, `0` is used. */
+    exitCodes?: number[];
+}
+
 export interface WithHttpEndpointCallbackOptions {
     name?: string;
     createIfNotExists?: boolean;
@@ -10496,6 +10503,24 @@ export interface ContainerRegistryResource {
      */
     excludeFromMcp(): ContainerRegistryResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ContainerRegistryResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerRegistryResourcePromise;
+    /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
      * @param callback The callback to execute when the step runs.
@@ -10755,6 +10780,24 @@ export interface ContainerRegistryResourcePromise extends PromiseLike<ContainerR
      * @returns The resource builder.
      */
     excludeFromMcp(): ContainerRegistryResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ContainerRegistryResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerRegistryResourcePromise;
     /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
@@ -11331,6 +11374,54 @@ class ContainerRegistryResourceImpl extends ResourceBuilderBase<ContainerRegistr
      */
     excludeFromMcp(): ContainerRegistryResourcePromise {
         return new ContainerRegistryResourcePromiseImpl(this._excludeFromMcpInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenInternal(): Promise<ContainerRegistryResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ContainerRegistryResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<ContainerRegistryResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<ContainerRegistryResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ContainerRegistryResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerRegistryResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ContainerRegistryResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
     }
 
     /** @internal */
@@ -11991,6 +12082,14 @@ class ContainerRegistryResourcePromiseImpl implements ContainerRegistryResourceP
         return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerRegistryResourcePromise {
+        return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withPipelineStepFactory(stepName: string, callback: (arg: PipelineStepContext) => Promise<void>, options?: WithPipelineStepFactoryOptions): ContainerRegistryResourcePromise {
         return new ContainerRegistryResourcePromiseImpl(this._promise.then(obj => obj.withPipelineStepFactory(stepName, callback, options)), this._client);
     }
@@ -12640,6 +12739,24 @@ export interface ContainerResource {
      * @returns The resource builder.
      */
     excludeFromMcp(): ContainerResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ContainerResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -13323,6 +13440,24 @@ export interface ContainerResourcePromise extends PromiseLike<ContainerResource>
      * @returns The resource builder.
      */
     excludeFromMcp(): ContainerResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ContainerResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -15073,6 +15208,54 @@ class ContainerResourceImpl extends ResourceBuilderBase<ContainerResourceHandle>
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<ContainerResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<ContainerResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ContainerResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ContainerResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<ContainerResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -16080,6 +16263,14 @@ class ContainerResourcePromiseImpl implements ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ContainerResourcePromise {
+        return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): ContainerResourcePromise {
         return new ContainerResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -16632,6 +16823,24 @@ export interface CSharpAppResource {
      */
     excludeFromMcp(): CSharpAppResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): CSharpAppResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): CSharpAppResourcePromise;
+    /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
      * This method allows customization of how container images are named and tagged when pushed to a registry using an asynchronous callback.
@@ -17175,6 +17384,24 @@ export interface CSharpAppResourcePromise extends PromiseLike<CSharpAppResource>
      * @returns The resource builder.
      */
     excludeFromMcp(): CSharpAppResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): CSharpAppResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): CSharpAppResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -18588,6 +18815,54 @@ class CSharpAppResourceImpl extends ResourceBuilderBase<CSharpAppResourceHandle>
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<CSharpAppResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<CSharpAppResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new CSharpAppResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): CSharpAppResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new CSharpAppResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<CSharpAppResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -19508,6 +19783,14 @@ class CSharpAppResourcePromiseImpl implements CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): CSharpAppResourcePromise {
+        return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): CSharpAppResourcePromise {
         return new CSharpAppResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -20084,6 +20367,24 @@ export interface DotnetToolResource {
      */
     excludeFromMcp(): DotnetToolResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): DotnetToolResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): DotnetToolResourcePromise;
+    /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
      * This method allows customization of how container images are named and tagged when pushed to a registry using an asynchronous callback.
@@ -20655,6 +20956,24 @@ export interface DotnetToolResourcePromise extends PromiseLike<DotnetToolResourc
      * @returns The resource builder.
      */
     excludeFromMcp(): DotnetToolResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): DotnetToolResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): DotnetToolResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -22158,6 +22477,54 @@ class DotnetToolResourceImpl extends ResourceBuilderBase<DotnetToolResourceHandl
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<DotnetToolResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<DotnetToolResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new DotnetToolResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): DotnetToolResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new DotnetToolResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<DotnetToolResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -23098,6 +23465,14 @@ class DotnetToolResourcePromiseImpl implements DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): DotnetToolResourcePromise {
+        return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): DotnetToolResourcePromise {
         return new DotnetToolResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -23648,6 +24023,24 @@ export interface ExecutableResource {
      */
     excludeFromMcp(): ExecutableResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ExecutableResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExecutableResourcePromise;
+    /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
      * This method allows customization of how container images are named and tagged when pushed to a registry using an asynchronous callback.
@@ -24186,6 +24579,24 @@ export interface ExecutableResourcePromise extends PromiseLike<ExecutableResourc
      * @returns The resource builder.
      */
     excludeFromMcp(): ExecutableResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ExecutableResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExecutableResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -25585,6 +25996,54 @@ class ExecutableResourceImpl extends ResourceBuilderBase<ExecutableResourceHandl
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<ExecutableResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<ExecutableResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ExecutableResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExecutableResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ExecutableResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<ExecutableResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -26501,6 +26960,14 @@ class ExecutableResourcePromiseImpl implements ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExecutableResourcePromise {
+        return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): ExecutableResourcePromise {
         return new ExecutableResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -26808,6 +27275,24 @@ export interface ExternalServiceResource {
      */
     excludeFromMcp(): ExternalServiceResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ExternalServiceResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExternalServiceResourcePromise;
+    /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
      * @param callback The callback to execute when the step runs.
@@ -27072,6 +27557,24 @@ export interface ExternalServiceResourcePromise extends PromiseLike<ExternalServ
      * @returns The resource builder.
      */
     excludeFromMcp(): ExternalServiceResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ExternalServiceResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExternalServiceResourcePromise;
     /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
@@ -27672,6 +28175,54 @@ class ExternalServiceResourceImpl extends ResourceBuilderBase<ExternalServiceRes
      */
     excludeFromMcp(): ExternalServiceResourcePromise {
         return new ExternalServiceResourcePromiseImpl(this._excludeFromMcpInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenInternal(): Promise<ExternalServiceResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ExternalServiceResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<ExternalServiceResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<ExternalServiceResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ExternalServiceResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExternalServiceResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ExternalServiceResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
     }
 
     /** @internal */
@@ -28336,6 +28887,14 @@ class ExternalServiceResourcePromiseImpl implements ExternalServiceResourcePromi
         return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ExternalServiceResourcePromise {
+        return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withPipelineStepFactory(stepName: string, callback: (arg: PipelineStepContext) => Promise<void>, options?: WithPipelineStepFactoryOptions): ExternalServiceResourcePromise {
         return new ExternalServiceResourcePromiseImpl(this._promise.then(obj => obj.withPipelineStepFactory(stepName, callback, options)), this._client);
     }
@@ -28628,6 +29187,24 @@ export interface ParameterResource {
      */
     excludeFromMcp(): ParameterResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ParameterResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ParameterResourcePromise;
+    /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
      * @param callback The callback to execute when the step runs.
@@ -28900,6 +29477,24 @@ export interface ParameterResourcePromise extends PromiseLike<ParameterResource>
      * @returns The resource builder.
      */
     excludeFromMcp(): ParameterResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ParameterResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ParameterResourcePromise;
     /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
@@ -29518,6 +30113,54 @@ class ParameterResourceImpl extends ResourceBuilderBase<ParameterResourceHandle>
      */
     excludeFromMcp(): ParameterResourcePromise {
         return new ParameterResourcePromiseImpl(this._excludeFromMcpInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenInternal(): Promise<ParameterResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ParameterResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ParameterResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<ParameterResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<ParameterResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ParameterResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ParameterResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ParameterResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
     }
 
     /** @internal */
@@ -30186,6 +30829,14 @@ class ParameterResourcePromiseImpl implements ParameterResourcePromise {
         return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ParameterResourcePromise {
+        return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withPipelineStepFactory(stepName: string, callback: (arg: PipelineStepContext) => Promise<void>, options?: WithPipelineStepFactoryOptions): ParameterResourcePromise {
         return new ParameterResourcePromiseImpl(this._promise.then(obj => obj.withPipelineStepFactory(stepName, callback, options)), this._client);
     }
@@ -30710,6 +31361,24 @@ export interface ProjectResource {
      * @returns The resource builder.
      */
     excludeFromMcp(): ProjectResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ProjectResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ProjectResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -31254,6 +31923,24 @@ export interface ProjectResourcePromise extends PromiseLike<ProjectResource> {
      * @returns The resource builder.
      */
     excludeFromMcp(): ProjectResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ProjectResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ProjectResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -32668,6 +33355,54 @@ class ProjectResourceImpl extends ResourceBuilderBase<ProjectResourceHandle> imp
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<ProjectResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<ProjectResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ProjectResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ProjectResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ProjectResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<ProjectResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -33588,6 +34323,14 @@ class ProjectResourcePromiseImpl implements ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ProjectResourcePromise {
+        return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): ProjectResourcePromise {
         return new ProjectResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -34260,6 +35003,24 @@ export interface TestDatabaseResource {
      * @returns The resource builder.
      */
     excludeFromMcp(): TestDatabaseResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestDatabaseResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestDatabaseResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -34943,6 +35704,24 @@ export interface TestDatabaseResourcePromise extends PromiseLike<TestDatabaseRes
      * @returns The resource builder.
      */
     excludeFromMcp(): TestDatabaseResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestDatabaseResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestDatabaseResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -36692,6 +37471,54 @@ class TestDatabaseResourceImpl extends ResourceBuilderBase<TestDatabaseResourceH
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<TestDatabaseResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<TestDatabaseResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new TestDatabaseResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestDatabaseResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new TestDatabaseResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<TestDatabaseResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -37699,6 +38526,14 @@ class TestDatabaseResourcePromiseImpl implements TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestDatabaseResourcePromise {
+        return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): TestDatabaseResourcePromise {
         return new TestDatabaseResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -38391,6 +39226,24 @@ export interface TestRedisResource {
      * @returns The resource builder.
      */
     excludeFromMcp(): TestRedisResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestRedisResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestRedisResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -39138,6 +39991,24 @@ export interface TestRedisResourcePromise extends PromiseLike<TestRedisResource>
      * @returns The resource builder.
      */
     excludeFromMcp(): TestRedisResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestRedisResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestRedisResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -40971,6 +41842,54 @@ class TestRedisResourceImpl extends ResourceBuilderBase<TestRedisResourceHandle>
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<TestRedisResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<TestRedisResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new TestRedisResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestRedisResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new TestRedisResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<TestRedisResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -42197,6 +43116,14 @@ class TestRedisResourcePromiseImpl implements TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestRedisResourcePromise {
+        return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): TestRedisResourcePromise {
         return new TestRedisResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -42926,6 +43853,24 @@ export interface TestVaultResource {
      */
     excludeFromMcp(): TestVaultResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestVaultResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestVaultResourcePromise;
+    /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
      * This method allows customization of how container images are named and tagged when pushed to a registry using an asynchronous callback.
@@ -43610,6 +44555,24 @@ export interface TestVaultResourcePromise extends PromiseLike<TestVaultResource>
      * @returns The resource builder.
      */
     excludeFromMcp(): TestVaultResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestVaultResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestVaultResourcePromise;
     /**
      * Adds an asynchronous callback to configure container image push options for the resource.
      *
@@ -45361,6 +46324,54 @@ class TestVaultResourceImpl extends ResourceBuilderBase<TestVaultResourceHandle>
     }
 
     /** @internal */
+    private async _withHiddenInternal(): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<TestVaultResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<TestVaultResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new TestVaultResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestVaultResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new TestVaultResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
+    }
+
+    /** @internal */
     private async _withImagePushOptionsInternal(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): Promise<TestVaultResource> {
         const callbackId = registerCallback(async (argData: unknown) => {
             const argHandle = wrapIfHandle(argData) as ContainerImagePushOptionsCallbackContextHandle;
@@ -46383,6 +47394,14 @@ class TestVaultResourcePromiseImpl implements TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
     }
 
+    withHidden(): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): TestVaultResourcePromise {
+        return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
+    }
+
     withImagePushOptions(callback: (arg: ContainerImagePushOptionsCallbackContext) => Promise<void>): TestVaultResourcePromise {
         return new TestVaultResourcePromiseImpl(this._promise.then(obj => obj.withImagePushOptions(callback)), this._client);
     }
@@ -47013,6 +48032,24 @@ export interface Resource {
      */
     excludeFromMcp(): ResourcePromise;
     /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ResourcePromise;
+    /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
      * @param callback The callback to execute when the step runs.
@@ -47272,6 +48309,24 @@ export interface ResourcePromise extends PromiseLike<Resource> {
      * @returns The resource builder.
      */
     excludeFromMcp(): ResourcePromise;
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ResourcePromise;
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ResourcePromise;
     /**
      * Adds a pipeline step to the resource that will be executed during deployment.
      * @param stepName The unique name of the pipeline step.
@@ -47849,6 +48904,54 @@ class ResourceImpl extends ResourceBuilderBase<IResourceHandle> implements Resou
      */
     excludeFromMcp(): ResourcePromise {
         return new ResourcePromiseImpl(this._excludeFromMcpInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenInternal(): Promise<Resource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        const result = await this._client.invokeCapability<IResourceHandle>(
+            'Aspire.Hosting/withHidden',
+            rpcArgs
+        );
+        return new ResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists
+     *
+     * Use this method to hide resources that are implementation details and should never be displayed by default.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @returns The resource builder.
+     */
+    withHidden(): ResourcePromise {
+        return new ResourcePromiseImpl(this._withHiddenInternal(), this._client);
+    }
+
+    /** @internal */
+    private async _withHiddenOnCompletionInternal(exitCode?: number, exitCodes?: number[]): Promise<Resource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle };
+        if (exitCode !== undefined) rpcArgs.exitCode = exitCode;
+        if (exitCodes !== undefined) rpcArgs.exitCodes = exitCodes;
+        const result = await this._client.invokeCapability<IResourceHandle>(
+            'Aspire.Hosting/withHiddenOnCompletion',
+            rpcArgs
+        );
+        return new ResourceImpl(result, this._client);
+    }
+
+    /**
+     * Hides the resource from default resource lists after successful completion
+     *
+     * This method is useful for one-off resources such as setup scripts, migrations, or build steps that should remain visible while running
+     * and then be hidden after successful completion.
+     * Hidden resources can still be accessed directly by their name, by using `Show hidden resources` toggle in the dashboard or by using `aspire describe --include-hidden` from the CLI.
+     * @param options Additional options.
+     * @returns The resource builder.
+     */
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ResourcePromise {
+        const exitCode = options?.exitCode;
+        const exitCodes = options?.exitCodes;
+        return new ResourcePromiseImpl(this._withHiddenOnCompletionInternal(exitCode, exitCodes), this._client);
     }
 
     /** @internal */
@@ -48507,6 +49610,14 @@ class ResourcePromiseImpl implements ResourcePromise {
 
     excludeFromMcp(): ResourcePromise {
         return new ResourcePromiseImpl(this._promise.then(obj => obj.excludeFromMcp()), this._client);
+    }
+
+    withHidden(): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withHidden()), this._client);
+    }
+
+    withHiddenOnCompletion(options?: WithHiddenOnCompletionOptions): ResourcePromise {
+        return new ResourcePromiseImpl(this._promise.then(obj => obj.withHiddenOnCompletion(options)), this._client);
     }
 
     withPipelineStepFactory(stepName: string, callback: (arg: PipelineStepContext) => Promise<void>, options?: WithPipelineStepFactoryOptions): ResourcePromise {
