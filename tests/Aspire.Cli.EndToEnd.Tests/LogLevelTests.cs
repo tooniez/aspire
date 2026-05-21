@@ -20,7 +20,7 @@ public sealed class LogLevelTests(ITestOutputHelper output)
         var repoRoot = CliE2ETestHelpers.GetRepoRoot();
         var strategy = CliInstallStrategy.Detect(output.WriteLine);
 
-        var workspace = TemporaryWorkspace.Create(output);
+        using var workspace = TemporaryWorkspace.Create(output);
 
         using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(repoRoot, strategy, output, mountDockerSocket: true, workspace: workspace);
 
@@ -36,7 +36,7 @@ public sealed class LogLevelTests(ITestOutputHelper output)
             await auto.InstallAspireCliAsync(strategy, counter);
 
             // Create a new empty AppHost project
-            await auto.AspireNewAsync("LogLevelApp", counter, template: AspireTemplate.EmptyAppHost);
+            await auto.AspireNewCSharpEmptyAppHostAsync("LogLevelApp", counter);
 
             // Navigate to the AppHost directory
             await auto.TypeAsync("cd LogLevelApp");

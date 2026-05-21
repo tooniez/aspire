@@ -1,6 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+using System.Runtime.CompilerServices;
 using Aspire.Cli.EndToEnd.Tests.Helpers;
 using Aspire.Cli.Tests.Utils;
 using Hex1b.Automation;
@@ -17,26 +18,21 @@ public sealed class OtelLogsTests(ITestOutputHelper output)
     [Fact]
     [CaptureWorkspaceOnFailure]
     public Task OtelLogsReturnsStructuredLogsFromStarterApp()
-        => OtelLogsReturnsStructuredLogsFromStarterAppCore(isolated: false, useDevLocalhost: false);
+        => OtelLogsReturnsStructuredLogsFromStarterAppCore(isolated: false);
 
     [Fact]
     [CaptureWorkspaceOnFailure]
-    public Task OtelLogsReturnsStructuredLogsFromStarterApp_Isolated()
-        => OtelLogsReturnsStructuredLogsFromStarterAppCore(isolated: true, useDevLocalhost: false);
+    public Task OtelLogsReturnsStructuredLogsFromStarterAppIsolated()
+        => OtelLogsReturnsStructuredLogsFromStarterAppCore(isolated: true);
 
-    [Fact]
-    [CaptureWorkspaceOnFailure]
-    public Task OtelLogsReturnsStructuredLogsFromStarterApp_DevLocalhost()
-        => OtelLogsReturnsStructuredLogsFromStarterAppCore(isolated: false, useDevLocalhost: true);
-
-    private async Task OtelLogsReturnsStructuredLogsFromStarterAppCore(bool isolated, bool useDevLocalhost)
+    private async Task OtelLogsReturnsStructuredLogsFromStarterAppCore(bool isolated, [CallerMemberName] string testName = "")
     {
         var repoRoot = CliE2ETestHelpers.GetRepoRoot();
         var strategy = CliInstallStrategy.Detect(output.WriteLine);
 
         using var workspace = TemporaryWorkspace.Create(output);
 
-        using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(repoRoot, strategy, output, mountDockerSocket: true, workspace: workspace);
+        using var terminal = CliE2ETestHelpers.CreateDockerTestTerminal(repoRoot, strategy, output, mountDockerSocket: true, workspace: workspace, testName: testName);
 
         var pendingRun = terminal.RunAsync(TestContext.Current.CancellationToken);
 
@@ -47,14 +43,14 @@ public sealed class OtelLogsTests(ITestOutputHelper output)
         await auto.InstallAspireCliAsync(strategy, counter);
 
         // Create a new Starter project (includes an ASP.NET Core apiservice)
-        await auto.AspireNewAsync("AspireOtelLogsApp", counter, useDevLocalhost: useDevLocalhost);
+        await auto.AspireNewAsync("AspireOtelLogsApp", counter);
 
         // Navigate to the AppHost directory
         await auto.TypeAsync("cd AspireOtelLogsApp/AspireOtelLogsApp.AppHost");
         await auto.EnterAsync();
         await auto.WaitForSuccessPromptAsync(counter);
 
-        // Start the AppHost
+        // Start the AppHost in the background
         await auto.AspireStartAsync(counter, isolated: isolated);
 
         // Wait for the apiservice resource to be running before querying logs
