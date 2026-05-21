@@ -1,5 +1,6 @@
 import aspire.*;
 import java.util.Map;
+import java.util.function.Function;
 
 void main() throws Exception {
         var builder = DistributedApplication.CreateBuilder();
@@ -128,6 +129,7 @@ void main() throws Exception {
         var builderExecutionContext = builder.executionContext();
         var executionContextServiceProvider = builderExecutionContext.serviceProvider();
         var _distributedApplicationModelFromExecutionContext = executionContextServiceProvider.getDistributedApplicationModel();
+        var resourceCommandService = executionContextServiceProvider.getResourceCommandService();
         builder.addEventingSubscriber((registrationContext) -> {
             var subscriberExecutionContext = registrationContext.executionContext();
             var _subscriberIsRunMode = subscriberExecutionContext.isRunMode();
@@ -218,16 +220,19 @@ void main() throws Exception {
         container.withUrl(ReferenceExpression.refExpr("http://%s", endpoint), null);
         container.withHttpHealthCheck();
         container.withHttpHealthCheck();
+        var commandOptions = new CommandOptions();
+        commandOptions.setUpdateState((Function<UpdateCommandStateContext, ResourceCommandState>) (ctx) -> {
+            var snapshot = ctx.resourceSnapshot();
+            return snapshot.getHealthStatus() == HealthStatus.HEALTHY ? ResourceCommandState.ENABLED : ResourceCommandState.DISABLED;
+        });
         container.withCommand("noop", "Noop", (_ctx) -> {
             var result = new ExecuteCommandResult();
             result.setSuccess(true);
             return result;
-        });
-        container.withCommand("restart", "Restart", (ctx) -> {
-            var serviceProvider = ctx.serviceProvider();
-            var commandService = serviceProvider.getResourceCommandService();
-            var cancellationToken = ctx.cancellationToken();
-            return commandService.executeCommandAsync("mycontainer", "noop", cancellationToken);
+        }, commandOptions);
+        container.withCommand("restart", "Restart", (_ctx) -> {
+            var cancellationToken = _ctx.cancellationToken();
+            return resourceCommandService.executeCommandAsync("mycontainer", "noop", cancellationToken);
         });
         container.withHttpCommand("/health", "Health Check");
         var httpCmdOptions = new HttpCommandExportOptions();
