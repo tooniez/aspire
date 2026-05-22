@@ -230,9 +230,26 @@ void main() throws Exception {
             result.setSuccess(true);
             return result;
         }, commandOptions);
-        container.withCommand("restart", "Restart", (_ctx) -> {
-            var cancellationToken = _ctx.cancellationToken();
-            return resourceCommandService.executeCommandAsync("mycontainer", "noop", cancellationToken);
+        var echoCommandOptions = new CommandOptions();
+        var messageArgument = new InteractionInput();
+        messageArgument.setName("message");
+        messageArgument.setInputType(InputType.TEXT);
+        messageArgument.setRequired(true);
+        echoCommandOptions.setArguments(new InteractionInput[] { messageArgument });
+        container.withCommand("echo", "Echo", (ctx) -> {
+            var commandArguments = ctx.arguments().toArray();
+            var result = new ExecuteCommandResult();
+            result.setSuccess("hello".equals(commandArguments[0].getValue()));
+            return result;
+        }, echoCommandOptions);
+        container.withCommand("restart", "Restart", (ctx) -> {
+            var cancellationToken = ctx.cancellationToken();
+            return resourceCommandService.executeCommandAsync(
+                container,
+                "echo",
+                new ExecuteCommandAsyncOptions()
+                    .arguments(Map.of("message", "hello"))
+                    .cancellationToken(cancellationToken));
         });
         container.withHttpCommand("/health", "Health Check");
         var httpCmdOptions = new HttpCommandExportOptions();

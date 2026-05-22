@@ -398,6 +398,10 @@ with create_builder() as builder:
         snapshot = ctx.resource_snapshot
         return "Enabled" if snapshot.get("HealthStatus") == "Healthy" else "Disabled"
 
+    def echo_command(ctx):
+        command_arguments = list(ctx.arguments.to_array())
+        return {"success": command_arguments[0]["Value"] == "hello"}
+
     container.with_command(
         "noop",
         "Noop",
@@ -406,8 +410,14 @@ with create_builder() as builder:
     )
 
     def restart_command(_ctx):
-        return resource_command_service.execute_command("mycontainer", "noop")
+        return resource_command_service.execute_command(container, "echo", arguments={"message": "hello"})
 
+    container.with_command(
+        "echo",
+        "Echo",
+        echo_command,
+        command_options={"Arguments": [{"Name": "message", "InputType": "Text", "Required": True}]}
+    )
     container.with_command("restart", "Restart", restart_command)
     # withHttpCommand
     container.with_http_command("/health", "Health Check")

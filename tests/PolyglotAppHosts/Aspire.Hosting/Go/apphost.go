@@ -512,12 +512,29 @@ func main() {
 			UpdateState: updateCommandState,
 		},
 	})
+	_ = container.WithCommand("echo", "Echo", func(ctx aspire.ExecuteCommandContext) *aspire.ExecuteCommandResult {
+		commandArguments, err := ctx.Arguments().ToArray()
+		if err != nil {
+			return &aspire.ExecuteCommandResult{Success: false, ErrorMessage: aspire.StringPtr(aspire.FormatError(err))}
+		}
+		return &aspire.ExecuteCommandResult{Success: commandArguments[0].Value == "hello"}
+	}, &aspire.WithCommandOptions{
+		CommandOptions: &aspire.CommandOptions{
+			Arguments: []*aspire.InteractionInput{
+				{
+					Name:      "message",
+					InputType: aspire.InputTypeText,
+					Required:  aspire.BoolPtr(true),
+				},
+			},
+		},
+	})
 	_ = container.WithCommand("restart", "Restart", func(ctx aspire.ExecuteCommandContext) *aspire.ExecuteCommandResult {
 		cancellationToken, err := ctx.CancellationToken()
 		if err != nil {
 			return &aspire.ExecuteCommandResult{Success: false, ErrorMessage: aspire.StringPtr(aspire.FormatError(err))}
 		}
-		result, err := resourceCommandService.ExecuteCommandAsync("mycontainer", "noop", &aspire.ExecuteCommandAsyncOptions{CancellationToken: cancellationToken})
+		result, err := resourceCommandService.ExecuteCommandAsync(container, "echo", &aspire.ExecuteCommandAsyncOptions{Arguments: map[string]string{"message": "hello"}, CancellationToken: cancellationToken})
 		if err != nil {
 			return &aspire.ExecuteCommandResult{Success: false, ErrorMessage: aspire.StringPtr(aspire.FormatError(err))}
 		}
