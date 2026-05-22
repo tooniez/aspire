@@ -13,8 +13,8 @@ import {
     ProbeType,
     ResourceCommandState,
     refExpr,
-} from './.modules/aspire.mjs';
-import type { DockerfileBuilderCallbackContext } from './.modules/aspire.mjs';
+} from './.aspire/modules/aspire.mjs';
+import type { DockerfileBuilderCallbackContext } from './.aspire/modules/aspire.mjs';
 import { fileURLToPath } from 'node:url';
 
 const builder = await createBuilder();
