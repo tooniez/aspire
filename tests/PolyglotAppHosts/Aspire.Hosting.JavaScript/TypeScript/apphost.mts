@@ -48,6 +48,6 @@ await builder.addJavaScriptApp('node-server-app', './node-server-app')
     .publishAsNodeServer('server.js', { outputPath: 'build' });
 
 await builder.addJavaScriptApp('npm-script-app', './npm-script-app')
-    .publishAsNpmScript({ startScriptName: 'start', runScriptArguments: '-- --port $PORT' });
+    .publishAsPackageScript({ scriptName: 'start', runScriptArguments: '-- --port $PORT' });
 
 await builder.build().run();

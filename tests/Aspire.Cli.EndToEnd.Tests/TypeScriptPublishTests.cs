@@ -400,7 +400,7 @@ public sealed class TypeScriptPublishTests(ITestOutputHelper output)
                 .publishAsNodeServer('build/server.js', { outputPath: 'build' });
 
             await builder.addViteApp('npmscript', './npmscript')
-                .publishAsNpmScript({ startScriptName: 'start', runScriptArguments: '-- --port $PORT' });
+                .publishAsPackageScript({ scriptName: 'start', runScriptArguments: '-- --port $PORT' });
 
             await builder.addNextJsApp('nextjs', './nextjs');
 

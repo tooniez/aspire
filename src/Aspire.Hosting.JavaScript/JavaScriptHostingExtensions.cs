@@ -582,13 +582,14 @@ public static class JavaScriptHostingExtensions
     }
 
     /// <summary>
-    /// Configures the JavaScript application to publish as a Node.js server that uses a package manager script at runtime.
+    /// Configures the JavaScript application to publish as a Node.js server that uses a <c>package.json</c> script at runtime.
     /// </summary>
     /// <typeparam name="TResource">The JavaScript resource type.</typeparam>
     /// <param name="builder">The JavaScript resource builder.</param>
-    /// <param name="startScriptName">
-    /// The name of the package manager script to run in the published container.
-    /// For example, <c>start</c> runs <c>npm run start</c>.
+    /// <param name="scriptName">
+    /// The name of the <c>package.json</c> script to run in the published container.
+    /// For example, <c>start</c> invokes the configured package manager's run command for the <c>start</c> script,
+    /// such as <c>npm run start</c>, <c>pnpm run start</c>, <c>yarn run start</c>, or <c>bun run start</c>.
     /// </param>
     /// <param name="runScriptArguments">
     /// Optional arguments appended after the script name at runtime,
@@ -612,20 +613,20 @@ public static class JavaScriptHostingExtensions
     /// </remarks>
     [Experimental("ASPIREJAVASCRIPT001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
     [AspireExport]
-    public static IResourceBuilder<TResource> PublishAsNpmScript<TResource>(this IResourceBuilder<TResource> builder, string startScriptName = "start", string? runScriptArguments = null)
+    public static IResourceBuilder<TResource> PublishAsPackageScript<TResource>(this IResourceBuilder<TResource> builder, string scriptName = "start", string? runScriptArguments = null)
         where TResource : JavaScriptAppResource
     {
         ArgumentNullException.ThrowIfNull(builder);
-        ArgumentException.ThrowIfNullOrEmpty(startScriptName);
+        ArgumentException.ThrowIfNullOrEmpty(scriptName);
 
         if (!builder.ApplicationBuilder.ExecutionContext.IsPublishMode)
         {
             return builder;
         }
 
-        var annotation = new JavaScriptPublishModeAnnotation(JavaScriptPublishMode.NpmScript)
+        var annotation = new JavaScriptPublishModeAnnotation(JavaScriptPublishMode.PackageScript)
         {
-            StartScriptName = startScriptName,
+            ScriptName = scriptName,
             RunScriptArguments = runScriptArguments
         };
 
@@ -657,7 +658,7 @@ public static class JavaScriptHostingExtensions
         }
     }
 
-    private static string GetNpmScriptRuntimeImage(
+    private static string GetPackageScriptRuntimeImage(
         string appDirectory,
         IServiceProvider services,
         DockerfileBaseImageAnnotation? baseImageAnnotation,
@@ -669,7 +670,7 @@ public static class JavaScriptHostingExtensions
             return baseImageAnnotation.RuntimeImage;
         }
 
-        return packageManager.ResolveNpmScriptRuntimeImage?.Invoke(buildImage)
+        return packageManager.ResolvePackageScriptRuntimeImage?.Invoke(buildImage)
             ?? GetDefaultBaseImage(appDirectory, "alpine", services);
     }
 
@@ -797,9 +798,9 @@ public static class JavaScriptHostingExtensions
                                     .Entrypoint(["node", NormalizeRelativePath(publishMode.EntryPoint!)]);
                                 break;
                             }
-                            case JavaScriptPublishMode.NpmScript:
+                            case JavaScriptPublishMode.PackageScript:
                             {
-                                var runtimeImage = GetNpmScriptRuntimeImage(appDirectory, dockerfileContext.Services, baseImageAnnotation, packageManager, baseImage);
+                                var runtimeImage = GetPackageScriptRuntimeImage(appDirectory, dockerfileContext.Services, baseImageAnnotation, packageManager, baseImage);
 
                                 // Production dependencies stage for optimized image
                                 var prodDepsStage = dockerfileContext.Builder
@@ -826,7 +827,7 @@ public static class JavaScriptHostingExtensions
                                 var installAnnotation = c.Resource.TryGetLastAnnotation<JavaScriptInstallCommandAnnotation>(out var installCmd) ? installCmd : null;
                                 if (string.IsNullOrEmpty(installAnnotation?.ProductionInstallArgs))
                                 {
-                                    throw new InvalidOperationException($"Package manager '{packageManager.ExecutableName}' does not have ProductionInstallArgs configured, which is required for PublishAsNpmScript.");
+                                    throw new InvalidOperationException($"Package manager '{packageManager.ExecutableName}' does not have ProductionInstallArgs configured, which is required for PublishAsPackageScript.");
                                 }
 
                                 var prodInstallCmd = $"{packageManager.ExecutableName} {string.Join(' ', installAnnotation.Args)} {installAnnotation.ProductionInstallArgs}";
@@ -841,8 +842,8 @@ public static class JavaScriptHostingExtensions
 
                                 // Runtime stage: copy build output then overlay prod deps
                                 var runCommand = string.IsNullOrWhiteSpace(publishMode.RunScriptArguments)
-                                    ? $"{packageManager.ExecutableName} {packageManager.ScriptCommand ?? "run"} {publishMode.StartScriptName}"
-                                    : $"{packageManager.ExecutableName} {packageManager.ScriptCommand ?? "run"} {publishMode.StartScriptName} {publishMode.RunScriptArguments}";
+                                    ? $"{packageManager.ExecutableName} {packageManager.ScriptCommand ?? "run"} {publishMode.ScriptName}"
+                                    : $"{packageManager.ExecutableName} {packageManager.ScriptCommand ?? "run"} {publishMode.ScriptName} {publishMode.RunScriptArguments}";
 
                                 var runtimeStage = dockerfileContext.Builder
                                     .From(runtimeImage, "runtime")
@@ -1343,7 +1344,7 @@ public static class JavaScriptHostingExtensions
     /// Bun forwards script arguments without requiring the <c>--</c> command separator, so this method configures the resource to omit it.
     /// When publishing and a bun lockfile (<c>bun.lock</c> or <c>bun.lockb</c>) is present, <c>--frozen-lockfile</c> is used by default.
     /// Publishing to a container requires Bun to be present in the build image. This method configures a Bun build image when one is not already specified.
-    /// <see cref="PublishAsNpmScript{TResource}"/> also uses the Bun image for the runtime stage unless a custom runtime image is configured.
+    /// <see cref="PublishAsPackageScript{TResource}"/> also uses the Bun image for the runtime stage unless a custom runtime image is configured.
     /// To use a specific Bun version, configure a custom build image (for example, <c>oven/bun:&lt;tag&gt;</c>) using <see cref="ContainerResourceBuilderExtensions.WithDockerfileBaseImage{T}(IResourceBuilder{T}, string?, string?)"/>.
     /// </remarks>
     /// <ats-remarks />
@@ -1386,7 +1387,7 @@ public static class JavaScriptHostingExtensions
                 PackageFilesPatterns = { new CopyFilePattern(packageFilesSourcePattern, "./") },
                 // bun supports passing script flags without the `--` separator.
                 CommandSeparator = null,
-                ResolveNpmScriptRuntimeImage = buildImage => buildImage,
+                ResolvePackageScriptRuntimeImage = buildImage => buildImage,
             })
             .WithAnnotation(new JavaScriptInstallCommandAnnotation(["install", .. installArgs])
             {

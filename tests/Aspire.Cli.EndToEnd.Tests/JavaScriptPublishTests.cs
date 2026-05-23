@@ -10,7 +10,7 @@ namespace Aspire.Cli.EndToEnd.Tests;
 
 /// <summary>
 /// End-to-end test for JavaScript publish methods. Uses checked-in fixture apps for all four
-/// publish patterns (StaticWebsite, NodeServer, NpmScript, AddNextJsApp), deploys them in a
+/// publish patterns (StaticWebsite, NodeServer, PackageScript, AddNextJsApp), deploys them in a
 /// single apphost via aspire deploy, and verifies all Docker images build successfully.
 /// </summary>
 public sealed class JavaScriptPublishTests(ITestOutputHelper output)
@@ -197,7 +197,7 @@ public sealed class JavaScriptPublishTests(ITestOutputHelper output)
                 .withExternalHttpEndpoints();
 
             await builder.addViteApp('npmscript', './npmscript')
-                .publishAsNpmScript({ startScriptName: 'start' })
+                .publishAsPackageScript({ scriptName: 'start' })
                 .withExternalHttpEndpoints();
 
             await builder.addNextJsApp('nextjs', './nextjs')
