@@ -540,9 +540,9 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
 
         foreach (var ingressResource in ingressResources)
         {
-            if (ingressResource.Routes.Count == 0 && ingressResource.DefaultBackend is null)
+            if (ingressResource.Paths.Count == 0 && ingressResource.DefaultBackend is null)
             {
-                logger.LogWarning("Ingress '{IngressName}' has no routes or default backend configured. Skipping.", ingressResource.Name);
+                logger.LogWarning("Ingress '{IngressName}' has no path rules or default backend configured. Skipping.", ingressResource.Name);
                 continue;
             }
 
@@ -550,9 +550,9 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
             // external. We do this before BuildIngressObject runs so the user
             // sees the validation error before any partial work or warnings
             // about missing deployment targets are emitted.
-            foreach (var route in ingressResource.Routes)
+            foreach (var path in ingressResource.Paths)
             {
-                EndpointRoutingValidation.ThrowIfEndpointNotExternal(route.Endpoint, "Ingress", ingressResource.Name);
+                EndpointRoutingValidation.ThrowIfEndpointNotExternal(path.Endpoint, "Ingress", ingressResource.Name);
             }
 
             if (ingressResource.DefaultBackend is { } defaultBackend)
@@ -592,9 +592,9 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
             ingress.Metadata.Annotations[key] = await ResolveExpressionAsync(value, cancellationToken).ConfigureAwait(false);
         }
 
-        var routesByHost = ingressResource.Routes.GroupBy(r => r.Host ?? string.Empty);
+        var pathsByHost = ingressResource.Paths.GroupBy(p => p.Host ?? string.Empty);
 
-        foreach (var hostGroup in routesByHost)
+        foreach (var hostGroup in pathsByHost)
         {
             var rule = new IngressRuleV1();
             if (!string.IsNullOrEmpty(hostGroup.Key))
@@ -602,9 +602,9 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
                 rule.Host = hostGroup.Key;
             }
 
-            foreach (var route in hostGroup)
+            foreach (var pathRule in hostGroup)
             {
-                var backend = ResolveIngressBackend(route.Endpoint, deploymentTargets, ingressResource.Name, logger);
+                var backend = ResolveIngressBackend(pathRule.Endpoint, deploymentTargets, ingressResource.Name, logger);
                 if (backend is null)
                 {
                     continue;
@@ -612,8 +612,8 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
 
                 rule.Http.Paths.Add(new HttpIngressPathV1
                 {
-                    Path = route.Path,
-                    PathType = route.PathType.ToKubernetesString(),
+                    Path = pathRule.Path,
+                    PathType = pathRule.PathType.ToKubernetesString(),
                     Backend = backend
                 });
             }
@@ -896,10 +896,10 @@ public sealed class KubernetesEnvironmentResource : Resource, IComputeEnvironmen
 
                 var pathType = route.PathType switch
                 {
-                    IngressPathType.Exact => "Exact",
-                    IngressPathType.Prefix => "PathPrefix",
-                    IngressPathType.ImplementationSpecific => "PathPrefix",
-                    _ => throw new ArgumentOutOfRangeException(nameof(gatewayResource), route.PathType, "Unknown path type.")
+                    GatewayPathMatchType.Exact => "Exact",
+                    GatewayPathMatchType.PathPrefix => "PathPrefix",
+                    GatewayPathMatchType.RegularExpression => "RegularExpression",
+                    _ => throw new InvalidOperationException($"Unknown gateway path match type '{route.PathType}'.")
                 };
 
                 var rule = new HttpRouteRuleV1();
