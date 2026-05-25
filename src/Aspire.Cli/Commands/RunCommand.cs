@@ -339,6 +339,16 @@ internal sealed class RunCommand : BaseCommand
                     _fileLoggerProvider.LogFilePath,
                     isExtensionHost);
 
+                if (ExtensionHelper.IsExtensionHost(InteractionService, out var extInteractionService, out _))
+                {
+                    if (dashboardUrls.DashboardHealthy is true)
+                    {
+                        extInteractionService.DisplayDashboardUrls(dashboardUrls);
+                    }
+
+                    extInteractionService.NotifyAppHostStartupCompleted();
+                }
+
                 // Handle remote environments (Codespaces, Remote Containers, SSH)
                 var isCodespaces = dashboardUrls.CodespacesUrlWithLoginToken is not null;
                 var isRemoteContainers = string.Equals(_configuration["REMOTE_CONTAINERS"], "true", StringComparison.OrdinalIgnoreCase);
@@ -417,16 +427,6 @@ internal sealed class RunCommand : BaseCommand
                     {
                         // Orderly shutdown
                     }
-                }
-
-                if (ExtensionHelper.IsExtensionHost(InteractionService, out var extInteractionService, out _))
-                {
-                    if (dashboardUrls.DashboardHealthy is true)
-                    {
-                        extInteractionService.DisplayDashboardUrls(dashboardUrls);
-                    }
-
-                    extInteractionService.NotifyAppHostStartupCompleted();
                 }
 
                 using (var lifetimeActivity = _profilingTelemetry.StartRunAppHostLifetime())

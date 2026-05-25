@@ -999,6 +999,88 @@ public class RunCommandTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task RunCommand_InRemoteExtensionHost_DisplaysDashboardUrlsBeforeLiveEndpointDisplayCompletes()
+    {
+        var displayLiveStarted = new TaskCompletionSource();
+        var allowLiveDisplayToComplete = new TaskCompletionSource();
+        var dashboardUrlsDisplayed = new TaskCompletionSource();
+
+        var backchannelFactory = (IServiceProvider sp) =>
+        {
+            var backchannel = new TestAppHostBackchannel();
+
+            backchannel.GetAppHostLogEntriesAsyncCallback = ReturnLogEntriesUntilCancelledAsync;
+
+            return backchannel;
+        };
+
+        var runnerFactory = (IServiceProvider sp) =>
+        {
+            var runner = new TestDotNetCliRunner();
+            runner.BuildAsyncCallback = (projectFile, noRestore, options, ct) => 0;
+            runner.GetAppHostInformationAsyncCallback = (projectFile, options, ct) => (0, true, VersionHelper.GetDefaultTemplateVersion());
+            runner.RunAsyncCallback = async (projectFile, watch, noBuild, noRestore, args, env, backchannelCompletionSource, options, ct) =>
+            {
+                var backchannel = sp.GetRequiredService<IAppHostCliBackchannel>();
+                backchannelCompletionSource!.SetResult(backchannel);
+
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+
+                return 0;
+            };
+
+            return runner;
+        };
+
+        using var workspace = TemporaryWorkspace.Create(outputHelper);
+        var services = CliTestHelper.CreateServiceCollection(workspace, outputHelper, options =>
+        {
+            options.AppHostBackchannelFactory = backchannelFactory;
+            options.DotNetCliRunnerFactory = runnerFactory;
+            options.ProjectLocatorFactory = _ => new TestProjectLocator();
+            options.ExtensionBackchannelFactory = _ => new TestExtensionBackchannel();
+            options.InteractionServiceFactory = sp => new TestExtensionInteractionService(sp)
+            {
+                DisplayDashboardUrlsCallback = _ => dashboardUrlsDisplayed.SetResult(),
+                DisplayLiveAsyncCallback = (_, _) =>
+                {
+                    displayLiveStarted.SetResult();
+                    return allowLiveDisplayToComplete.Task;
+                }
+            };
+            options.ConfigurationCallback += config =>
+            {
+                config[KnownConfigNames.ExtensionDebugSessionId] = "test-session-id";
+                config["VSCODE_IPC_HOOK_CLI"] = "test-ipc-hook";
+                config["SSH_CONNECTION"] = "127.0.0.1 1 127.0.0.1 2";
+            };
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var command = provider.GetRequiredService<RootCommand>();
+        var result = command.Parse("run");
+
+        using var cts = new CancellationTokenSource();
+        var pendingRun = result.InvokeAsync(cancellationToken: cts.Token);
+
+        try
+        {
+            await displayLiveStarted.Task.DefaultTimeout();
+
+            var completedTask = await Task.WhenAny(dashboardUrlsDisplayed.Task, Task.Delay(TimeSpan.FromSeconds(1))).DefaultTimeout();
+            Assert.Same(dashboardUrlsDisplayed.Task, completedTask);
+        }
+        finally
+        {
+            allowLiveDisplayToComplete.TrySetResult();
+            cts.Cancel();
+
+            var exitCode = await pendingRun.DefaultTimeout();
+            Assert.Equal(CliExitCodes.Success, exitCode);
+        }
+    }
+
+    [Fact]
     public async Task RunCommand_WhenAppHostReturnsCancelled_CompletesSuccessfully()
     {
         var runnerFactory = (IServiceProvider sp) =>
