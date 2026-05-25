@@ -2,7 +2,7 @@
 # Polyglot SDK Validation - TypeScript validation AppHosts
 # Iterates all TypeScript validation AppHosts under tests/PolyglotAppHosts/*/TypeScript,
 # runs 'aspire restore --apphost' to regenerate the per-integration .aspire/modules/ SDK, and
-# type-checks each AppHost against the generated API surface.
+# type-checks each AppHost with tsgo against the generated API surface.
 set -euo pipefail
 
 echo "=== TypeScript Validation AppHost Codegen Validation ==="
@@ -17,13 +17,43 @@ if ! command -v node &> /dev/null; then
     exit 1
 fi
 
-if ! command -v npx &> /dev/null; then
-    echo "❌ npx not found in PATH (Node.js required for npm TypeScript validation)"
+if ! command -v npm &> /dev/null; then
+    echo "❌ npm not found in PATH (Node.js required)"
     exit 1
 fi
 
+if ! command -v npx &> /dev/null; then
+    echo "❌ npx not found in PATH (Node.js required to run @typescript/native-preview when tsgo is not installed)"
+    exit 1
+fi
+
+if command -v tsgo &> /dev/null; then
+    TSGO_COMMAND=(tsgo)
+elif command -v npx &> /dev/null; then
+    TSGO_COMMAND=(npx --yes @typescript/native-preview)
+else
+    echo "❌ tsgo not found in PATH and npx is unavailable to run @typescript/native-preview"
+    exit 1
+fi
+
+detect_parallelism() {
+    if [ -n "${MAX_PARALLEL_TYPESCRIPT_VALIDATIONS:-}" ]; then
+        echo "$MAX_PARALLEL_TYPESCRIPT_VALIDATIONS"
+    elif command -v nproc &> /dev/null; then
+        nproc
+    elif command -v getconf &> /dev/null; then
+        getconf _NPROCESSORS_ONLN
+    elif command -v sysctl &> /dev/null; then
+        sysctl -n hw.ncpu
+    else
+        echo 4
+    fi
+}
+
 echo "Aspire CLI version:"
 aspire --version
+echo "TypeScript checker:"
+"${TSGO_COMMAND[@]}" --version
 
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 
@@ -128,12 +158,7 @@ install_command_text() {
 }
 
 typecheck_command_text() {
-    case "$1" in
-        npm) echo "npx --no-install tsc --noEmit --project tsconfig.json" ;;
-        pnpm) echo "pnpm exec tsc --noEmit --project tsconfig.json" ;;
-        yarn) echo "yarn run tsc --noEmit --project tsconfig.json" ;;
-        bun) echo "bun run tsc --noEmit --project tsconfig.json" ;;
-    esac
+    echo "tsgo --noEmit --project tsconfig.json"
 }
 
 run_install() {
@@ -146,12 +171,7 @@ run_install() {
 }
 
 run_typecheck() {
-    case "$1" in
-        npm) npx --no-install tsc --noEmit --project tsconfig.json ;;
-        pnpm) pnpm exec tsc --noEmit --project tsconfig.json ;;
-        yarn) yarn run tsc --noEmit --project tsconfig.json ;;
-        bun) bun run tsc --noEmit --project tsconfig.json ;;
-    esac
+    "${TSGO_COMMAND[@]}" --noEmit --project tsconfig.json
 }
 
 ensure_package_manager_available() {
@@ -159,7 +179,7 @@ ensure_package_manager_available() {
     local required_command="$package_manager"
 
     if ! command -v "$required_command" &> /dev/null; then
-        echo "  ❌ $required_command not found in PATH (required for $(typecheck_command_text "$package_manager"))"
+        echo "  ❌ $required_command not found in PATH (required for $(install_command_text "$package_manager"))"
         return 1
     fi
 }
@@ -192,11 +212,27 @@ for app_dir in "${APP_DIRS[@]}"; do
 done
 echo ""
 
+MAX_PARALLEL="$(detect_parallelism)"
+if ! [[ "$MAX_PARALLEL" =~ ^[0-9]+$ ]] || [ "$MAX_PARALLEL" -lt 1 ]; then
+    echo "Invalid MAX_PARALLEL_TYPESCRIPT_VALIDATIONS value '$MAX_PARALLEL'; using 1."
+    MAX_PARALLEL=1
+fi
+if [ "$MAX_PARALLEL" -gt "${#APP_DIRS[@]}" ]; then
+    MAX_PARALLEL="${#APP_DIRS[@]}"
+fi
+
+echo "Running up to $MAX_PARALLEL TypeScript validations in parallel."
+echo ""
+
 FAILED=()
 PASSED=()
+RUN_ROOT="$(mktemp -d)"
+trap 'rm -rf "$RUN_ROOT"' EXIT
 
-for app_dir in "${APP_DIRS[@]}"; do
-    integration_name="$(basename "$(dirname "$app_dir")")"
+validate_apphost() {
+    local app_dir="$1"
+    local integration_name="$2"
+    local result_file="$3"
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "Testing: $integration_name"
@@ -205,17 +241,15 @@ for app_dir in "${APP_DIRS[@]}"; do
     cd "$app_dir"
 
     if ! resolve_package_manager "$app_dir"; then
-        FAILED+=("$integration_name (package manager resolution)")
-        echo ""
-        continue
+        printf 'FAIL|%s|package manager resolution\n' "$integration_name" > "$result_file"
+        return 1
     fi
 
     echo "  → package manager: $SELECTED_PACKAGE_MANAGER ($SELECTED_PACKAGE_MANAGER_REASON)"
 
     if ! ensure_package_manager_available "$SELECTED_PACKAGE_MANAGER"; then
-        FAILED+=("$integration_name ($SELECTED_PACKAGE_MANAGER unavailable)")
-        echo ""
-        continue
+        printf 'FAIL|%s|%s unavailable\n' "$integration_name" "$SELECTED_PACKAGE_MANAGER" > "$result_file"
+        return 1
     fi
 
     install_command=$(install_command_text "$SELECTED_PACKAGE_MANAGER")
@@ -223,32 +257,83 @@ for app_dir in "${APP_DIRS[@]}"; do
     install_output=$(run_install "$SELECTED_PACKAGE_MANAGER" 2>&1) || {
         echo "$install_output" | tail -5
         echo "  ❌ $install_command failed for $integration_name"
-        FAILED+=("$integration_name ($install_command)")
-        echo ""
-        continue
+        printf 'FAIL|%s|%s\n' "$integration_name" "$install_command" > "$result_file"
+        return 1
     }
     echo "$install_output" | tail -3
 
     echo "  → aspire restore --apphost apphost.mts..."
     if ! aspire restore --non-interactive --apphost apphost.mts 2>&1; then
         echo "  ❌ aspire restore failed for $integration_name"
-        FAILED+=("$integration_name (aspire restore)")
-        echo ""
-        continue
+        printf 'FAIL|%s|aspire restore\n' "$integration_name" > "$result_file"
+        return 1
     fi
 
     typecheck_command=$(typecheck_command_text "$SELECTED_PACKAGE_MANAGER")
     echo "  → $typecheck_command..."
     if ! run_typecheck "$SELECTED_PACKAGE_MANAGER" 2>&1; then
-        echo "  ❌ tsc compilation failed for $integration_name"
-        FAILED+=("$integration_name (tsc)")
-        echo ""
-        continue
+        echo "  ❌ tsgo compilation failed for $integration_name"
+        printf 'FAIL|%s|tsgo\n' "$integration_name" > "$result_file"
+        return 1
     fi
 
     echo "  ✅ $integration_name passed"
-    PASSED+=("$integration_name")
+    printf 'PASS|%s|\n' "$integration_name" > "$result_file"
     echo ""
+}
+
+BATCH_PIDS=()
+BATCH_INDEXES=()
+LOG_FILES=()
+RESULT_FILES=()
+
+wait_for_batch() {
+    local pid
+    local index
+    local result_file
+
+    for pid in "${BATCH_PIDS[@]}"; do
+        wait "$pid" || true
+    done
+
+    for index in "${BATCH_INDEXES[@]}"; do
+        cat "${LOG_FILES[$index]}"
+        result_file="${RESULT_FILES[$index]}"
+        if [ ! -f "$result_file" ]; then
+            printf 'FAIL|%s|unexpected failure\n' "$(basename "$(dirname "${APP_DIRS[$index]}")")" > "$result_file"
+        fi
+    done
+
+    BATCH_PIDS=()
+    BATCH_INDEXES=()
+}
+
+for index in "${!APP_DIRS[@]}"; do
+    app_dir="${APP_DIRS[$index]}"
+    integration_name="$(basename "$(dirname "$app_dir")")"
+    LOG_FILES[$index]="$RUN_ROOT/$index.log"
+    RESULT_FILES[$index]="$RUN_ROOT/$index.result"
+
+    validate_apphost "$app_dir" "$integration_name" "${RESULT_FILES[$index]}" > "${LOG_FILES[$index]}" 2>&1 &
+    BATCH_PIDS+=("$!")
+    BATCH_INDEXES+=("$index")
+
+    if [ "${#BATCH_PIDS[@]}" -ge "$MAX_PARALLEL" ]; then
+        wait_for_batch
+    fi
+done
+
+if [ "${#BATCH_PIDS[@]}" -gt 0 ]; then
+    wait_for_batch
+fi
+
+for result_file in "${RESULT_FILES[@]}"; do
+    IFS='|' read -r status integration_name failure_step < "$result_file"
+    if [ "$status" = "PASS" ]; then
+        PASSED+=("$integration_name")
+    else
+        FAILED+=("$integration_name ($failure_step)")
+    fi
 done
 
 echo ""
