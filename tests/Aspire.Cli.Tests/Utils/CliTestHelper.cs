@@ -117,6 +117,7 @@ internal static class CliTestHelper
         services.AddSingleton(options.AddCommandPrompterFactory);
         services.AddSingleton(options.PublishCommandPrompterFactory);
         services.AddTransient(options.DotNetCliExecutionFactoryFactory);
+        services.AddTransient<IDetachedProcessLauncher, DefaultDetachedProcessLauncher>();
         services.AddTransient(options.DotNetCliRunnerFactory);
         services.AddTransient(options.NuGetPackageCacheFactory);
         services.AddSingleton<TemplateNuGetConfigService>();

@@ -266,6 +266,12 @@ namespace Aspire.Cli.Resources {
                 return ResourceManager.GetString("TimeoutWaitingForAppHost", resourceCulture);
             }
         }
+
+        public static string InvalidAppHostStartupTimeoutEnvironmentVariable {
+            get {
+                return ResourceManager.GetString("InvalidAppHostStartupTimeoutEnvironmentVariable", resourceCulture);
+            }
+        }
         
         public static string CheckLogsForDetails {
             get {
