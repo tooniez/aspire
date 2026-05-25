@@ -66,6 +66,90 @@ public class KubernetesIngressTests
     }
 
     [Fact]
+    public async Task AddIngress_WithIngressClassParameter_GeneratesHelmReferenceAndPlaceholder()
+    {
+        // Regression test: using a ParameterResource with the WithIngressClass overload
+        // previously rendered the literal format string ("{0}") into ingressClassName
+        // when the parameter had no value available at publish time. The fix substitutes a
+        // Helm template expression and captures the parameter so the deploy-time values
+        // override file (and chart values.yaml placeholder) include the entry.
+        using var tempDir = new TestTempDirectory();
+        // Pipeline:ClearCache=true prevents loading of leaked deployment state from
+        // ~/.aspire/deployments/<sha>/<env>.json (which would otherwise auto-resolve
+        // parameters from prior test runs and bypass the MissingParameterValueException path).
+        var builder = TestDistributedApplicationBuilder.Create(
+            "AppHost:Operation=publish",
+            $"Pipeline:OutputPath={tempDir.Path}",
+            "Pipeline:LogLevel=information",
+            "Pipeline:Step=publish",
+            "Pipeline:ClearCache=true");
+
+        // Use a unique parameter name per test run to defeat any persistent state file lookup.
+        var parameterName = $"ingressclass{Guid.NewGuid():N}";
+        var ingressClass = builder.AddParameter(parameterName);
+
+        var k8s = builder.AddKubernetesEnvironment("env");
+        var ingress = k8s.AddIngress("public")
+            .WithIngressClass(ingressClass);
+
+        var api = builder.AddContainer("myapi", "nginx")
+            .WithHttpEndpoint(targetPort: 8080)
+            .WithExternalHttpEndpoints();
+
+        ingress.WithPath("/api", api.GetEndpoint("http"));
+
+        var app = builder.Build();
+        app.Run();
+
+        var ingressPath = Path.Combine(tempDir.Path, "templates", "public", "public.yaml");
+        Assert.True(File.Exists(ingressPath), $"Expected ingress YAML at {ingressPath}");
+
+        var content = await File.ReadAllTextAsync(ingressPath);
+        Assert.DoesNotContain("\"{0}\"", content);
+        Assert.Contains($"{{{{ .Values.parameters.public.{parameterName} }}}}", content);
+
+        var valuesPath = Path.Combine(tempDir.Path, "values.yaml");
+        Assert.True(File.Exists(valuesPath), $"Expected values.yaml at {valuesPath}");
+
+        var values = await File.ReadAllTextAsync(valuesPath);
+        // Expect a placeholder entry under parameters: public: <parameterName>: so consumers
+        // of the published Helm chart can fill it in (and `helm template` won't substitute <no value>).
+        Assert.Matches(
+            new System.Text.RegularExpressions.Regex(@"parameters:\s*[\r\n]+\s*public:\s*[\r\n]+\s*" + System.Text.RegularExpressions.Regex.Escape(parameterName) + @"\s*:"),
+            values);
+    }
+
+    [Fact]
+    public async Task AddIngress_WithIngressClassParameter_WithDefaultValue_ResolvesAtPublish()
+    {
+        // When a parameter has a publish-time default, the resolved value should be inlined
+        // into the manifest rather than rendered as a Helm template reference.
+        using var tempDir = new TestTempDirectory();
+        var builder = TestDistributedApplicationBuilder.Create(DistributedApplicationOperation.Publish, tempDir.Path);
+
+        var ingressClass = builder.AddParameter("ingressclass", "nginx", publishValueAsDefault: true);
+
+        var k8s = builder.AddKubernetesEnvironment("env");
+        var ingress = k8s.AddIngress("public")
+            .WithIngressClass(ingressClass);
+
+        var api = builder.AddContainer("myapi", "nginx")
+            .WithHttpEndpoint(targetPort: 8080)
+            .WithExternalHttpEndpoints();
+
+        ingress.WithPath("/api", api.GetEndpoint("http"));
+
+        var app = builder.Build();
+        app.Run();
+
+        var ingressPath = Path.Combine(tempDir.Path, "templates", "public", "public.yaml");
+        var content = await File.ReadAllTextAsync(ingressPath);
+
+        Assert.Contains("ingressClassName: \"nginx\"", content);
+        Assert.DoesNotContain("{{ .Values", content);
+    }
+
+    [Fact]
     public async Task AddIngress_WithTls_GeneratesTlsSection()
     {
         using var tempDir = new TestTempDirectory();
