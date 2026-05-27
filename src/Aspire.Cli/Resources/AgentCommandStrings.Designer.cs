@@ -205,11 +205,29 @@ namespace Aspire.Cli.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Installed {0} skill ({1})..
+        ///   Looks up a localized string similar to Installed Aspire agent skills:.
         /// </summary>
-        internal static string InitCommand_InstalledSkill {
+        internal static string InitCommand_InstalledSkillsSummary {
             get {
-                return ResourceManager.GetString("InitCommand_InstalledSkill", resourceCulture);
+                return ResourceManager.GetString("InitCommand_InstalledSkillsSummary", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Skills: {0}.
+        /// </summary>
+        internal static string InitCommand_InstalledSkillsSummarySkills {
+            get {
+                return ResourceManager.GetString("InitCommand_InstalledSkillsSummarySkills", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Looks up a localized string similar to Locations: {0}.
+        /// </summary>
+        internal static string InitCommand_InstalledSkillsSummaryLocations {
+            get {
+                return ResourceManager.GetString("InitCommand_InstalledSkillsSummaryLocations", resourceCulture);
             }
         }
 
@@ -358,7 +376,7 @@ namespace Aspire.Cli.Resources {
         }
 
         /// <summary>
-        ///   Looks up a localized string similar to Aspire skills could not be downloaded from the verified GitHub release asset, and no valid cached bundle is available..
+        ///   Looks up a localized string similar to Aspire skills could not be downloaded from the verified GitHub release asset, and no valid cached or embedded bundle is available..
         /// </summary>
         internal static string AspireSkillsInstaller_GitHubUnavailable {
             get {

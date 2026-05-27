@@ -3,8 +3,8 @@
   <file datatype="xml" source-language="en" target-language="ru" original="../AgentCommandStrings.resx">
     <body>
       <trans-unit id="AspireSkillsInstaller_GitHubUnavailable">
-        <source>Aspire skills could not be downloaded from the verified GitHub release asset, and no valid cached bundle is available.</source>
-        <target state="new">Aspire skills could not be downloaded from the verified GitHub release asset, and no valid cached bundle is available.</target>
+        <source>Aspire skills could not be downloaded from the verified GitHub release asset, and no valid cached or embedded bundle is available.</source>
+        <target state="new">Aspire skills could not be downloaded from the verified GitHub release asset, and no valid cached or embedded bundle is available.</target>
         <note />
       </trans-unit>
       <trans-unit id="ConfigUpdatesSelectPrompt">
@@ -57,9 +57,19 @@
         <target state="new">Installed Playwright CLI.</target>
         <note />
       </trans-unit>
-      <trans-unit id="InitCommand_InstalledSkill">
-        <source>Installed {0} skill ({1}).</source>
-        <target state="new">Installed {0} skill ({1}).</target>
+      <trans-unit id="InitCommand_InstalledSkillsSummary">
+        <source>Installed Aspire agent skills:</source>
+        <target state="new">Installed Aspire agent skills:</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InitCommand_InstalledSkillsSummaryLocations">
+        <source>Locations: {0}</source>
+        <target state="new">Locations: {0}</target>
+        <note />
+      </trans-unit>
+      <trans-unit id="InitCommand_InstalledSkillsSummarySkills">
+        <source>Skills: {0}</source>
+        <target state="new">Skills: {0}</target>
         <note />
       </trans-unit>
       <trans-unit id="InitCommand_PlaywrightCliSkipped">
