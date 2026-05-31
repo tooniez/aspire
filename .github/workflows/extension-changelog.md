@@ -74,6 +74,18 @@ network:
 safe-outputs:
   push-to-pull-request-branch:
     max: 1
+    # Skip gh-aw's branch-protection pre-flight check. By default this safe output
+    # reads branch protection before pushing, which makes gh-aw request
+    # `administration: read` on the minted aspire-repo-bot app token. That scope is
+    # NOT granted to the App installation, so the `Generate GitHub App token` step
+    # fails with a 422 ("The permissions requested are not granted to this
+    # installation") and the changelog is never pushed. The PR head we push to is a
+    # short-lived release branch created moments earlier by extension-release.yml and
+    # is never protected, so the pre-flight check has no value here. Disabling it
+    # drops `administration: read` from the token request, leaving only the already
+    # granted `contents: write` + `pull-requests: write`.
+    # See https://github.com/github/gh-aw push_to_pull_request_branch.go (check-branch-protection).
+    check-branch-protection: false
     # Fail (don't just warn) if the agent emits a push with no diff. Every
     # legitimate run that gets this far edits extension/CHANGELOG.md (even the
     # "no user-facing changes" case rewrites the placeholder), and the benign
