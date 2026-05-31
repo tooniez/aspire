@@ -172,7 +172,9 @@ Native build can be disabled with `/p:SkipNativeBuild=true`. To build only the n
 
 ### Building the VS Code extension
 
-The Aspire VS Code extension lives under `extension/`. To build the extension through the repo build, make sure Node.js, yarn, and `vsce` are on your PATH, then run:
+The Aspire VS Code extension lives under `extension/`. See [extension/CONTRIBUTING.md](/extension/CONTRIBUTING.md) for the full extension contributor guide, including the extension-only inner loop (no .NET build required), project structure, running tests, and localization rules.
+
+To build the extension through the repo build, make sure Node.js, yarn, and `vsce` are on your PATH, then run:
 
 ```bash
 ./build.sh --build-extension  # macOS/Linux
