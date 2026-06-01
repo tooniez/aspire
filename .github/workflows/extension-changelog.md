@@ -256,6 +256,11 @@ style template. Match:
   `### Fixes`).
 - Bullet style and level of detail (one concise line per change).
 - Whether bullets reference PRs by number (e.g. `(#NNNN)`) and/or credit authors.
+- When a change has both a tracking issue and an implementation pull request, keep
+  the references distinct and use the correct GitHub URL type for each
+  (`/issues/` for issues, `/pull/` for pull requests). Do not replace a
+  user-facing issue reference with only the implementation PR number if the PR
+  title or body makes the issue the canonical tracking item.
 
 **Do not invent a new format.** Match what is already there. Keep bullets
 concise, factual, and user-facing — describe what changed for someone using the
@@ -271,6 +276,9 @@ Edit `extension/CHANGELOG.md` in the workspace so that:
   is removed and replaced with your generated notes. The marker MUST NOT survive
   in the final file; if it did, a later run (e.g. from the label being
   re-applied) would have no reliable way to tell the work was already done.
+- The final Markdown contains no multiple consecutive blank lines (`\n\n\n`),
+  which would fail the repository's Markdownlint `MD012/no-multiple-blanks`
+  required check.
 - All other existing entries below are left untouched.
 
 If, after excluding noise in Step 4, there are **no** user-facing changes,

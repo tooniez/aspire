@@ -1,5 +1,11 @@
 # Aspire VS Code Extension Changelog
 
+## v1.12.0
+
+### Features
+
+- Add VS Code telemetry signals for engagement, AppHost launches, command invocations, debug sessions, and dashboard telemetry passthrough; all events respect the VS Code `telemetry.telemetryLevel` setting ([#17721](https://github.com/microsoft/aspire/issues/17721), [#17723](https://github.com/microsoft/aspire/pull/17723)).
+
 ## v1.11.0
 
 ### Features
