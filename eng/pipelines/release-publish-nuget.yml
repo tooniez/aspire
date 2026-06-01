@@ -2061,6 +2061,12 @@ extends:
             templateContext:
               type: releaseJob
               isProduction: true
+              # No ESRP publish runs in this job; vsce publishes directly to the VS Code Marketplace
+              # using a PAT. Skip the auto-injected MicroBuildAuthorizePublishPlugin@0 so it
+              # does not 401 against the devdiv MicroBuildToolset feed.
+              mb:
+                publish:
+                  enabled: false
               inputs:
                 - input: pipelineArtifact
                   artifactName: aspire-vscode-extension
