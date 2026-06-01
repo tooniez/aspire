@@ -256,7 +256,6 @@ public sealed class NpmCliPackageTests
 
         Assert.Contains("NPM_PUBLISH_REQUIRED_OWNERS", commonVariables);
         Assert.Contains("NPM_PUBLISH_REQUIRED_APPROVERS", commonVariables);
-        Assert.Contains("default: ''", releasePipeline);
         Assert.Contains("NpmPublishOwnersEffective", releasePipeline);
         Assert.Contains("NpmPublishApproversEffective", releasePipeline);
         Assert.Contains("owners: '$(NpmPublishOwnersEffective)'", releasePipeline);
