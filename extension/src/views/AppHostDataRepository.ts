@@ -165,7 +165,9 @@ export class AppHostDataRepository {
     private _workspaceAppHostDescription: string | undefined;
     private _workspaceAppHostDiscoveryComplete = false;
     private _workspaceAppHostDiscoveryUsesWorkspaceRoot = false;
+    private _workspaceAppHostDiscoveryVersion = 0;
     private readonly _appHostDiscoveryChangeDisposable: vscode.Disposable;
+    private readonly _workspaceFoldersChangeDisposable: vscode.Disposable;
     private readonly _appHostDiscoveryService: AppHostDiscoveryService;
     private readonly _ownsAppHostDiscoveryService: boolean;
 
@@ -189,6 +191,17 @@ export class AppHostDataRepository {
             if (rootFolder?.uri.toString() === workspaceFolder.uri.toString()) {
                 this._fetchWorkspaceAppHost();
             }
+        });
+        this._workspaceFoldersChangeDisposable = vscode.workspace.onDidChangeWorkspaceFolders(() => {
+            this._stopDescribeWatch({ clearWorkspaceResources: true });
+            this._stopAllGlobalDescribes();
+            this._stopPolling();
+            this._workspaceAppHostDiscoveryComplete = false;
+            this._clearWorkspaceAppHostDiscovery();
+            this._clearWorkspaceAppHostData();
+            this._clearErrors();
+            this._updateWorkspaceContext();
+            this._fetchWorkspaceAppHost({ forceRefresh: true });
         });
         this._fetchWorkspaceAppHost();
         this._configChangeDisposable = vscode.workspace.onDidChangeConfiguration(e => {
@@ -230,6 +243,15 @@ export class AppHostDataRepository {
 
     get workspaceAppHostDescription(): string | undefined {
         return this._workspaceAppHostDescription;
+    }
+
+    get isLoading(): boolean {
+        const isLoading = this._viewMode === 'workspace' ? this._loadingWorkspace : this._loadingGlobal;
+        return this._dataActive && isLoading;
+    }
+
+    get isWorkspaceAppHostDiscoveryComplete(): boolean {
+        return this._workspaceAppHostDiscoveryComplete;
     }
 
     get errorMessage(): string | undefined {
@@ -282,8 +304,14 @@ export class AppHostDataRepository {
         this._stopAllGlobalDescribes();
         this._workspaceResources.clear();
         this._clearErrors();
+        // A user-triggered refresh should observe AppHost/config files written by tools
+        // even when the file watcher has not delivered an invalidation event yet.
+        this._workspaceAppHostDiscoveryComplete = false;
+        this._clearWorkspaceAppHostDiscovery();
+        this._clearWorkspaceAppHostData();
         this._updateWorkspaceContext();
         this._describeRestartDelay = 5000;
+        this._fetchWorkspaceAppHost({ forceRefresh: true });
         if (this._shouldWatchWorkspace) {
             this._startDescribeWatch();
         }
@@ -304,6 +332,7 @@ export class AppHostDataRepository {
         this._stopAllGlobalDescribes();
         this._configChangeDisposable.dispose();
         this._appHostDiscoveryChangeDisposable.dispose();
+        this._workspaceFoldersChangeDisposable.dispose();
         this._onDidChangeData.dispose();
         if (this._ownsAppHostDiscoveryService) {
             this._appHostDiscoveryService.dispose();
@@ -365,7 +394,8 @@ export class AppHostDataRepository {
 
     // ── Workspace app host (from aspire ls) ──
 
-    private _fetchWorkspaceAppHost(): void {
+    private _fetchWorkspaceAppHost(options?: { forceRefresh?: boolean }): void {
+        const discoveryVersion = ++this._workspaceAppHostDiscoveryVersion;
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
             this._workspaceAppHostDiscoveryComplete = true;
@@ -381,8 +411,8 @@ export class AppHostDataRepository {
 
         extensionLogOutputChannel.info('Fetching workspace apphost via shared AppHost discovery');
 
-        this._appHostDiscoveryService.discover(rootFolder).then(appHosts => {
-            if (this._disposed) {
+        this._appHostDiscoveryService.discover(rootFolder, options?.forceRefresh).then(appHosts => {
+            if (!this._isCurrentWorkspaceDiscovery(discoveryVersion, rootFolder)) {
                 return;
             }
 
@@ -390,6 +420,10 @@ export class AppHostDataRepository {
             this._workspaceAppHostDiscoveryComplete = true;
             this._handleWorkspaceAppHostCandidates(result.app_host_candidates, result.selected_project_file);
         }).catch(error => {
+            if (!this._isCurrentWorkspaceDiscovery(discoveryVersion, rootFolder)) {
+                return;
+            }
+
             this._workspaceAppHostDiscoveryComplete = true;
             extensionLogOutputChannel.warn(`Failed to fetch workspace apphost: ${error}`);
             this._clearWorkspaceAppHostDiscovery();
@@ -423,8 +457,10 @@ export class AppHostDataRepository {
                 this._clearWorkspaceAppHostSelection();
             }
             this._workspaceAppHostDescription = workspaceViewSelectedMultipleAppHosts(buildableAppHostCandidates.length);
-            extensionLogOutputChannel.info(`Workspace contains ${buildableAppHostCandidates.length} buildable AppHosts; keeping workspace view`);
-            this.setViewMode('workspace');
+            extensionLogOutputChannel.info(`Workspace contains ${buildableAppHostCandidates.length} buildable AppHosts`);
+            if (this._viewMode === 'workspace') {
+                this.setViewMode('workspace');
+            }
             this._syncPolling();
             this._onDidChangeData.fire();
             return;
@@ -440,7 +476,19 @@ export class AppHostDataRepository {
             extensionLogOutputChannel.info(`Workspace apphost resolved: ${selectedAppHostCandidate.path} (${selectedAppHostCandidate.language}, ${selectedAppHostCandidate.status})`);
             this._syncPolling();
             this._onDidChangeData.fire();
+            return;
         }
+
+        this._clearWorkspaceAppHostDiscovery();
+        this._syncPolling();
+        this._updateWorkspaceContext({ clearLoading: true });
+    }
+
+    private _isCurrentWorkspaceDiscovery(discoveryVersion: number, workspaceFolder: vscode.WorkspaceFolder): boolean {
+        const rootFolder = vscode.workspace.workspaceFolders?.[0];
+        return !this._disposed
+            && discoveryVersion === this._workspaceAppHostDiscoveryVersion
+            && rootFolder?.uri.toString() === workspaceFolder.uri.toString();
     }
 
     private _setWorkspaceAppHostPath(appHostPath: string, appHostCandidates: readonly AppHostCandidate[]): void {
@@ -476,8 +524,10 @@ export class AppHostDataRepository {
     private _clearWorkspaceAppHostData(): void {
         this._workspaceResources.clear();
         this._workspaceAppHost = undefined;
-        this._appHosts = [];
-        this._appHostsSnapshot = '[]';
+        if (this._viewMode === 'workspace') {
+            this._appHosts = [];
+            this._appHostsSnapshot = '[]';
+        }
     }
 
     // ── Workspace mode: describe --follow ──
@@ -1079,7 +1129,7 @@ export class AppHostDataRepository {
     private _updateErrorMessage(): void {
         const message = this._viewMode === 'workspace'
             ? this._describeErrorMessage ?? this._psErrorMessage
-            : this._psErrorMessage ?? this._describeErrorMessage;
+            : this._psErrorMessage;
         const hasError = message !== undefined;
         if (this._errorMessage !== message) {
             this._errorMessage = message;
@@ -1477,9 +1527,24 @@ export function isMatchingAppHostPath(left: string | undefined, right: string | 
     }
 
     // `aspire extension get-apphosts` resolves a project file while `aspire ps`
-    // can report the AppHost source file. Match by directory as a fallback to
-    // mirror the CodeLens AppHost resolution strategy.
-    return getComparisonKey(path.dirname(normalizedLeft)) === getComparisonKey(path.dirname(normalizedRight));
+    // can report the AppHost source file. Match by directory only for that
+    // project/source-file shape so sibling AppHost projects don't collapse into
+    // the same workspace AppHost.
+    return getComparisonKey(path.dirname(normalizedLeft)) === getComparisonKey(path.dirname(normalizedRight))
+        && isProjectFileToSourceFileMatch(normalizedLeft, normalizedRight);
+}
+
+function isProjectFileToSourceFileMatch(left: string, right: string): boolean {
+    return (isProjectFile(left) && isAppHostSourceFile(right)) || (isAppHostSourceFile(left) && isProjectFile(right));
+}
+
+function isProjectFile(value: string): boolean {
+    return path.extname(value).toLowerCase() === '.csproj';
+}
+
+function isAppHostSourceFile(value: string): boolean {
+    const fileName = path.basename(value).toLowerCase();
+    return fileName === 'apphost.cs' || fileName === 'program.cs';
 }
 
 function isSameAppHostPath(left: string | undefined, right: string | undefined): boolean {
