@@ -8,6 +8,7 @@ using Aspire.Dashboard.Otlp.Model;
 using Aspire.Dashboard.Otlp.Storage;
 using Aspire.Otlp.Serialization;
 using Google.Protobuf.Collections;
+using Microsoft.AspNetCore.InternalTesting;
 using OpenTelemetry.Proto.Logs.V1;
 using OpenTelemetry.Proto.Trace.V1;
 using Xunit;
@@ -26,10 +27,9 @@ public class TelemetryApiServiceTests
         AddSpans(repository, count: 5);
 
         var service = CreateService(repository);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var receivedItems = new List<string>();
-        await foreach (var item in service.FollowSpansAsync(null, null, null, null, cancellationToken: cts.Token))
+        await foreach (var item in service.FollowSpansAsync(null, null, null, null).DefaultTimeout())
         {
             receivedItems.Add(item);
             if (receivedItems.Count >= 5)
@@ -48,10 +48,9 @@ public class TelemetryApiServiceTests
         AddLogs(repository, ["log1", "log2", "log3", "log4", "log5"]);
 
         var service = CreateService(repository);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var receivedItems = new List<string>();
-        await foreach (var item in service.FollowLogsAsync(null, null, null, null, cts.Token))
+        await foreach (var item in service.FollowLogsAsync(null, null, null, null, default).DefaultTimeout())
         {
             receivedItems.Add(item);
             if (receivedItems.Count >= 5)
@@ -87,17 +86,16 @@ public class TelemetryApiServiceTests
         AddSpans(repository, count: 1);
 
         var service = CreateService(repository);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var receivedItems = new List<string>();
         try
         {
-            await foreach (var item in service.FollowSpansAsync(["nonexistent-service"], null, null, null, cancellationToken: cts.Token))
+            await foreach (var item in service.FollowSpansAsync(["nonexistent-service"], null, null, null).DefaultTimeout())
             {
                 receivedItems.Add(item);
             }
         }
-        catch (OperationCanceledException)
+        catch (TimeoutException)
         {
         }
 
@@ -111,17 +109,16 @@ public class TelemetryApiServiceTests
         AddLogs(repository, ["log1"]);
 
         var service = CreateService(repository);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
 
         var receivedItems = new List<string>();
         try
         {
-            await foreach (var item in service.FollowLogsAsync(["nonexistent-service"], null, null, null, cts.Token))
+            await foreach (var item in service.FollowLogsAsync(["nonexistent-service"], null, null, null, default).DefaultTimeout())
             {
                 receivedItems.Add(item);
             }
         }
-        catch (OperationCanceledException)
+        catch (TimeoutException)
         {
         }
 
@@ -169,10 +166,9 @@ public class TelemetryApiServiceTests
         ]);
 
         var service = CreateService(repository);
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         var receivedItems = new List<string>();
-        await foreach (var streamedItem in service.FollowSpansAsync(null, "7472616", null, null, cancellationToken: cts.Token))
+        await foreach (var streamedItem in service.FollowSpansAsync(null, "7472616", null, null).DefaultTimeout())
         {
             receivedItems.Add(streamedItem);
             break;
@@ -803,6 +799,50 @@ public class TelemetryApiServiceTests
             .SelectMany(rs => rs.ScopeSpans ?? [])
             .SelectMany(ss => ss.Spans ?? [])
             .ToList() ?? [];
+    }
+
+    [Fact]
+    public async Task FollowSpansAsync_WaitsForResourceToAppear_ThenStreams()
+    {
+        var repository = CreateRepository(subscriptionMinExecuteInterval: TimeSpan.Zero);
+        var service = CreateService(repository);
+
+        // Start enumerating - MoveNextAsync will block until data arrives.
+        var enumerator = service.FollowSpansAsync(["service1"], null, null, null).GetAsyncEnumerator();
+        var moveNextTask = enumerator.MoveNextAsync();
+
+        // The task should not complete yet because the resource doesn't exist.
+        Assert.False(moveNextTask.IsCompleted);
+
+        // Now add spans for the resource - this should unblock the stream.
+        AddSpans(repository, count: 1);
+
+        Assert.True(await moveNextTask.DefaultTimeout());
+        Assert.NotNull(enumerator.Current);
+
+        await enumerator.DisposeAsync();
+    }
+
+    [Fact]
+    public async Task FollowLogsAsync_WaitsForResourceToAppear_ThenStreams()
+    {
+        var repository = CreateRepository(subscriptionMinExecuteInterval: TimeSpan.Zero);
+        var service = CreateService(repository);
+
+        // Start enumerating - MoveNextAsync will block until data arrives.
+        var enumerator = service.FollowLogsAsync(["service1"], null, null, null, default).GetAsyncEnumerator();
+        var moveNextTask = enumerator.MoveNextAsync();
+
+        // The task should not complete yet because the resource doesn't exist.
+        Assert.False(moveNextTask.IsCompleted);
+
+        // Now add logs for the resource - this should unblock the stream.
+        AddLogs(repository, ["hello"]);
+
+        Assert.True(await moveNextTask.DefaultTimeout());
+        Assert.NotNull(enumerator.Current);
+
+        await enumerator.DisposeAsync();
     }
 
     // SpanId is serialized as lowercase hex per the OTLP/JSON spec
