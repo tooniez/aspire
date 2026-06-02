@@ -10,19 +10,19 @@ namespace Aspire.Hosting
 {
     public static partial class KafkaBuilderExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds a Kafka container resource")]
         public static ApplicationModel.IResourceBuilder<KafkaServerResource> AddKafka(this IDistributedApplicationBuilder builder, string name, int? port = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a data bind mount to the Kafka container")]
         public static ApplicationModel.IResourceBuilder<KafkaServerResource> WithDataBindMount(this ApplicationModel.IResourceBuilder<KafkaServerResource> builder, string source, bool isReadOnly = false) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a data volume to the Kafka container")]
         public static ApplicationModel.IResourceBuilder<KafkaServerResource> WithDataVolume(this ApplicationModel.IResourceBuilder<KafkaServerResource> builder, string? name = null, bool isReadOnly = false) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Sets the host port for the Kafka UI container")]
         public static ApplicationModel.IResourceBuilder<KafkaUIContainerResource> WithHostPort(this ApplicationModel.IResourceBuilder<KafkaUIContainerResource> builder, int? port) { throw null; }
 
-        [AspireExport(RunSyncOnBackgroundThread = true)]
+        [AspireExport(Description = "Adds a Kafka UI container to manage the Kafka resource", RunSyncOnBackgroundThread = true)]
         public static ApplicationModel.IResourceBuilder<KafkaServerResource> WithKafkaUI(this ApplicationModel.IResourceBuilder<KafkaServerResource> builder, System.Action<ApplicationModel.IResourceBuilder<KafkaUIContainerResource>>? configureContainer = null, string? containerName = null) { throw null; }
     }
 

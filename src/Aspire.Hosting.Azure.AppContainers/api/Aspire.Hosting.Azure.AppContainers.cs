@@ -10,68 +10,68 @@ namespace Aspire.Hosting
 {
     public static partial class AzureContainerAppContainerExtensions
     {
-        [AspireExport("publishContainerAsAzureContainerApp", MethodName = "publishAsAzureContainerApp")]
+        [AspireExport("publishContainerAsAzureContainerApp", MethodName = "publishAsAzureContainerApp", Description = "Configures the container resource to be published as an Azure Container App")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsAzureContainerApp<T>(this ApplicationModel.IResourceBuilder<T> container, System.Action<Azure.AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerApp> configure)
             where T : ApplicationModel.ContainerResource { throw null; }
     }
 
     public static partial class AzureContainerAppExecutableExtensions
     {
-        [AspireExport("publishExecutableAsAzureContainerApp", MethodName = "publishAsAzureContainerApp")]
+        [AspireExport("publishExecutableAsAzureContainerApp", MethodName = "publishAsAzureContainerApp", Description = "Configures the executable resource to be published as an Azure Container App")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsAzureContainerApp<T>(this ApplicationModel.IResourceBuilder<T> executable, System.Action<Azure.AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerApp> configure)
             where T : ApplicationModel.ExecutableResource { throw null; }
     }
 
     public static partial class AzureContainerAppExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Container App Environment resource")]
         public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> AddAzureContainerAppEnvironment(this IDistributedApplicationBuilder builder, string name) { throw null; }
 
         [System.Obsolete("Use AddAzureContainerAppEnvironment instead. This method will be removed in a future version.")]
         public static IDistributedApplicationBuilder AddAzureContainerAppsInfrastructure(this IDistributedApplicationBuilder builder) { throw null; }
 
-        [AspireExport]
-        public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> WithAcrPullIdentity(this ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> builder, ApplicationModel.IResourceBuilder<Azure.AzureUserAssignedIdentityResource> identityBuilder) { throw null; }
-
-        [AspireExport]
+        [AspireExport(Description = "Configures resources to use azd naming conventions")]
         public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> WithAzdResourceNaming(this ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> builder) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures the container app environment to use a specific Log Analytics Workspace")]
         public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> WithAzureLogAnalyticsWorkspace(this ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> builder, ApplicationModel.IResourceBuilder<Azure.AzureLogAnalyticsWorkspaceResource> workspaceBuilder) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures resources to use compact naming for length-constrained Azure resources")]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIREACANAMING001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> WithCompactResourceNaming(this ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> builder) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures whether the Aspire dashboard is included in the container app environment")]
         public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> WithDashboard(this ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> builder, bool enable = true) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures whether HTTP endpoints are upgraded to HTTPS")]
         public static ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> WithHttpsUpgrade(this ApplicationModel.IResourceBuilder<Azure.AppContainers.AzureContainerAppEnvironmentResource> builder, bool upgrade = true) { throw null; }
     }
 
     public static partial class AzureContainerAppProjectExtensions
     {
-        [AspireExport("publishProjectAsAzureContainerApp", MethodName = "publishAsAzureContainerApp")]
+        [AspireExport("publishProjectAsAzureContainerApp", MethodName = "publishAsAzureContainerApp", Description = "Configures the project resource to be published as an Azure Container App")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsAzureContainerApp<T>(this ApplicationModel.IResourceBuilder<T> project, System.Action<Azure.AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerApp> configure)
             where T : ApplicationModel.ProjectResource { throw null; }
     }
 
     public static partial class ContainerAppExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Configures the custom domain for the container app")]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIREACADOMAINS001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static void ConfigureCustomDomain(this global::Azure.Provisioning.AppContainers.ContainerApp app, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource> customDomain, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource> certificateName) { }
 
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal publishAsAzureContainerAppJob dispatcher export.")]
+        [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE002", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsAzureContainerAppJob<T>(this ApplicationModel.IResourceBuilder<T> resource, System.Action<Azure.AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerAppJob> configure)
             where T : ApplicationModel.IComputeResource { throw null; }
 
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal publishAsAzureContainerAppJob dispatcher export.")]
+        [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE002", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsAzureContainerAppJob<T>(this ApplicationModel.IResourceBuilder<T> resource)
             where T : ApplicationModel.IComputeResource { throw null; }
 
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal publishAsScheduledAzureContainerAppJob dispatcher export.")]
+        [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE002", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsScheduledAzureContainerAppJob<T>(this ApplicationModel.IResourceBuilder<T> resource, string cronExpression, System.Action<Azure.AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerAppJob>? configure = null)
             where T : ApplicationModel.IComputeResource { throw null; }
     }
@@ -86,6 +86,7 @@ namespace Aspire.Hosting.Azure
         public System.Action<AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerApp> Configure { get { throw null; } }
     }
 
+    [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE002", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
     public sealed partial class AzureContainerAppJobCustomizationAnnotation : ApplicationModel.IResourceAnnotation
     {
         public AzureContainerAppJobCustomizationAnnotation(System.Action<AzureResourceInfrastructure, global::Azure.Provisioning.AppContainers.ContainerAppJob> configure) { }

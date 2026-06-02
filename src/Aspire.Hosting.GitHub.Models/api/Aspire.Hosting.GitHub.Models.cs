@@ -16,10 +16,10 @@ namespace Aspire.Hosting
         [AspireExportIgnore(Reason = "The polyglot overload uses the GitHubModelName enum instead. See the internal AddGitHubModel(GitHubModelName) overload.")]
         public static ApplicationModel.IResourceBuilder<GitHub.Models.GitHubModelResource> AddGitHubModel(this IDistributedApplicationBuilder builder, string name, string model, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource>? organization = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures the API key for the GitHub Model resource.")]
         public static ApplicationModel.IResourceBuilder<GitHub.Models.GitHubModelResource> WithApiKey(this ApplicationModel.IResourceBuilder<GitHub.Models.GitHubModelResource> builder, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource> apiKey) { throw null; }
 
-        [AspireExport("enableHealthCheck")]
+        [AspireExport("enableHealthCheck", MethodName = "withHealthCheck", Description = "Adds a health check for the GitHub Model resource.")]
         public static ApplicationModel.IResourceBuilder<GitHub.Models.GitHubModelResource> WithHealthCheck(this ApplicationModel.IResourceBuilder<GitHub.Models.GitHubModelResource> builder) { throw null; }
     }
 }

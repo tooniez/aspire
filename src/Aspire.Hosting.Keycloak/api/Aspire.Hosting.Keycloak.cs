@@ -10,19 +10,19 @@ namespace Aspire.Hosting
 {
     public static partial class KeycloakResourceBuilderExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds a Keycloak container resource")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> AddKeycloak(this IDistributedApplicationBuilder builder, string name, int? port = null, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource>? adminUsername = null, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource>? adminPassword = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a data bind mount for Keycloak")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> WithDataBindMount(this ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> builder, string source) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a data volume for Keycloak")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> WithDataVolume(this ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> builder, string? name = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Disables Keycloak features")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> WithDisabledFeatures(this ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> builder, params string[] features) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Enables Keycloak features")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> WithEnabledFeatures(this ApplicationModel.IResourceBuilder<ApplicationModel.KeycloakResource> builder, params string[] features) { throw null; }
 
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal withOtlpExporter dispatcher export.")]

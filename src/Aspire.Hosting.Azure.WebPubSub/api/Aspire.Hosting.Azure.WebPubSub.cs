@@ -10,7 +10,7 @@ namespace Aspire.Hosting
 {
     public static partial class AzureWebPubSubExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Web PubSub resource to the distributed application model.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.AzureWebPubSubResource> AddAzureWebPubSub(this IDistributedApplicationBuilder builder, string name) { throw null; }
 
         [AspireExportIgnore(Reason = "UpstreamAuthSettings is not ATS-compatible. Use the polyglot overload without auth settings instead.")]
@@ -19,7 +19,7 @@ namespace Aspire.Hosting
         [AspireExportIgnore(Reason = "ExpressionInterpolatedStringHandler and UpstreamAuthSettings are not ATS-compatible. Use the polyglot overload without auth settings instead.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.AzureWebPubSubHubResource> AddEventHandler(this ApplicationModel.IResourceBuilder<ApplicationModel.AzureWebPubSubHubResource> builder, ApplicationModel.ReferenceExpression.ExpressionInterpolatedStringHandler urlTemplateExpression, string userEventPattern = "*", string[]? systemEvents = null, global::Azure.Provisioning.WebPubSub.UpstreamAuthSettings? authSettings = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a hub to the Azure Web PubSub resource.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.AzureWebPubSubHubResource> AddHub(this ApplicationModel.IResourceBuilder<ApplicationModel.AzureWebPubSubResource> builder, string name, string? hubName = null) { throw null; }
 
         [AspireExportIgnore(Reason = "Use the AddHub overload with the optional hubName parameter instead.")]

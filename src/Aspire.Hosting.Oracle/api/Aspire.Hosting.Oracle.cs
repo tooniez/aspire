@@ -10,25 +10,25 @@ namespace Aspire.Hosting
 {
     public static partial class OracleDatabaseBuilderExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Oracle database resource to an Oracle server resource.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseResource> AddDatabase(this ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> builder, string name, string? databaseName = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds an Oracle server resource to the distributed application model.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> AddOracle(this IDistributedApplicationBuilder builder, string name, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource>? password = null, int? port = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Mounts a host directory as the Oracle data directory.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> WithDataBindMount(this ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> builder, string source) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a persistent data volume to the Oracle server resource.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> WithDataVolume(this ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> builder, string? name = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Mounts a host directory as the Oracle DB setup directory.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> WithDbSetupBindMount(this ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> builder, string source) { throw null; }
 
         [System.Obsolete("Use WithInitFiles instead.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> WithInitBindMount(this ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> builder, string source) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Copies initialization files into the Oracle container.")]
         public static ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> WithInitFiles(this ApplicationModel.IResourceBuilder<ApplicationModel.OracleDatabaseServerResource> builder, string source) { throw null; }
     }
 }

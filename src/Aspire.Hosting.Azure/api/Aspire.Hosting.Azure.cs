@@ -10,13 +10,13 @@ namespace Aspire.Hosting
 {
     public static partial class AzureBicepResourceExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Bicep template resource from a file")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureBicepResource> AddBicepTemplate(this IDistributedApplicationBuilder builder, string name, string bicepFile) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Bicep template resource from inline Bicep content")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureBicepResource> AddBicepTemplateString(this IDistributedApplicationBuilder builder, string name, string bicepContent) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Gets an output reference from an Azure Bicep template resource")]
         public static Azure.BicepOutputReference GetOutput(this ApplicationModel.IResourceBuilder<Azure.AzureBicepResource> builder, string name) { throw null; }
 
         [System.Obsolete("GetSecretOutput is obsolete. Use IAzureKeyVaultResource.GetSecret instead.")]
@@ -81,13 +81,13 @@ namespace Aspire.Hosting
 
     public static partial class AzureProvisionerExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds Azure provisioning services to the distributed application builder")]
         public static IDistributedApplicationBuilder AddAzureProvisioning(this IDistributedApplicationBuilder builder) { throw null; }
     }
 
     public static partial class AzureProvisioningResourceExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure provisioning resource to the application model")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureProvisioningResource> AddAzureInfrastructure(this IDistributedApplicationBuilder builder, string name, System.Action<Azure.AzureResourceInfrastructure> configureInfrastructure) { throw null; }
 
         [AspireExportIgnore(Reason = "KeyVaultSecret is an Azure.Provisioning type not compatible with ATS.")]
@@ -111,21 +111,21 @@ namespace Aspire.Hosting
         [AspireExportIgnore(Reason = "ProvisioningParameter is an Azure.Provisioning type not compatible with ATS.")]
         public static global::Azure.Provisioning.ProvisioningParameter AsProvisioningParameter(this Azure.BicepOutputReference outputReference, Azure.AzureResourceInfrastructure infrastructure, string? parameterName = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures the Azure provisioning infrastructure callback")]
         public static ApplicationModel.IResourceBuilder<T> ConfigureInfrastructure<T>(this ApplicationModel.IResourceBuilder<T> builder, System.Action<Azure.AzureResourceInfrastructure> configure)
             where T : Azure.AzureProvisioningResource { throw null; }
     }
 
     public static partial class AzureResourceExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Clears the default Azure role assignments from a resource")]
         public static ApplicationModel.IResourceBuilder<T> ClearDefaultRoleAssignments<T>(this ApplicationModel.IResourceBuilder<T> builder)
             where T : ApplicationModel.IAzureResource { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Gets the normalized Bicep identifier for an Azure resource")]
         public static string GetBicepIdentifier(this ApplicationModel.IAzureResource resource) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Publishes an Azure resource to the manifest as a connection string")]
         public static ApplicationModel.IResourceBuilder<T> PublishAsConnectionString<T>(this ApplicationModel.IResourceBuilder<T> builder)
             where T : ApplicationModel.IAzureResource, ApplicationModel.IResourceWithConnectionString { throw null; }
     }
@@ -252,15 +252,15 @@ namespace Aspire.Hosting.Azure
 
     public static partial class AzureEnvironmentResourceExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds the shared Azure environment resource to the application model")]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<AzureEnvironmentResource> AddAzureEnvironment(this IDistributedApplicationBuilder builder) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Sets the Azure location for the shared Azure environment resource")]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<AzureEnvironmentResource> WithLocation(this ApplicationModel.IResourceBuilder<AzureEnvironmentResource> builder, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource> location) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Sets the Azure resource group for the shared Azure environment resource")]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<AzureEnvironmentResource> WithResourceGroup(this ApplicationModel.IResourceBuilder<AzureEnvironmentResource> builder, ApplicationModel.IResourceBuilder<ApplicationModel.ParameterResource> resourceGroup) { throw null; }
     }
@@ -320,24 +320,12 @@ namespace Aspire.Hosting.Azure
         public AzureProvisioningResource AspireResource { get { throw null; } }
     }
 
-    [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE003", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
-    public sealed partial class AzureRoleAssignmentResource : AzureProvisioningResource
-    {
-        public AzureRoleAssignmentResource(string name, AzureProvisioningResource targetAzureResource, ApplicationModel.IResource? ownerResource, AzureUserAssignedIdentityResource? identityResource, System.Action<AzureResourceInfrastructure> configureInfrastructure) : base(default!, default!) { }
-
-        public AzureUserAssignedIdentityResource? IdentityResource { get { throw null; } }
-
-        public ApplicationModel.IResource? OwnerResource { get { throw null; } }
-
-        public AzureProvisioningResource TargetAzureResource { get { throw null; } }
-    }
-
     public static partial class AzureUserAssignedIdentityExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure user-assigned identity resource")]
         public static ApplicationModel.IResourceBuilder<AzureUserAssignedIdentityResource> AddAzureUserAssignedIdentity(this IDistributedApplicationBuilder builder, string name) { throw null; }
 
-        [AspireExport("withUserAssignedIdentityAzureUserAssignedIdentity", MethodName = "withAzureUserAssignedIdentity")]
+        [AspireExport("withUserAssignedIdentityAzureUserAssignedIdentity", MethodName = "withAzureUserAssignedIdentity", Description = "Associates an Azure user-assigned identity with a compute resource")]
         public static ApplicationModel.IResourceBuilder<T> WithAzureUserAssignedIdentity<T>(this ApplicationModel.IResourceBuilder<T> builder, ApplicationModel.IResourceBuilder<AzureUserAssignedIdentityResource> identityResourceBuilder)
             where T : ApplicationModel.IComputeResource { throw null; }
     }
@@ -532,27 +520,12 @@ namespace Aspire.Hosting.Azure
         void ApplyAzureFunctionsConfiguration(System.Collections.Generic.IDictionary<string, object> target, string connectionName);
     }
 
-    public partial interface ITokenCredentialProvider
-    {
-        global::Azure.Core.TokenCredential TokenCredential { get; }
-    }
-
     [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE003", UrlFormat = "https://aka.ms/aspire/diagnostics#{0}")]
     public sealed partial class PrivateEndpointTargetAnnotation : ApplicationModel.IResourceAnnotation
     {
         public PrivateEndpointTargetAnnotation(AzureProvisioningResource privateEndpointResource) { }
 
         public AzureProvisioningResource PrivateEndpointResource { get { throw null; } }
-    }
-
-    [System.Diagnostics.CodeAnalysis.Experimental("ASPIREAZURE003", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
-    public sealed partial class ReferenceRoleAssignmentAnnotation : ApplicationModel.IResourceAnnotation
-    {
-        public ReferenceRoleAssignmentAnnotation(AzureProvisioningResource target, System.Collections.Generic.IReadOnlySet<RoleDefinition> roles) { }
-
-        public System.Collections.Generic.IReadOnlySet<RoleDefinition> Roles { get { throw null; } }
-
-        public AzureProvisioningResource Target { get { throw null; } }
     }
 
     public partial class RoleAssignmentAnnotation : ApplicationModel.IResourceAnnotation

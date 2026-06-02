@@ -10,7 +10,7 @@ namespace Aspire.Hosting
 {
     public static partial class AzureLogAnalyticsWorkspaceExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Log Analytics Workspace resource")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureLogAnalyticsWorkspaceResource> AddAzureLogAnalyticsWorkspace(this IDistributedApplicationBuilder builder, string name) { throw null; }
     }
 }

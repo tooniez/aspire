@@ -48,7 +48,7 @@ namespace Aspire.Hosting
 
     public static partial class AzureCosmosExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Cosmos DB resource")]
         public static ApplicationModel.IResourceBuilder<AzureCosmosDBResource> AddAzureCosmosDB(this IDistributedApplicationBuilder builder, string name) { throw null; }
 
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal addContainer dispatcher export.")]
@@ -57,17 +57,17 @@ namespace Aspire.Hosting
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal addContainer dispatcher export.")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBContainerResource> AddContainer(this ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBDatabaseResource> builder, string name, string partitionKeyPath, string? containerName = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Cosmos DB database resource")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBDatabaseResource> AddCosmosDatabase(this ApplicationModel.IResourceBuilder<AzureCosmosDBResource> builder, string name, string? databaseName = null) { throw null; }
 
         [AspireExportIgnore(Reason = "Obsolete API with incorrect return type. Use AddCosmosDatabase instead.")]
         [System.Obsolete("This method is obsolete because it has the wrong return type and will be removed in a future version. Use AddCosmosDatabase instead to add a Cosmos DB database.")]
         public static ApplicationModel.IResourceBuilder<AzureCosmosDBResource> AddDatabase(this ApplicationModel.IResourceBuilder<AzureCosmosDBResource> builder, string databaseName) { throw null; }
 
-        [AspireExport(RunSyncOnBackgroundThread = true)]
+        [AspireExport(Description = "Configures the Azure Cosmos DB resource to run using the local emulator", RunSyncOnBackgroundThread = true)]
         public static ApplicationModel.IResourceBuilder<AzureCosmosDBResource> RunAsEmulator(this ApplicationModel.IResourceBuilder<AzureCosmosDBResource> builder, System.Action<ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource>>? configureContainer = null) { throw null; }
 
-        [AspireExport(RunSyncOnBackgroundThread = true)]
+        [AspireExport(Description = "Configures the Azure Cosmos DB resource to run using the preview emulator", RunSyncOnBackgroundThread = true)]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIRECOSMOSDB001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<AzureCosmosDBResource> RunAsPreviewEmulator(this ApplicationModel.IResourceBuilder<AzureCosmosDBResource> builder, System.Action<ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource>>? configureContainer = null) { throw null; }
 
@@ -77,20 +77,20 @@ namespace Aspire.Hosting
         [AspireExportIgnore(Reason = "Polyglot app hosts use the internal withAccessKeyAuthentication dispatcher export.")]
         public static ApplicationModel.IResourceBuilder<AzureCosmosDBResource> WithAccessKeyAuthentication(this ApplicationModel.IResourceBuilder<AzureCosmosDBResource> builder) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Exposes the Data Explorer endpoint for the preview emulator")]
         [System.Diagnostics.CodeAnalysis.Experimental("ASPIRECOSMOSDB001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> WithDataExplorer(this ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> builder, int? port = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Adds a named volume for the data folder to an Azure Cosmos DB emulator resource")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> WithDataVolume(this ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> builder, string? name = null) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures Azure Cosmos DB to use the default Azure SKU")]
         public static ApplicationModel.IResourceBuilder<AzureCosmosDBResource> WithDefaultAzureSku(this ApplicationModel.IResourceBuilder<AzureCosmosDBResource> builder) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Sets the host port for the Cosmos DB emulator gateway endpoint")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> WithGatewayPort(this ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> builder, int? port) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Sets the partition count for the Azure Cosmos DB emulator")]
         public static ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> WithPartitionCount(this ApplicationModel.IResourceBuilder<Azure.AzureCosmosDBEmulatorResource> builder, int count) { throw null; }
     }
 }

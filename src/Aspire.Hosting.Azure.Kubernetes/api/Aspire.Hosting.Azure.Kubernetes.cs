@@ -8,55 +8,37 @@
 //------------------------------------------------------------------------------
 namespace Aspire.Hosting
 {
-    public static partial class AzureCertManagerExtensions
-    {
-        [AspireExport]
-        public static ApplicationModel.IResourceBuilder<Kubernetes.CertManagerResource> AddCertManager(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string name, string? chartVersion = null) { throw null; }
-    }
-
     public static partial class AzureKubernetesEnvironmentExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds an Azure Kubernetes Service environment resource")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> AddAzureKubernetesEnvironment(this IDistributedApplicationBuilder builder, string name) { throw null; }
 
-        [AspireExport]
-        public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesLoadBalancerResource> AddLoadBalancer(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string name, ApplicationModel.IResourceBuilder<Azure.AzureSubnetResource> subnet) { throw null; }
-
-        [AspireExport]
+        [AspireExport(Description = "Adds a node pool to the AKS cluster")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AksNodePoolResource> AddNodePool(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string name, string vmSize = "Standard_D2s_v5", int minCount = 1, int maxCount = 3) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures the AKS environment to use a specific container registry")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> WithContainerRegistry(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, ApplicationModel.IResourceBuilder<Azure.AzureContainerRegistryResource> registry) { throw null; }
 
-        [AspireExport("withNodePoolSubnet", MethodName = "withSubnet")]
+        [AspireExport("withNodePoolSubnet", MethodName = "withSubnet", Description = "Configures an AKS node pool to use a specific VNet subnet")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AksNodePoolResource> WithSubnet(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AksNodePoolResource> builder, ApplicationModel.IResourceBuilder<Azure.AzureSubnetResource> subnet) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Configures the AKS cluster to use a VNet subnet")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> WithSubnet(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, ApplicationModel.IResourceBuilder<Azure.AzureSubnetResource> subnet) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Replaces the default system node pool with a customized configuration")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> WithSystemNodePool(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string vmSize = "Standard_D2s_v5", int minCount = 1, int maxCount = 3) { throw null; }
 
-        [AspireExport]
+        [AspireExport(Description = "Enables workload identity on the AKS cluster")]
         public static ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> WithWorkloadIdentity(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, bool enabled = true) { throw null; }
     }
 
     public static partial class AzureKubernetesIngressExtensions
     {
-        [AspireExport]
+        [AspireExport(Description = "Adds a Kubernetes Gateway API Gateway to an AKS environment")]
         public static ApplicationModel.IResourceBuilder<Kubernetes.KubernetesGatewayResource> AddGateway(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string name) { throw null; }
 
-        [AspireExport]
-        public static ApplicationModel.IResourceBuilder<Kubernetes.KubernetesHelmChartResource> AddHelmChart(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string name, string chartReference, string chartVersion) { throw null; }
-
-        [AspireExport]
+        [AspireExport(Description = "Adds a Kubernetes Ingress resource to an AKS environment")]
         public static ApplicationModel.IResourceBuilder<Kubernetes.KubernetesIngressResource> AddIngress(this ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesEnvironmentResource> builder, string name) { throw null; }
-
-        [AspireExport]
-        public static ApplicationModel.IResourceBuilder<Kubernetes.KubernetesGatewayResource> WithLoadBalancer(this ApplicationModel.IResourceBuilder<Kubernetes.KubernetesGatewayResource> builder, ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesLoadBalancerResource> loadBalancer) { throw null; }
-
-        [AspireExport("withLoadBalancerOnIngress", MethodName = "withLoadBalancer")]
-        public static ApplicationModel.IResourceBuilder<Kubernetes.KubernetesIngressResource> WithLoadBalancer(this ApplicationModel.IResourceBuilder<Kubernetes.KubernetesIngressResource> builder, ApplicationModel.IResourceBuilder<Azure.Kubernetes.AzureKubernetesLoadBalancerResource> loadBalancer) { throw null; }
     }
 }
 
@@ -3517,12 +3499,5 @@ namespace Aspire.Hosting.Azure.Kubernetes
         public BicepOutputReference NodeResourceGroup { get { throw null; } }
 
         public BicepOutputReference OidcIssuerUrl { get { throw null; } }
-    }
-
-    public sealed partial class AzureKubernetesLoadBalancerResource : ApplicationModel.Resource, ApplicationModel.IResourceWithParent<AzureKubernetesEnvironmentResource>, ApplicationModel.IResourceWithParent, ApplicationModel.IResource
-    {
-        internal AzureKubernetesLoadBalancerResource() : base(default!) { }
-
-        public AzureKubernetesEnvironmentResource Parent { get { throw null; } }
     }
 }
