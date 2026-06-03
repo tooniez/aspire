@@ -191,7 +191,7 @@ suite('E2E launch profile', () => {
 
         assert.ok(aspireCliEnvironmentStart >= 0);
         assert.ok(aspireCliEnvironmentEnd > aspireCliEnvironmentStart);
-        assert.ok(aspireCliEnvironment.includes("ASPIRE_CLI_TELEMETRY_OPTOUT: '1'"));
+        assert.ok(aspireCliEnvironment.includes("ASPIRE_CLI_TELEMETRY_OPTOUT: 'true'"));
         assert.ok(aspireCliEnvironment.includes("DOTNET_CLI_TELEMETRY_OPTOUT: '1'"));
         assert.ok(envConstruction.includes('const extestEnv = getAspireCliEnvironment({'));
         assert.ok(envConstruction.includes("ASPIRE_EXTENSION_E2E_ENABLE_BRIDGE: 'true'"));
@@ -225,8 +225,8 @@ suite('E2E launch profile', () => {
         assert.ok(zeroToRunning.includes('this.timeout(2100000);'));
         assert.ok(zeroToRunning.includes('waitForDebugSessionStartup(appHostPath, 300000)'));
         assert.ok(zeroToRunning.includes('waitForDebugDashboardUrl(appHostPath, 180000)'));
-        assert.ok(zeroToRunning.includes("waitForEditorTitle(new URL(dashboardUrl).host, 180000"));
-        assert.ok(zeroToRunning.includes("process.platform === 'win32'"));
+        assert.ok(zeroToRunning.includes('waitForEditorTitle(dashboardHost, 180000'));
+        assert.ok(zeroToRunning.includes("process.platform === 'linux'"));
         assert.ok(zeroToRunning.includes("waitForWorkbenchTextAfterIntegratedBrowserNavigation(['Resources', dashboardHost], 180000)"));
     });
 

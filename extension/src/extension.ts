@@ -20,7 +20,7 @@ import { AspireExtensionContext } from './AspireExtensionContext';
 import AspireRpcServer, { RpcServerConnectionInfo } from './server/AspireRpcServer';
 import AspireDcpServer from './dcp/AspireDcpServer';
 import { configureLaunchJsonCommand } from './commands/configureLaunchJson';
-import { AspireTerminalProvider, AspireTerminalCommandEvent } from './utils/AspireTerminalProvider';
+import { AspireTerminalProvider, AspireTerminalCommandEvent, quoteShellArg } from './utils/AspireTerminalProvider';
 import { MessageConnection } from 'vscode-jsonrpc';
 import { openTerminalCommand } from './commands/openTerminal';
 import { updateCommand, updateSelfCommand } from './commands/update';
@@ -29,7 +29,7 @@ import { openLocalSettingsCommand, openGlobalSettingsCommand } from './commands/
 import { checkCliAvailableOrRedirect, checkForExistingAppHostPathInWorkspace } from './utils/workspace';
 import { AspireEditorCommandProvider } from './editor/AspireEditorCommandProvider';
 import { AspirePackageRestoreProvider } from './utils/AspirePackageRestoreProvider';
-import { AspireAppHostTreeProvider } from './views/AspireAppHostTreeProvider';
+import { AspireAppHostTreeProvider, isEnabledCommand } from './views/AspireAppHostTreeProvider';
 import { AppHostDataRepository } from './views/AppHostDataRepository';
 import { installCliStableCommand, installCliDailyCommand, verifyCliInstalledCommand } from './commands/walkthroughCommands';
 import { AspireMcpServerDefinitionProvider } from './mcp/AspireMcpServerDefinitionProvider';
@@ -190,6 +190,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const restartResourceRegistration = registerInstrumentedCommand('aspire-vscode.restartResource', 'tree', (element) => appHostTreeProvider.restartResource(element));
   const viewResourceLogsRegistration = registerInstrumentedCommand('aspire-vscode.viewResourceLogs', 'tree', (element) => appHostTreeProvider.viewResourceLogs(element));
   const executeResourceCommandRegistration = registerInstrumentedCommand('aspire-vscode.executeResourceCommand', 'tree', (element) => appHostTreeProvider.executeResourceCommand(element));
+  const executeResourceCommandItemRegistration = registerInstrumentedCommand('aspire-vscode.executeResourceCommandItem', 'tree', (element) => appHostTreeProvider.executeResourceCommandItem(element));
   const copyEndpointUrlRegistration = registerInstrumentedCommand('aspire-vscode.copyEndpointUrl', 'tree', (element) => appHostTreeProvider.copyEndpointUrl(element));
   const openInExternalBrowserRegistration = registerInstrumentedCommand('aspire-vscode.openInExternalBrowser', 'tree', (element) => appHostTreeProvider.openInExternalBrowser(element));
   const openInIntegratedBrowserRegistration = registerInstrumentedCommand('aspire-vscode.openInIntegratedBrowser', 'tree', (element) => appHostTreeProvider.openInIntegratedBrowser(element));
@@ -208,7 +209,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Activate the data repository. Workspace describe watching and global polling begin when the panel is visible.
   dataRepository.activate();
 
-  context.subscriptions.push(appHostTreeView, globalRefreshAppHostsRegistration, refreshAppHostsRegistration, switchToGlobalViewRegistration, switchToWorkspaceViewRegistration, openDashboardRegistration, openAppHostSourceRegistration, stopAppHostRegistration, runAppHostRegistration, debugAppHostRegistration, stopResourceRegistration, startResourceRegistration, restartResourceRegistration, viewResourceLogsRegistration, executeResourceCommandRegistration, copyEndpointUrlRegistration, openInExternalBrowserRegistration, openInIntegratedBrowserRegistration, copyResourceNameRegistration, copyAppHostPathRegistration, viewAppHostSourceRegistration, viewAppHostLogFileRegistration, copyLogFilePathRegistration, expandAllRegistration, debugSessionRefreshRegistration, { dispose: () => { appHostTreeProvider.dispose(); dataRepository.dispose(); } });
+  context.subscriptions.push(appHostTreeView, globalRefreshAppHostsRegistration, refreshAppHostsRegistration, switchToGlobalViewRegistration, switchToWorkspaceViewRegistration, openDashboardRegistration, openAppHostSourceRegistration, stopAppHostRegistration, runAppHostRegistration, debugAppHostRegistration, stopResourceRegistration, startResourceRegistration, restartResourceRegistration, viewResourceLogsRegistration, executeResourceCommandRegistration, executeResourceCommandItemRegistration, copyEndpointUrlRegistration, openInExternalBrowserRegistration, openInIntegratedBrowserRegistration, copyResourceNameRegistration, copyAppHostPathRegistration, viewAppHostSourceRegistration, viewAppHostLogFileRegistration, copyLogFilePathRegistration, expandAllRegistration, debugSessionRefreshRegistration, { dispose: () => { appHostTreeProvider.dispose(); dataRepository.dispose(); } });
 
   // CodeLens provider — shows Debug on pipeline steps, resource state on resources
   const codeLensProvider = new AspireCodeLensProvider(appHostTreeProvider, dataRepository);
@@ -216,6 +217,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const codeLensRegistration = vscode.languages.registerCodeLensProvider(languageFilters, codeLensProvider);
   const codeLensDebugPipelineStepRegistration = registerInstrumentedCommand('aspire-vscode.codeLensDebugPipelineStep', 'codelens', (stepName: string) => editorCommandProvider.tryExecuteDoAppHost(false, stepName));
   const codeLensResourceActionRegistration = registerInstrumentedCommand('aspire-vscode.codeLensResourceAction', 'codelens', async (resourceName: string, action: string, appHostPath: string, resourceCommand?: ResourceCommandJson) => {
+    if (resourceCommand !== undefined && !isEnabledCommand(resourceCommand)) {
+      extensionLogOutputChannel.warn(`Ignoring disabled CodeLens resource command '${action}' for resource '${resourceName}'.`);
+      return;
+    }
+
     const commandArguments = await collectResourceCommandArguments(action, resourceCommand, {
       secretWarningState: context.globalState,
       loadDynamicArguments: createResourceCommandArgumentLoader({
@@ -229,16 +235,16 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    let command = `resource "${resourceName}" "${action}"`;
+    let command = `resource ${quoteShellArg(resourceName)} ${quoteShellArg(action)}`;
     if (appHostPath) {
-      command += ` --apphost "${appHostPath}"`;
+      command += ` --apphost ${quoteShellArg(appHostPath)}`;
     }
     terminalProvider.sendAspireCommandToAspireTerminal(command, true, commandArguments.args, { redactAdditionalArgs: commandArguments.containsSecret });
   });
   const codeLensViewLogsRegistration = registerInstrumentedCommand('aspire-vscode.codeLensViewLogs', 'codelens', (resourceName: string, appHostPath: string) => {
-    let command = `logs "${resourceName}"`;
+    let command = `logs ${quoteShellArg(resourceName)}`;
     if (appHostPath) {
-      command += ` --apphost "${appHostPath}"`;
+      command += ` --apphost ${quoteShellArg(appHostPath)}`;
     }
     command += ' --follow';
     terminalProvider.sendAspireCommandToAspireTerminal(command);
@@ -819,6 +825,12 @@ async function executeE2eControlCommand(
       markStarted();
       return await commandPromise;
     }
+    case 'executeResourceCommandItem': {
+      const element = getResourceCommandElement(appHostTreeProvider, command);
+      const commandPromise = vscode.commands.executeCommand('aspire-vscode.executeResourceCommandItem', element);
+      markStarted();
+      return await commandPromise;
+    }
     case 'executeAspireCommand': {
       const commandId = getE2eAspireCommandId(command.commandId);
       const args = getE2eCommandArguments(command.args);
@@ -1044,6 +1056,30 @@ function getEndpointElement(
   return element;
 }
 
+function getResourceCommandElement(
+  appHostTreeProvider: AspireAppHostTreeProvider,
+  command: Extract<AspireExtensionE2EControlCommand, { name: 'executeResourceCommandItem' }>
+): unknown {
+  if (typeof command.resourceName !== 'string' || command.resourceName.length === 0) {
+    throw new Error('Aspire extension E2E resource command item requires resourceName.');
+  }
+
+  if (typeof command.commandName !== 'string' || command.commandName.length === 0) {
+    throw new Error('Aspire extension E2E resource command item requires commandName.');
+  }
+
+  const element = appHostTreeProvider.findResourceCommandElement({
+    appHostPath: command.appHostPath,
+    resourceName: command.resourceName,
+    commandName: command.commandName,
+  });
+  if (!element) {
+    throw new Error(`Aspire extension E2E resource command item could not find command '${command.commandName}' on resource '${command.resourceName}'.`);
+  }
+
+  return element;
+}
+
 function getLogFileElement(appHostTreeProvider: AspireAppHostTreeProvider, appHostPath?: string): unknown {
   const element = appHostTreeProvider.findLogFileElement(appHostPath);
   if (!element) {
@@ -1157,6 +1193,7 @@ function cloneResourceCommands(commands: ResourceJson['commands']): Record<strin
   return Object.fromEntries(Object.entries(commands).map(([name, command]) => [name, {
     displayName: command.displayName,
     description: command.description,
+    state: command.state,
     visibility: command.visibility,
   }]));
 }

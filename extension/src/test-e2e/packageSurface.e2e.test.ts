@@ -183,9 +183,9 @@ suite('Aspire package contribution surface E2E', function () {
             { commandId: 'aspire-vscode.add', expectedSubcommand: 'add' },
             { commandId: 'aspire-vscode.update', expectedSubcommand: 'update' },
             { commandId: 'aspire-vscode.updateSelf', expectedSubcommand: 'update --self' },
-            { commandId: 'aspire-vscode.codeLensViewLogs', args: ['e2e-worker', appHostPath], expectedSubcommand: 'logs "e2e-worker"' },
+            { commandId: 'aspire-vscode.codeLensViewLogs', args: ['e2e-worker', appHostPath], expectedSubcommand: `logs ${quoteExpectedShellArg('e2e-worker')}` },
             { commandId: 'aspire-vscode.codeLensViewAppHostLogs', args: [appHostPath], expectedSubcommand: 'logs' },
-            { commandId: 'aspire-vscode.codeLensResourceAction', args: ['e2e-worker', 'restart', appHostPath], expectedSubcommand: 'resource "e2e-worker" "restart"' },
+            { commandId: 'aspire-vscode.codeLensResourceAction', args: ['e2e-worker', 'restart', appHostPath], expectedSubcommand: `resource ${quoteExpectedShellArg('e2e-worker')} ${quoteExpectedShellArg('restart')}` },
         ];
 
         for (const item of cases) {
@@ -395,6 +395,14 @@ function delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function quoteExpectedShellArg(arg: string): string {
+    if (process.platform === 'win32') {
+        return `"${arg.replace(/`/g, '``').replace(/"/g, '`"').replace(/\$/g, '`$')}"`;
+    }
+
+    return `'${arg.replace(/'/g, "'\"'\"'")}'`;
+}
+
 const expectedActivationEvents = [
     'onDebugResolve:aspire',
     'onDebugInitialConfigurations:aspire',
@@ -429,6 +437,7 @@ const expectedCommandIds = [
     'aspire-vscode.deploy',
     'aspire-vscode.do',
     'aspire-vscode.executeResourceCommand',
+    'aspire-vscode.executeResourceCommandItem',
     'aspire-vscode.expandAll',
     'aspire-vscode.globalRefreshAppHosts',
     'aspire-vscode.init',
@@ -499,6 +508,7 @@ const expectedViewItemContextCommands = [
     'aspire-vscode.startResource',
     'aspire-vscode.restartResource',
     'aspire-vscode.executeResourceCommand',
+    'aspire-vscode.executeResourceCommandItem',
     'aspire-vscode.viewResourceLogs',
     'aspire-vscode.openInExternalBrowser',
     'aspire-vscode.openInIntegratedBrowser',

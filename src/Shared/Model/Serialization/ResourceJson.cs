@@ -237,10 +237,26 @@ internal sealed class ResourceCommandJson
     public string? Visibility { get; set; }
 
     /// <summary>
+    /// The state of the command (e.g., "Enabled", "Disabled", "Hidden").
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? State { get; set; }
+
+    /// <summary>
     /// The ordered inputs that describe the invocation arguments accepted by the command.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public ResourceCommandArgumentJson[]? ArgumentInputs { get; set; }
+}
+
+/// <summary>
+/// Constants for resource command state values in serialized resource JSON.
+/// </summary>
+internal static class KnownCommandState
+{
+    public const string Enabled = "Enabled";
+    public const string Disabled = "Disabled";
+    public const string Hidden = "Hidden";
 }
 
 /// <summary>
