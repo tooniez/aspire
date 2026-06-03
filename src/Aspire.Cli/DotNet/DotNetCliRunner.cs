@@ -628,7 +628,8 @@ internal sealed class DotNetCliRunner(
         var env = new Dictionary<string, string>
         {
             [KnownConfigNames.DotnetCliTelemetryOptOut] = "1",
-            [KnownConfigNames.DotnetCliWorkloadUpdateNotifyDisable] = "1"
+            [KnownConfigNames.DotnetCliWorkloadUpdateNotifyDisable] = "1",
+            [KnownConfigNames.SuppressCliRunHook] = "true"
         };
 
         var existingStandardOutputCallback = options.StandardOutputCallback;
@@ -719,6 +720,7 @@ internal sealed class DotNetCliRunner(
         var noBuildSwitch = noBuild ? "--no-build" : string.Empty;
         var noRestoreSwitch = noRestore && !noBuild ? "--no-restore" : string.Empty; // --no-build implies --no-restore
         var noProfileSwitch = options.NoLaunchProfile ? "--no-launch-profile" : string.Empty;
+        var suppressCliRunHookProperty = $"/p:{KnownConfigNames.SuppressCliRunHook}=true";
         // Add --non-interactive flag when using watch to prevent interactive prompts during automation
         var nonInteractiveSwitch = watch ? "--non-interactive" : string.Empty;
         // Add --verbose flag when using watch and debug is enabled
@@ -727,7 +729,10 @@ internal sealed class DotNetCliRunner(
         string[] cliArgs = isSingleFile switch
         {
             false => [watchOrRunCommand, nonInteractiveSwitch, verboseSwitch, noBuildSwitch, noRestoreSwitch, noProfileSwitch, "--project", projectFile.FullName, "--", .. args],
-            true => ["run", noProfileSwitch, "--file", projectFile.FullName, "--", .. args]
+            // File-based dotnet run only recomputes RunCommand during build. Omit --no-build
+            // for single-file AppHosts so the suppression property is applied before launch
+            // and a CLI-launched AppHost cannot recursively enter the run hook.
+            true => ["run", noRestoreSwitch, noProfileSwitch, suppressCliRunHookProperty, "--file", projectFile.FullName, "--", .. args]
         };
 
         cliArgs = [.. cliArgs.Where(arg => !string.IsNullOrWhiteSpace(arg))];
@@ -735,6 +740,10 @@ internal sealed class DotNetCliRunner(
         var finalEnv = CreateRunEnvironment(
             env,
             watch,
+            // Aspire CLI launches AppHosts by shelling out to dotnet run. If the AppHost SDK run hook
+            // is enabled, every CLI-launched AppHost must suppress the hook to avoid recursive
+            // dotnet run -> aspire run -> dotnet run loops.
+            suppressCliRunHook: true,
             backchannelCompletionSource);
 
         return await ExecuteAsync(
@@ -762,6 +771,7 @@ internal sealed class DotNetCliRunner(
         var finalEnv = CreateRunEnvironment(
             env,
             watch: false,
+            suppressCliRunHook: false,
             backchannelCompletionSource);
 
         return await ExecuteAsync(
@@ -778,6 +788,7 @@ internal sealed class DotNetCliRunner(
     private Dictionary<string, string> CreateRunEnvironment(
         IDictionary<string, string>? env,
         bool watch,
+        bool suppressCliRunHook,
         TaskCompletionSource<IAppHostCliBackchannel>? backchannelCompletionSource)
     {
         // We copy the dictionary here because we don't want to mutate the input.
@@ -801,6 +812,11 @@ internal sealed class DotNetCliRunner(
             {
                 finalEnv["DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER"] = "true";
             }
+        }
+
+        if (suppressCliRunHook)
+        {
+            finalEnv[KnownConfigNames.SuppressCliRunHook] = "true";
         }
 
         // Set the backchannel socket path when backchannel is configured
