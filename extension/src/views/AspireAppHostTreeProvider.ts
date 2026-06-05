@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { AspireTerminalProvider, quoteShellArg } from '../utils/AspireTerminalProvider';
+import { AspireTerminalProvider, shellArg } from '../utils/AspireTerminalProvider';
 import { ResourceState, HealthStatus, StateStyle } from '../editor/resourceConstants';
 import { compareResourceCommands, getParameterValueDescription, getResourceStateDescription } from '../utils/resourceDisplay';
 import {
@@ -1259,7 +1259,7 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
         this._trackStoppingAppHost(appHostPath);
         this._onDidChangeTreeData.fire();
         try {
-            await this._terminalProvider.sendAspireCommandToAspireTerminal(`stop --apphost ${quoteShellArg(appHostPath)}`);
+            await this._terminalProvider.sendAspireCommandToAspireTerminal(['stop', '--apphost', shellArg(appHostPath)]);
         } catch (err) {
             const stoppingKey = this._findStoppingAppHostKey(appHostPath);
             if (stoppingKey) {
@@ -1310,18 +1310,19 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
     async viewResourceLogs(element: ResourceItem): Promise<void> {
         // aspire logs accepts the resource display name, not the internal name
         const resourceName = element.resource.displayName ?? element.resource.name;
-        const resourceNameArg = quoteShellArg(resourceName);
         if (this._repository.viewMode === 'workspace') {
             const appHostPath = this._getAppHostPathForResource(element);
-            const appHostFlag = appHostPath ? ` --apphost ${quoteShellArg(appHostPath)}` : '';
-            await this._terminalProvider.sendAspireCommandToAspireTerminal(`logs ${resourceNameArg}${appHostFlag}`);
+            const command = appHostPath
+                ? ['logs', shellArg(resourceName), '--apphost', shellArg(appHostPath)]
+                : ['logs', shellArg(resourceName)];
+            await this._terminalProvider.sendAspireCommandToAspireTerminal(command);
             return;
         }
         const appHost = this._findAppHostForResource(element);
         if (!appHost) {
             return;
         }
-        await this._terminalProvider.sendAspireCommandToAspireTerminal(`logs ${resourceNameArg} --apphost ${quoteShellArg(appHost.appHostPath)}`);
+        await this._terminalProvider.sendAspireCommandToAspireTerminal(['logs', shellArg(resourceName), '--apphost', shellArg(appHost.appHostPath)]);
     }
 
     async executeResourceCommand(element: ResourceItem): Promise<void> {
@@ -1451,13 +1452,12 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
     }
 
     private async _runResourceCommand(element: ResourceItem, commandName: string, additionalArgs?: string[], redactAdditionalArgs = false): Promise<void> {
-        const resourceNameArg = quoteShellArg(element.resource.name);
-        const commandNameArg = quoteShellArg(commandName);
-
         if (this._repository.viewMode === 'workspace') {
             const appHostPath = this._getAppHostPathForResource(element);
-            const appHostFlag = appHostPath ? ` --apphost ${quoteShellArg(appHostPath)}` : '';
-            await this._terminalProvider.sendAspireCommandToAspireTerminal(`resource ${resourceNameArg} ${commandNameArg}${appHostFlag}`, true, additionalArgs, { redactAdditionalArgs });
+            const command = appHostPath
+                ? ['resource', shellArg(element.resource.name), shellArg(commandName), '--apphost', shellArg(appHostPath)]
+                : ['resource', shellArg(element.resource.name), shellArg(commandName)];
+            await this._terminalProvider.sendAspireCommandToAspireTerminal(command, true, additionalArgs, { redactAdditionalArgs });
             return;
         }
 
@@ -1465,7 +1465,7 @@ export class AspireAppHostTreeProvider implements vscode.TreeDataProvider<TreeEl
         if (!appHost) {
             return;
         }
-        await this._terminalProvider.sendAspireCommandToAspireTerminal(`resource ${resourceNameArg} ${commandNameArg} --apphost ${quoteShellArg(appHost.appHostPath)}`, true, additionalArgs, { redactAdditionalArgs });
+        await this._terminalProvider.sendAspireCommandToAspireTerminal(['resource', shellArg(element.resource.name), shellArg(commandName), '--apphost', shellArg(appHost.appHostPath)], true, additionalArgs, { redactAdditionalArgs });
     }
 
     private async _loadResourceCommandArguments(element: ResourceItem, commandName: string, values: readonly ResourceCommandArgumentValue[]): Promise<ResourceCommandArgumentInputJson[] | undefined> {
