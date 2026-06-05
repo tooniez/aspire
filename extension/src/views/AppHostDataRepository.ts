@@ -21,6 +21,7 @@ export interface ResourceCommandJson {
     description: string | null;
     visibility?: string | null;
     state?: string | null;
+    registrationOrder?: number | null;
     argumentInputs?: ResourceCommandArgumentInputJson[] | null;
 }
 
