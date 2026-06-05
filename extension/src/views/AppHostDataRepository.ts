@@ -179,6 +179,9 @@ export class AppHostDataRepository {
     private _workspaceAppHostDiscoveryComplete = false;
     private _workspaceAppHostDiscoveryUsesWorkspaceRoot = false;
     private _workspaceAppHostDiscoveryVersion = 0;
+    private _workspaceAppHostDiscoveryInProgress = false;
+    private _workspaceAppHostDiscoveryRefreshQueued = false;
+    private _workspaceAppHostDiscoveryCancellationSource: vscode.CancellationTokenSource | undefined;
     private readonly _appHostDiscoveryChangeDisposable: vscode.Disposable;
     private readonly _workspaceFoldersChangeDisposable: vscode.Disposable;
     private readonly _appHostDiscoveryService: AppHostDiscoveryService;
@@ -349,6 +352,7 @@ export class AppHostDataRepository {
         this._stopPolling();
         this._stopDescribeWatch();
         this._stopAllGlobalDescribes();
+        this._cancelWorkspaceAppHostDiscovery();
         this._configChangeDisposable.dispose();
         this._appHostDiscoveryChangeDisposable.dispose();
         this._workspaceFoldersChangeDisposable.dispose();
@@ -414,6 +418,14 @@ export class AppHostDataRepository {
     // ── Workspace app host (from aspire ls) ──
 
     private _fetchWorkspaceAppHost(options?: { forceRefresh?: boolean }): void {
+        if (this._workspaceAppHostDiscoveryInProgress) {
+            this._workspaceAppHostDiscoveryRefreshQueued = true;
+            // Let the current discovery finish so we don't start overlapping CLI work, but
+            // prevent its now-stale result from briefly restoring old AppHost candidates.
+            this._workspaceAppHostDiscoveryVersion++;
+            return;
+        }
+
         const discoveryVersion = ++this._workspaceAppHostDiscoveryVersion;
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -430,8 +442,12 @@ export class AppHostDataRepository {
 
         extensionLogOutputChannel.info('Fetching workspace apphost via shared AppHost discovery');
 
-        this._appHostDiscoveryService.discover(rootFolder, options?.forceRefresh).then(appHosts => {
-            if (!this._isCurrentWorkspaceDiscovery(discoveryVersion, rootFolder)) {
+        const cancellationSource = new vscode.CancellationTokenSource();
+        this._workspaceAppHostDiscoveryInProgress = true;
+        this._workspaceAppHostDiscoveryCancellationSource = cancellationSource;
+
+        this._appHostDiscoveryService.discover(rootFolder, options?.forceRefresh, cancellationSource.token).then(appHosts => {
+            if (cancellationSource.token.isCancellationRequested || !this._isCurrentWorkspaceDiscovery(discoveryVersion, rootFolder)) {
                 return;
             }
 
@@ -439,7 +455,7 @@ export class AppHostDataRepository {
             this._workspaceAppHostDiscoveryComplete = true;
             this._handleWorkspaceAppHostCandidates(result.app_host_candidates, result.selected_project_file);
         }).catch(error => {
-            if (!this._isCurrentWorkspaceDiscovery(discoveryVersion, rootFolder)) {
+            if (cancellationSource.token.isCancellationRequested || !this._isCurrentWorkspaceDiscovery(discoveryVersion, rootFolder)) {
                 return;
             }
 
@@ -450,7 +466,27 @@ export class AppHostDataRepository {
             this._setDescribeError(errorFetchingAppHosts(String(error)));
             this._updateWorkspaceContext({ clearLoading: true });
             this._syncPolling();
+        }).finally(() => {
+            cancellationSource.dispose();
+            if (this._workspaceAppHostDiscoveryCancellationSource !== cancellationSource) {
+                return;
+            }
+
+            this._workspaceAppHostDiscoveryCancellationSource = undefined;
+            this._workspaceAppHostDiscoveryInProgress = false;
+            if (this._workspaceAppHostDiscoveryRefreshQueued && !this._disposed) {
+                this._workspaceAppHostDiscoveryRefreshQueued = false;
+                this._fetchWorkspaceAppHost({ forceRefresh: true });
+            }
         });
+    }
+
+    private _cancelWorkspaceAppHostDiscovery(): void {
+        this._workspaceAppHostDiscoveryRefreshQueued = false;
+        this._workspaceAppHostDiscoveryCancellationSource?.cancel();
+        this._workspaceAppHostDiscoveryCancellationSource?.dispose();
+        this._workspaceAppHostDiscoveryCancellationSource = undefined;
+        this._workspaceAppHostDiscoveryInProgress = false;
     }
 
     private _handleWorkspaceAppHostCandidates(appHostCandidates: readonly AppHostCandidate[], selectedAppHostPath: string | null): void {
