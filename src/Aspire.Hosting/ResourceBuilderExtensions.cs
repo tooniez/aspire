@@ -3242,6 +3242,21 @@ public static class ResourceBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(options);
 
+        if (options.CreateProcessSpec is { } createProcessSpec)
+        {
+            return builder.WithProcessCommand(
+                commandName,
+                displayName,
+                async context =>
+                {
+                    var processCommandSpec = await createProcessSpec(context).ConfigureAwait(false)
+                        ?? throw new InvalidOperationException("The process command specification factory returned null.");
+
+                    return CreateProcessCommandSpec(processCommandSpec);
+                },
+                CreateProcessCommandOptions(options));
+        }
+
         return builder.WithProcessCommand(
             commandName,
             displayName,
@@ -3253,6 +3268,7 @@ public static class ResourceBuilderExtensions
     /// Adds a command to the resource that starts a local process created by a callback when invoked.
     /// </summary>
     [Experimental("ASPIREPROCESSCOMMAND001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
+    [Obsolete("Use withProcessCommand with createProcessSpec in the options object instead.")]
     [AspireExport("withProcessCommandFactory")]
     internal static IResourceBuilder<TResource> WithProcessCommandFactoryExport<TResource>(
         this IResourceBuilder<TResource> builder,
@@ -3465,6 +3481,7 @@ public static class ResourceBuilderExtensions
                 ResourceName = context.ResourceName,
                 Logger = context.Logger,
                 CancellationToken = context.CancellationToken,
+                Arguments = context.Arguments,
                 ProcessCommandSpec = processCommandSpec,
                 ExitCode = processResult.ExitCode,
                 Output = processResult.ProcessOutput,
