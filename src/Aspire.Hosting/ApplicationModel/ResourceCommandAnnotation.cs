@@ -444,7 +444,7 @@ public sealed class ExecuteCommandContext
     /// The service provider.
     /// </summary>
     [Obsolete("Use Services instead.")]
-    [AspireExportIgnore(Reason = "IServiceProvider is not usable from polyglot command callbacks.")]
+    [AspireExportIgnore(Reason = "Obsolete alias for Services.")]
     public IServiceProvider ServiceProvider
     {
         get => Services;
@@ -454,7 +454,6 @@ public sealed class ExecuteCommandContext
     /// <summary>
     /// The service provider.
     /// </summary>
-    [AspireExportIgnore(Reason = "IServiceProvider is not usable from polyglot command callbacks.")]
     public required IServiceProvider Services { get; init; }
 
     /// <summary>
