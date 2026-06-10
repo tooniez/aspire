@@ -169,6 +169,26 @@ ENTRYPOINT ["dotnet", "App.dll"]
 		},
 	})
 
+	// WithContainerFilesCallback — build entries dynamically via the context factory methods
+	container.WithContainerFilesCallback("/usr/lib/aspire/container-files", func(filesCtx aspire.ContainerFileSystemCallbackContext, _ *aspire.CancellationToken) []aspire.ContainerFileSystemItem {
+		filesServices := filesCtx.Services()
+		filesLoggerFactory := filesServices.GetLoggerFactory()
+		filesLogger := filesLoggerFactory.CreateLogger("ValidationAppHost.ContainerFilesCallback")
+		_ = filesLogger.LogInformation("ContainerFilesCallback services")
+
+		appConfig := filesCtx.CreateFile("app.conf", &aspire.CreateFileOptions{Contents: aspire.StringPtr("key=value"), Mode: aspire.Float64Ptr(0o644)})
+		nestedConfig := filesCtx.CreateFile("nested.conf", &aspire.CreateFileOptions{Contents: aspire.StringPtr("nested=true")})
+		confDir := filesCtx.CreateDirectory("conf.d", []aspire.ContainerFileSystemItem{nestedConfig}, &aspire.CreateDirectoryOptions{Mode: aspire.Float64Ptr(0o755)})
+		cert := filesCtx.CreateCertificateFile("server.pem", &aspire.CreateCertificateFileOptions{Contents: aspire.StringPtr("-----BEGIN CERTIFICATE-----")})
+		return []aspire.ContainerFileSystemItem{appConfig, confDir, cert}
+	}, &aspire.WithContainerFilesCallbackOptions{
+		Options: &aspire.ContainerFilesOptions{
+			DefaultOwner: aspire.Float64Ptr(1000),
+			DefaultGroup: aspire.Float64Ptr(1000),
+			Umask:        aspire.Float64Ptr(0o022),
+		},
+	})
+
 	// WithImageRegistry
 	container.WithImageRegistry("docker.io")
 
@@ -282,6 +302,15 @@ ENTRYPOINT ["dotnet", "App.dll"]
 
 	// WithRequiredCommand
 	container.WithRequiredCommand("docker")
+
+	// WithRequiredCommandValidation
+	container.WithRequiredCommandValidation("docker", func(validationCtx aspire.RequiredCommandValidationContext) aspire.RequiredCommandValidationResult {
+		validationServices := validationCtx.Services()
+		validationLoggerFactory := validationServices.GetLoggerFactory()
+		validationLogger := validationLoggerFactory.CreateLogger("ValidationAppHost.RequiredCommandValidation")
+		_ = validationLogger.LogInformation("RequiredCommandValidation services")
+		return validationCtx.Success()
+	})
 
 	// ===================================================================
 	// DotnetToolResourceExtensions — all With-tool methods are fluent
@@ -544,6 +573,10 @@ ENTRYPOINT ["dotnet", "App.dll"]
 	_ = container.WithHttpHealthCheck()
 	_ = container.WithHttpHealthCheck()
 	updateCommandState := func(ctx aspire.UpdateCommandStateContext) aspire.ResourceCommandState {
+		updateStateServices := ctx.Services()
+		updateStateLoggerFactory := updateStateServices.GetLoggerFactory()
+		updateStateLogger := updateStateLoggerFactory.CreateLogger("ValidationAppHost.UpdateCommandState")
+		_ = updateStateLogger.LogInformation("UpdateCommandState services")
 		snapshot, err := ctx.ResourceSnapshot()
 		if err != nil || snapshot.HealthStatus == nil {
 			return aspire.ResourceCommandStateDisabled
@@ -560,7 +593,17 @@ ENTRYPOINT ["dotnet", "App.dll"]
 			UpdateState: updateCommandState,
 		},
 	})
+	validateCommandArguments := func(ctx aspire.InputsDialogValidationContext) {
+		validationServices := ctx.Services()
+		validationLoggerFactory := validationServices.GetLoggerFactory()
+		validationLogger := validationLoggerFactory.CreateLogger("ValidationAppHost.ValidateCommandArguments")
+		_ = validationLogger.LogInformation("Validate command arguments services")
+	}
 	_ = container.WithCommand("echo", "Echo", func(ctx aspire.ExecuteCommandContext) *aspire.ExecuteCommandResult {
+		echoServices := ctx.Services()
+		echoLoggerFactory := echoServices.GetLoggerFactory()
+		echoLogger := echoLoggerFactory.CreateLogger("ValidationAppHost.EchoCommand")
+		_ = echoLogger.LogInformation("Echo command services")
 		message, err := ctx.Arguments().Value("message")
 		if err != nil {
 			return &aspire.ExecuteCommandResult{Success: false, ErrorMessage: aspire.StringPtr(aspire.FormatError(err))}
@@ -575,6 +618,7 @@ ENTRYPOINT ["dotnet", "App.dll"]
 					Required:  aspire.BoolPtr(true),
 				},
 			},
+			ValidateArguments: validateCommandArguments,
 		},
 	})
 	_ = container.WithCommand("restart", "Restart", func(ctx aspire.ExecuteCommandContext) *aspire.ExecuteCommandResult {
@@ -588,6 +632,39 @@ ENTRYPOINT ["dotnet", "App.dll"]
 		}
 
 		return result
+	})
+
+	container.WithHttpsCertificateConfiguration(func(certCtx aspire.HttpsCertificateConfigurationCallbackAnnotationContext) {
+		certificatePath := certCtx.CertificatePath()
+		keyPath := certCtx.KeyPath()
+		certArgs := certCtx.Arguments()
+		_ = certArgs.Add("--certificate")
+		_ = certArgs.Add(certificatePath)
+		_ = certArgs.Add("--key")
+		_ = certArgs.Add(keyPath)
+		certEnv := certCtx.Environment()
+		_ = certEnv.Set("Kestrel__Certificates__Path", certificatePath)
+		_ = certEnv.Set("Kestrel__Certificates__KeyPath", keyPath)
+	})
+
+	_ = container.SubscribeHttpsEndpointsUpdate(func(httpsCtx aspire.HttpsEndpointUpdateCallbackContext) {
+		httpsServices := httpsCtx.Services()
+		httpsLoggerFactory := httpsServices.GetLoggerFactory()
+		httpsLogger := httpsLoggerFactory.CreateLogger("ValidationAppHost.HttpsEndpointsUpdate")
+		_ = httpsLogger.LogInformation("HttpsEndpointsUpdate services")
+	})
+
+	_ = container.WithContainerBuildOptions(func(buildCtx aspire.ContainerBuildOptionsCallbackContext) {
+		buildCtx.SetDestination(aspire.ContainerImageDestinationRegistry).
+			SetImageFormat(aspire.ContainerImageFormatOci).
+			SetTargetPlatform(aspire.ContainerTargetPlatformLinuxAmd64).
+			SetOutputPath("./artifacts/container-image").
+			SetLocalImageName("validation-image").
+			SetLocalImageTag("latest")
+		buildServices := buildCtx.Services()
+		buildLoggerFactory := buildServices.GetLoggerFactory()
+		buildLogger := buildLoggerFactory.CreateLogger("ValidationAppHost.ContainerBuildOptions")
+		_ = buildLogger.LogInformation("ContainerBuildOptions services")
 	})
 
 	// Test bench for the polyglot IInteractionService API: prompts for a region, then dynamically
