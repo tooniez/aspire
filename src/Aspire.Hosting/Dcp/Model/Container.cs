@@ -104,6 +104,14 @@ internal sealed class ContainerSpec
     // List of public PEM certificates to be trusted by the container
     [JsonPropertyName("pemCertificates")]
     public ContainerPemCertificates? PemCertificates { get; set; }
+
+    /// <summary>
+    /// Terminal configuration for interactive PTY access.
+    /// When set, DCP allocates a pseudo-terminal for the container and forwards
+    /// I/O over a Unix domain socket using <see href="https://github.com/dotnet/hex1b">Hex1b</see>'s HMP v1 framing.
+    /// </summary>
+    [JsonPropertyName("terminal")]
+    public TerminalSpec? Terminal { get; set; }
 }
 
 internal sealed class BuildContext
