@@ -342,4 +342,7 @@
     <Content Remove="wwwroot\fonts\cascadia-mono-nf\README.md" />
     <None Include="wwwroot\fonts\cascadia-mono-nf\README.md" />
   </ItemGroup>
+
+  <Import Project="BlazorAssets.targets" />
+
 </Project>
