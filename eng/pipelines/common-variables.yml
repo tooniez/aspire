@@ -16,10 +16,6 @@ variables:
     value: npm-validation-summary-linux-x64
   - name: NPM_VALIDATION_SUMMARY_OSX_ARTIFACT
     value: npm-validation-summary-osx
-  - name: NPM_PUBLISH_REQUIRED_OWNERS
-    value: joperezr,ankj
-  - name: NPM_PUBLISH_REQUIRED_APPROVERS
-    value: adamratzman
 
   - ${{ if notin(variables['Build.Reason'], 'PullRequest') }}:
     - name: _RunAsPublic
