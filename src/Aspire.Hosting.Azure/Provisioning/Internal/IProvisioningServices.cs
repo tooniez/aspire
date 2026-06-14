@@ -153,6 +153,11 @@ internal interface IArmClient
     Task<IEnumerable<(string Name, string Location)>> GetAvailableResourceGroupsWithLocationAsync(string subscriptionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets Azure locations that support the specified resource type.
+    /// </summary>
+    Task<IEnumerable<string>> GetSupportedLocationsAsync(string subscriptionId, string resourceType, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets role assignments collection for the specified scope.
     /// </summary>
     IRoleAssignmentCollection GetRoleAssignments(ResourceIdentifier scope);
@@ -176,6 +181,14 @@ internal interface IArmClient
     /// Gets Azure resource IDs targeted by the specified deployment.
     /// </summary>
     IAsyncEnumerable<string> GetDeploymentTargetResourceIdsAsync(string deploymentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets Azure deployment operations for the specified deployment.
+    /// </summary>
+    IAsyncEnumerable<AzureDeploymentOperationDetails> GetDeploymentOperationsAsync(
+        string deploymentId,
+        bool recursive = true,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
