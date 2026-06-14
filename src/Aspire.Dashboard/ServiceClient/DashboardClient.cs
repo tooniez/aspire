@@ -41,6 +41,7 @@ namespace Aspire.Dashboard.ServiceClient;
 internal sealed class DashboardClient : IDashboardClient
 {
     private const string ApiKeyHeaderName = "x-resource-service-api-key";
+    private const string TroubleshootingUrl = "https://aka.ms/aspire/dashboard-apphost-connection-failed";
 
     private readonly Dictionary<string, ResourceViewModel> _resourceByName = new(StringComparers.ResourceName);
     private readonly InteractionCollection _pendingInteractionCollection = new();
@@ -339,7 +340,7 @@ internal sealed class DashboardClient : IDashboardClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error loading data from the resource service.");
+            _logger.LogError(ex, "Error loading data from the resource service. For troubleshooting, see {TroubleshootingUrl}", TroubleshootingUrl);
             throw;
         }
     }
@@ -411,7 +412,7 @@ internal sealed class DashboardClient : IDashboardClient
             catch (Exception ex)
             {
                 errorCount++;
-                _logger.LogError(ex, "Error #{ErrorCount} connecting to the resource service.", errorCount);
+                _logger.LogError(ex, "Error #{ErrorCount} connecting to the resource service. For troubleshooting, see {TroubleshootingUrl}", errorCount, TroubleshootingUrl);
             }
         }
     }
@@ -500,7 +501,7 @@ internal sealed class DashboardClient : IDashboardClient
             {
                 retryContext.ErrorCount++;
 
-                _logger.LogError(ex, "Error #{ErrorCount} watching {WatchName}.", retryContext.ErrorCount, actionName);
+                _logger.LogError(ex, "Error #{ErrorCount} watching {WatchName}. For troubleshooting, see {TroubleshootingUrl}", retryContext.ErrorCount, actionName, TroubleshootingUrl);
             }
         }
 
