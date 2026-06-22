@@ -317,6 +317,14 @@ export class AspireTerminalProvider implements vscode.Disposable {
         // such as the first-run banner and spinners.
         env.ASPIRE_NON_INTERACTIVE = 'true';
 
+        // While debugging, the developer can pause on a breakpoint (e.g. before builder.Build())
+        // for an arbitrarily long time. Use a very long startup timeout (86400s = 24h) so the parent
+        // Aspire CLI doesn't hit its normal ~120s startup timeout and tear down the debug session.
+        // An explicitly configured ASPIRE_CLI_START_TIMEOUT still wins.
+        if (noDebug === false && !hasConfiguredEnvironmentVariable(env, EnvironmentVariables.ASPIRE_CLI_START_TIMEOUT)) {
+            env[EnvironmentVariables.ASPIRE_CLI_START_TIMEOUT] = '86400';
+        }
+
         // if DCP debug logging is enabled, set DCP-specific logging environment variables
         const dcpDebugLoggingEnabled = vscode.workspace.getConfiguration('aspire').get<boolean>('enableAspireDcpDebugLogging', false);
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0];
@@ -397,6 +405,20 @@ function isPowerShell7Available(): boolean {
     });
 
     return result.status === 0 && result.error === undefined;
+}
+
+function hasConfiguredEnvironmentVariable(env: Record<string, string | undefined>, name: string): boolean {
+    if (env[name]) {
+        return true;
+    }
+
+    if (process.platform !== 'win32') {
+        return false;
+    }
+
+    // Windows environment variables are case-insensitive. Avoid adding a second
+    // differently-cased key because Node picks only one when spawning the child process.
+    return Object.entries(env).some(([key, value]) => key.toUpperCase() === name && !!value);
 }
 
 function isE2eTerminalCommandExecutionSuppressed(): boolean {
