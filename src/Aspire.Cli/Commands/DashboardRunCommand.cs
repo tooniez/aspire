@@ -371,7 +371,7 @@ internal sealed class DashboardRunCommand : BaseCommand
         IProcessExecution process;
         try
         {
-            process = _layoutProcessRunner.Start(managedPath, dashboardArgs, environmentVariables: environmentVariables, options: options);
+            process = await _layoutProcessRunner.StartAsync(managedPath, dashboardArgs, environmentVariables: environmentVariables, options: options).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -380,7 +380,7 @@ internal sealed class DashboardRunCommand : BaseCommand
             return CommandResult.Failure(CliExitCodes.DashboardFailure);
         }
 
-        using var _ = process;
+        await using var _ = process;
 
         // Wait for the dashboard to become ready, the process to exit, or a timeout.
         var processExitTask = process.WaitForExitAsync(cancellationToken);
