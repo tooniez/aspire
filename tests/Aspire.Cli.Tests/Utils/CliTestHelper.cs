@@ -142,6 +142,7 @@ internal static class CliTestHelper
         services.AddSingleton<IAppHostInfoResolver, AppHostInfoResolver>();
         services.AddSingleton(options.CliHostEnvironmentFactory);
         services.AddSingleton(options.CliDownloaderFactory);
+        services.AddSingleton(options.ProcessPathProviderFactory);
         services.AddSingleton(options.FirstTimeUseNoticeSentinelFactory);
         services.AddSingleton(options.BannerServiceFactory);
         services.AddSingleton<FallbackProjectParser>();
@@ -380,7 +381,8 @@ internal sealed class CliServiceCollectionTestOptions
         var logger = NullLoggerFactory.Instance.CreateLogger<CliUpdateNotifier>();
         var nuGetPackageCache = serviceProvider.GetRequiredService<INuGetPackageCache>();
         var interactionService = serviceProvider.GetRequiredService<IInteractionService>();
-        return new CliUpdateNotifier(logger, nuGetPackageCache, interactionService);
+        var processPathProvider = serviceProvider.GetRequiredService<IProcessPathProvider>();
+        return new CliUpdateNotifier(logger, nuGetPackageCache, interactionService, processPathProvider);
     };
 
     public Func<IServiceProvider, IAddCommandPrompter> AddCommandPrompterFactory { get; set; } = (IServiceProvider serviceProvider) =>
@@ -468,9 +470,10 @@ internal sealed class CliServiceCollectionTestOptions
         var consoleEnvironment = serviceProvider.GetRequiredService<ConsoleEnvironment>();
         var executionContext = serviceProvider.GetRequiredService<CliExecutionContext>();
         var hostEnvironment = serviceProvider.GetRequiredService<ICliHostEnvironment>();
+        var processPathProvider = serviceProvider.GetRequiredService<IProcessPathProvider>();
         var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
         var logBufferContext = serviceProvider.GetRequiredService<ConsoleLogBufferContext>();
-        return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, loggerFactory, logBufferContext);
+        return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, processPathProvider, loggerFactory, logBufferContext);
     };
 
     public Func<IServiceProvider, ICertificateToolRunner> CertificateToolRunnerFactory { get; set; } = (IServiceProvider _) =>
@@ -613,6 +616,8 @@ internal sealed class CliServiceCollectionTestOptions
         var tmpDirectory = new DirectoryInfo(Path.Combine(executionContext.WorkingDirectory.FullName, "tmp"));
         return new TestCliDownloader(tmpDirectory);
     };
+
+    public Func<IServiceProvider, IProcessPathProvider> ProcessPathProviderFactory { get; set; } = _ => new EnvironmentProcessPathProvider();
 
     public Func<IServiceProvider, IAuxiliaryBackchannelMonitor> AuxiliaryBackchannelMonitorFactory { get; set; } = (IServiceProvider serviceProvider) =>
     {

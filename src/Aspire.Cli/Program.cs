@@ -346,6 +346,7 @@ public class Program
         builder.Services.AddSingleton(sp => new TelemetryManager(sp.GetRequiredService<IConfiguration>(), args));
 
         // Shared services.
+        builder.Services.AddSingleton<IProcessPathProvider, EnvironmentProcessPathProvider>();
         // Two identity readers coexist by design. `IdentityChannelReader` is constructed early in
         // CliStartupContext so the channel can be logged at startup before DI is fully wired, and it
         // continues to power that early startup log. `IIdentityResolver` is the richer reader that
@@ -369,7 +370,7 @@ public class Program
             // sidecar path relative to it (<binaryDir>/.aspire-install.json).
             //
             // This is the right anchor for every shipping install route because
-            // Environment.ProcessPath resolves to the actual native CLI binary
+            // IProcessPathProvider resolves to the actual native CLI binary
             // that is running, and each route either co-locates its sidecar next
             // to that binary or intentionally ships none (see
             // docs/specs/install-routes.md):
@@ -385,7 +386,8 @@ public class Program
             //   - managed-host launch (dotnet aspire.dll in tests/dev) or a null
             //     ProcessPath: the resolver simply skips the sidecar layer and the
             //     env → assembly → terminal default fallbacks still apply.
-            var binaryDir = Environment.ProcessPath is { Length: > 0 } p
+            var processPathProvider = sp.GetRequiredService<IProcessPathProvider>();
+            var binaryDir = processPathProvider.ProcessPath is { Length: > 0 } p
                 ? Path.GetDirectoryName(p)
                 : null;
             return new IdentityResolver(
@@ -1127,9 +1129,10 @@ public class Program
                 consoleEnvironment.Out.Profile.Width = 256; // VS code terminal will handle wrapping so set a large width here.
                 var executionContext = provider.GetRequiredService<CliExecutionContext>();
                 var hostEnvironment = provider.GetRequiredService<ICliHostEnvironment>();
+                var processPathProvider = provider.GetRequiredService<IProcessPathProvider>();
                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
                 var logBufferCtx = provider.GetRequiredService<ConsoleLogBufferContext>();
-                var consoleInteractionService = new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, loggerFactory, logBufferCtx);
+                var consoleInteractionService = new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, processPathProvider, loggerFactory, logBufferCtx);
                 return new ExtensionInteractionService(consoleInteractionService,
                     provider.GetRequiredService<IExtensionBackchannel>(),
                     extensionPromptEnabled,
@@ -1143,9 +1146,10 @@ public class Program
                 var consoleEnvironment = provider.GetRequiredService<ConsoleEnvironment>();
                 var executionContext = provider.GetRequiredService<CliExecutionContext>();
                 var hostEnvironment = provider.GetRequiredService<ICliHostEnvironment>();
+                var processPathProvider = provider.GetRequiredService<IProcessPathProvider>();
                 var loggerFactory = provider.GetRequiredService<ILoggerFactory>();
                 var logBufferCtx = provider.GetRequiredService<ConsoleLogBufferContext>();
-                return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, loggerFactory, logBufferCtx);
+                return new ConsoleInteractionService(consoleEnvironment, executionContext, hostEnvironment, processPathProvider, loggerFactory, logBufferCtx);
             });
         }
     }

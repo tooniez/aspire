@@ -37,6 +37,7 @@ public class ExtensionInteractionServiceTests(ITestOutputHelper outputHelper)
             new ConsoleEnvironment(console, console),
             executionContext,
             TestHelpers.CreateInteractiveHostEnvironment(),
+            new EnvironmentProcessPathProvider(),
             NullLoggerFactory.Instance,
             new ConsoleLogBufferContext());
         var extensionInteractionService = new ExtensionInteractionService(
@@ -78,6 +79,7 @@ public class ExtensionInteractionServiceTests(ITestOutputHelper outputHelper)
             new ConsoleEnvironment(console, console),
             executionContext,
             TestHelpers.CreateInteractiveHostEnvironment(),
+            new EnvironmentProcessPathProvider(),
             NullLoggerFactory.Instance,
             new ConsoleLogBufferContext());
         var extensionInteractionService = new ExtensionInteractionService(
