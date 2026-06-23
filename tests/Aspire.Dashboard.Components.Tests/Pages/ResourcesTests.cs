@@ -442,7 +442,6 @@ public partial class ResourcesTests : DashboardTestContext
         Assert.Equal(2, filteredResources.Count);
         Assert.Contains(filteredResources, r => r.Name == "myapp");
         Assert.Contains(filteredResources, r => r.Name == "mycontainer");
-        Assert.DoesNotContain(filteredResources, r => r.Name == "myparameter");
     }
 
     [Fact]
@@ -474,8 +473,6 @@ public partial class ResourcesTests : DashboardTestContext
         Assert.Equal(2, filteredResources.Count);
         Assert.Contains(filteredResources, r => r.Name == "myparameter1");
         Assert.Contains(filteredResources, r => r.Name == "myparameter2");
-        Assert.DoesNotContain(filteredResources, r => r.Name == "myapp");
-        Assert.DoesNotContain(filteredResources, r => r.Name == "mycontainer");
     }
 
     [Fact]
@@ -509,11 +506,10 @@ public partial class ResourcesTests : DashboardTestContext
         Assert.Equal(2, filteredResources.Count);
         Assert.Contains(filteredResources, r => r.Name == "myparameter1");
         Assert.Contains(filteredResources, r => r.Name == "myparameter2");
-        Assert.DoesNotContain(filteredResources, r => r.Name == "myapp");
     }
 
     [Fact]
-    public void GraphView_ShowsAllResources()
+    public void GraphView_ExcludesParameters()
     {
         // Arrange
         var viewport = new ViewportInformation(IsDesktop: true, IsUltraLowHeight: false, IsUltraLowWidth: false);
@@ -539,11 +535,50 @@ public partial class ResourcesTests : DashboardTestContext
         cut.Instance.PageViewModel.SelectedViewKind = Components.Pages.Resources.ResourceViewKind.Graph;
         cut.Render();
 
-        // Assert - Graph view should show all resources (no parameter filtering)
+        // Assert - Graph view should exclude parameters (they have their own dedicated view)
         var filteredResources = cut.Instance.GetFilteredResources().ToList();
-        Assert.Equal(2, filteredResources.Count);
+        Assert.Single(filteredResources);
         Assert.Contains(filteredResources, r => r.Name == "myapp");
-        Assert.Contains(filteredResources, r => r.Name == "myparameter");
+    }
+
+    [Fact]
+    public void GetVisibleViewKindForSelectedResource_GraphParameter_ReturnsParameters()
+    {
+        var parameter = CreateResource("myparameter", KnownResourceTypes.Parameter, "Running", null);
+
+        var viewKind = Components.Pages.Resources.GetVisibleViewKindForSelectedResource(Components.Pages.Resources.ResourceViewKind.Graph, parameter);
+
+        Assert.Equal(Components.Pages.Resources.ResourceViewKind.Parameters, viewKind);
+    }
+
+    [Fact]
+    public void GetVisibleViewKindForSelectedResource_GraphNonParameter_ReturnsGraph()
+    {
+        var resource = CreateResource("myapp", "Project", "Running", null);
+
+        var viewKind = Components.Pages.Resources.GetVisibleViewKindForSelectedResource(Components.Pages.Resources.ResourceViewKind.Graph, resource);
+
+        Assert.Equal(Components.Pages.Resources.ResourceViewKind.Graph, viewKind);
+    }
+
+    [Fact]
+    public void GetVisibleViewKindForViewChange_GraphParameter_ReturnsParameters()
+    {
+        var parameter = CreateResource("myparameter", KnownResourceTypes.Parameter, "Running", null);
+
+        var viewKind = Components.Pages.Resources.GetVisibleViewKindForViewChange(Components.Pages.Resources.ResourceViewKind.Graph, parameter);
+
+        Assert.Equal(Components.Pages.Resources.ResourceViewKind.Parameters, viewKind);
+    }
+
+    [Fact]
+    public void GetVisibleViewKindForViewChange_ParametersNonParameter_ReturnsParameters()
+    {
+        var resource = CreateResource("myapp", "Project", "Running", null);
+
+        var viewKind = Components.Pages.Resources.GetVisibleViewKindForViewChange(Components.Pages.Resources.ResourceViewKind.Parameters, resource);
+
+        Assert.Equal(Components.Pages.Resources.ResourceViewKind.Parameters, viewKind);
     }
 
     [Fact]
