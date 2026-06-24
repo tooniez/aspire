@@ -26,6 +26,8 @@ namespace Aspire.Dashboard.Components.Pages;
 
 public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncDisposable, IPageWithSessionAndUrlState<Resources.ResourcesViewModel, Resources.ResourcesPageState>
 {
+    private const string ScrollContainerId = "resourcesScrollContainer";
+    private const string GraphContainerId = "resourcesGraphContainer";
     private const string TypeColumn = nameof(TypeColumn);
     private const string NameColumn = nameof(NameColumn);
     private const string StateColumn = nameof(StateColumn);
@@ -116,6 +118,7 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
     private bool _isFilterPopupVisible;
     private Task? _resourceSubscriptionTask;
     private string? _elementIdBeforeDetailsViewOpened;
+    private string? _pendingFocusElementId;
     private FluentDataGrid<ResourceGridViewModel> _dataGrid = null!;
     private GridColumnManager _manager = null!;
     private int _maxHighlightedCount;
@@ -387,6 +390,18 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
             StateHasChanged();
         }
 
+        if (firstRender)
+        {
+            var initialFocusElementId = PageViewModel.SelectedViewKind == ResourceViewKind.Graph ? GraphContainerId : ScrollContainerId;
+            await JS.InvokeVoidAsync("focusElement", initialFocusElementId, true);
+        }
+
+        if (_pendingFocusElementId is { } pendingFocusElementId)
+        {
+            _pendingFocusElementId = null;
+            await JS.InvokeVoidAsync("focusElement", pendingFocusElementId);
+        }
+
         if (PageViewModel.SelectedViewKind == ResourceViewKind.Graph && !_graphInitialized)
         {
             // Before any awaits, set a flag to indicate the graph is initialized. This prevents the graph being initialized multiple times.
@@ -587,7 +602,7 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
         {
             if (_resourceByName.TryGetValue(ResourceName, out var selectedResource))
             {
-                await ShowResourceDetailsAsync(selectedResource, buttonId: null);
+                await ShowResourceDetailsAsync(selectedResource, focusElementId: null);
             }
             else
             {
@@ -633,7 +648,7 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
                 _contextMenuItems,
                 resource,
                 _resourceByName,
-                EventCallback.Factory.Create(this, () => ShowResourceDetailsAsync(resource, buttonId: null)),
+                EventCallback.Factory.Create(this, () => ShowResourceDetailsAsync(resource, focusElementId: null)),
                 EventCallback.Factory.Create<CommandViewModel>(this, (command) => ExecuteResourceCommandAsync(resource, command)),
                 (resource, command) => DashboardCommandExecutor.IsExecuting(resource.Name, command.Name),
                 showViewDetails: true,
@@ -653,11 +668,11 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
         }
     }
 
-    private async Task ShowResourceDetailsAsync(ResourceViewModel resource, string? buttonId)
+    private async Task ShowResourceDetailsAsync(ResourceViewModel resource, string? focusElementId)
     {
         Logger.LogDebug("Showing details for resource {ResourceName}.", resource.Name);
 
-        _elementIdBeforeDetailsViewOpened = buttonId;
+        _elementIdBeforeDetailsViewOpened = focusElementId;
 
         if (string.Equals(PageViewModel.SelectedResource?.Name, resource.Name, StringComparisons.ResourceName))
         {
@@ -707,6 +722,12 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
         Logger.LogDebug("Clearing selected resource.");
 
         PageViewModel.SelectedResource = null;
+        if (_elementIdBeforeDetailsViewOpened is not null && causedByUserAction)
+        {
+            _pendingFocusElementId = _elementIdBeforeDetailsViewOpened;
+        }
+
+        _elementIdBeforeDetailsViewOpened = null;
 
         await InvokeAsync(StateHasChanged);
 
@@ -714,13 +735,6 @@ public partial class Resources : ComponentBase, IComponentWithTelemetry, IAsyncD
         {
             await UpdateResourceGraphSelectedAsync();
         }
-
-        if (_elementIdBeforeDetailsViewOpened is not null && causedByUserAction)
-        {
-            await JS.InvokeVoidAsync("focusElement", _elementIdBeforeDetailsViewOpened);
-        }
-
-        _elementIdBeforeDetailsViewOpened = null;
     }
 
     private string GetResourceName(ResourceViewModel resource) => ResourceViewModel.GetResourceName(resource, _resourceByName);
