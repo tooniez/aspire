@@ -969,7 +969,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
 
             if (!string.IsNullOrWhiteSpace(profile.ApplicationUrl))
             {
-                env["ASPNETCORE_URLS"] = profile.ApplicationUrl;
+                env[KnownAspNetCoreConfigNames.Urls] = profile.ApplicationUrl;
             }
 
             if (profile.EnvironmentVariables is not null)
@@ -1224,7 +1224,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
             return false;
         }
 
-        env["ASPNETCORE_URLS"] = profile.ApplicationUrl;
+        env[KnownAspNetCoreConfigNames.Urls] = profile.ApplicationUrl;
 
         if (profile.EnvironmentVariables is not null)
         {
@@ -1244,7 +1244,7 @@ internal sealed class DotNetAppHostProject : IAppHostProject
 
     private static void ApplyDefaultSingleFileEndpoints(IDictionary<string, string> env)
     {
-        env["ASPNETCORE_URLS"] = "https://localhost:17193;http://localhost:15069";
+        env[KnownAspNetCoreConfigNames.Urls] = "https://localhost:17193;http://localhost:15069";
         env["ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL"] = "https://localhost:21293";
         env["ASPIRE_RESOURCE_SERVICE_ENDPOINT_URL"] = "https://localhost:22086";
     }
