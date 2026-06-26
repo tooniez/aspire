@@ -1680,7 +1680,7 @@ suite('AppHostDataRepository', () => {
             assert.strictEqual(repository.viewMode, 'workspace');
             assert.strictEqual(repository.workspaceAppHostPath, '/workspace/apps/Store/AppHost.csproj');
             assert.strictEqual(repository.workspaceAppHostName, 'AppHost.csproj');
-            assert.strictEqual(repository.workspaceAppHostDescription, 'Workspace view selected because aspire ls found one buildable AppHost.');
+            assert.strictEqual(repository.workspaceAppHostDescription, 'Workspace view selected because aspire ls found one buildable C# AppHost.');
         } finally {
             repository.dispose();
             workspaceFoldersStub.restore();
