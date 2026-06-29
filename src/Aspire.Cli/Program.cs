@@ -1046,6 +1046,10 @@ public class Program
                 logger.LogDebug("Parsing arguments: {Args}", string.Join(" ", args));
                 var parseResult = rootCommand.Parse(args);
 
+#if DEBUG
+                WaitForDebuggerIfRequested(parseResult, app.Services, WaitForDebugger);
+#endif
+
                 var commandName = GetCommandName(parseResult);
                 logger.LogDebug("Executing command: {CommandName}", commandName);
 
@@ -1153,6 +1157,42 @@ public class Program
         parentNames.Reverse();
         return string.Join(' ', parentNames);
     }
+
+#if DEBUG
+    /// <summary>
+    /// Waits for a debugger to attach if --cli-wait-for-debugger was passed.
+    /// </summary>
+    /// <remarks>
+    /// This is handled here rather than as an option or command validator because:
+    /// (1) adding a validator to the static CliWaitForDebuggerOption causes a thread-safety
+    ///     race (concurrent List&lt;T&gt;.Add from parallel test classes that each construct a
+    ///     Transient RootCommand), and
+    /// (2) command-level validators only run for the innermost command — not for RootCommand
+    ///     when a subcommand is invoked (e.g. "aspire run --cli-wait-for-debugger").
+    /// </remarks>
+    internal static void WaitForDebuggerIfRequested(ParseResult parseResult, IServiceProvider services, Action waitAction)
+    {
+        if (!parseResult.GetValue(RootCommand.CliWaitForDebuggerOption))
+        {
+            return;
+        }
+
+        var interactionService = services.GetRequiredService<IInteractionService>();
+        interactionService.ShowStatus(
+            string.Format(CultureInfo.CurrentCulture, RootCommandStrings.WaitingForDebugger, Environment.ProcessId),
+            waitAction, emoji: KnownEmojis.Bug);
+    }
+
+    private static void WaitForDebugger()
+    {
+        while (!Debugger.IsAttached)
+        {
+            Thread.Sleep(1000);
+        }
+
+        Debugger.Break();
+    }
+#endif
 
     private static void AddInteractionServices(HostApplicationBuilder builder)
     {
