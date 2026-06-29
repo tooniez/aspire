@@ -29,6 +29,7 @@ using Aspire.Cli.Git;
 using Aspire.Cli.Interaction;
 using Aspire.Cli.Layout;
 using Aspire.Cli.Mcp;
+using Aspire.Cli.Migrations;
 using Aspire.Cli.Npm;
 using Aspire.Cli.NuGet;
 using Aspire.Cli.Packaging;
@@ -582,6 +583,7 @@ public class Program
         builder.Services.AddSingleton<IEnvironmentCheck, DcpConnectionHealthCheck>();
         builder.Services.AddSingleton<IEnvironmentCheck, DeprecatedAgentConfigCheck>();
         builder.Services.AddSingleton<IEnvironmentCheck, LegacySettingsFileCheck>();
+        builder.Services.AddSingleton<IEnvironmentCheck, PendingMigrationsCheck>();
         builder.Services.AddSingleton<IEnvironmentChecker, EnvironmentChecker>();
 
         // MCP server transport factory - creates transport only when needed to avoid
@@ -655,6 +657,7 @@ public class Program
         builder.Services.AddTransient<SdkGenerateCommand>();
         builder.Services.AddTransient<SdkDumpCommand>();
         builder.Services.AddTransient<RestoreCommand>();
+        builder.Services.AddSingleton<IMigration, TypeScriptAppHostMigration>();
         builder.Services.AddTransient<SetupCommand>();
 #if DEBUG
         builder.Services.AddTransient<RenderCommand>();
