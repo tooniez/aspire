@@ -103,6 +103,65 @@ public sealed class RadiusStarterDeploymentTests(ITestOutputHelper output)
             output.WriteLine("Step 1: Preparing environment...");
             await auto.PrepareEnvironmentAsync(workspace, counter);
 
+            var wsRoot = workspace.WorkspaceRoot.FullName;
+
+            // Step 1a: Install the Radius (`rad`) CLI into the workspace. `aspire deploy` against a
+            // Radius environment shells out to `rad deploy`, and this test drives `rad install
+            // kubernetes` / `rad workspace create` / `rad app graph` directly, so the CLI must be on
+            // PATH. Installing it here (rather than in the deployment-tests.yml workflow) keeps the
+            // Radius prerequisite self-contained in the test that needs it: the ~dozens of other
+            // deployment scenarios that share the workflow neither pay the download cost nor risk
+            // failing on an install-endpoint outage, and the test can be run locally without any
+            // workflow-specific setup.
+            //
+            // Install into workspace-local dirs so nothing leaks into the developer's real
+            // ~/.rad, and prepend the CLI directory to PATH so the Step 1b `command -v rad` (and every
+            // later `rad`) resolves to this binary. The Radius installer invokes `rad bicep download`,
+            // and even `rad version --cli` initializes config, so run both with HOME scoped to the
+            // installer subshell; Radius-managed tools and config then stay under the workspace home.
+            // Export PATH outside the subshell because the CLI location must persist, while HOME must
+            // not. Later az/kubectl/docker/aspire commands keep the real HOME and use their own
+            // KUBECONFIG/DOCKER_CONFIG isolation where needed. radiusVersion pins the CLI version;
+            // `rad install kubernetes` (Step 9) then installs the matching control plane, keeping the run
+            // deterministic across Radius releases. Keep this aligned with
+            // RadiusBicepExtension.Version (major.minor 0.59) so the installed control plane matches
+            // the Bicep types the publisher emits. install.sh is fetched pinned to the immutable
+            // commit SHA behind the v0.59.0 release tag (radiusInstallScriptSha) rather than a branch
+            // or tag ref, either of which can be retargeted, so the executed installer content cannot
+            // drift out from under this pin (supply-chain hardening). The download is retried a few
+            // times to tolerate transient GitHub CDN failures on scheduled runs. install.sh's needsSudo
+            // checks the install dir first and skips sudo when that directory already exists and is
+            // writable; it only falls back to the parent dir when the install dir is absent. Pre-creating
+            // the user-owned {wsRoot}/radbin makes it see a writable target and skip sudo entirely.
+            const string radiusVersion = "0.59.0";
+
+            // Immutable commit SHA that the v0.59.0 tag pointed to in radius-project/radius. Update this
+            // together with radiusVersion (and RadiusBicepExtension.Version) when bumping the Radius
+            // release, re-resolving the tag to its commit SHA.
+            const string radiusInstallScriptSha = "2bf2c25fcdde20d4cba1371618829bbbe1f9a997";
+            output.WriteLine("Step 1a: Installing the Radius (rad) CLI into the workspace...");
+            await auto.TypeAsync(
+                // `set -o pipefail` so a failed `curl` propagates through the pipe instead of being
+                // masked by `install.sh`'s exit code; the interactive terminal shell does not enable
+                // pipefail by default. Scoped to this compound command via a subshell so it never leaks
+                // into later steps' commands. The install is retried up to three times (deleting any
+                // partial binary between attempts) to ride out transient raw.githubusercontent.com or
+                // release-asset download failures, mirroring the CLI E2E installer's retry loop.
+                $"( set -o pipefail && " +
+                $"mkdir -p \"{wsRoot}/radbin\" \"{wsRoot}/home\" && " +
+                $"export HOME=\"{wsRoot}/home\" && " +
+                $"{{ for i in 1 2 3; do " +
+                $"curl -fsSL \"https://raw.githubusercontent.com/radius-project/radius/{radiusInstallScriptSha}/deploy/install.sh\" | " +
+                $"/bin/bash -s -- --version \"{radiusVersion}\" --install-dir \"{wsRoot}/radbin\" && " +
+                $"test -x \"{wsRoot}/radbin/rad\" && break; " +
+                $"echo \"Retry $i: rad download failed, retrying in 5s...\"; " +
+                $"rm -f \"{wsRoot}/radbin/rad\"; sleep 5; done; " +
+                $"test -x \"{wsRoot}/radbin/rad\"; }} && " +
+                $"\"{wsRoot}/radbin/rad\" version --cli ) && " +
+                $"export PATH=\"{wsRoot}/radbin:$PATH\"");
+            await auto.EnterAsync();
+            await auto.WaitForSuccessPromptAsync(counter, TimeSpan.FromMinutes(5));
+
             // Step 1b: Isolate kubeconfig, the Radius (`rad`) config, and Docker credentials to
             // throwaway files under the TemporaryWorkspace so this test never mutates the developer's
             // real ~/.kube/config, ~/.rad/config.yaml, or ~/.docker/config.json (test-isolation
@@ -133,7 +192,6 @@ public sealed class RadiusStarterDeploymentTests(ITestOutputHelper output)
             // - DOCKER_CONFIG: the documented override directory for Docker's config.json. `az acr login`
             //   shells out to `docker login`, and `dotnet publish /t:PublishContainer` reads the same
             //   config, so both authenticate against this throwaway dir instead of ~/.docker.
-            var wsRoot = workspace.WorkspaceRoot.FullName;
             output.WriteLine("Step 1b: Isolating kubeconfig, rad config, and docker credentials to the workspace...");
             await auto.TypeAsync(
                 $"REAL_RAD=\"$(command -v rad)\" && " +
@@ -207,8 +265,8 @@ public sealed class RadiusStarterDeploymentTests(ITestOutputHelper output)
 
             // ===== PHASE 2: Install the Radius control plane on the cluster =====
 
-            // Install the Radius control plane. The `rad` CLI version is pinned by the "Setup Radius"
-            // workflow step, and `rad install kubernetes` installs the matching control plane onto the
+            // Install the Radius control plane. The `rad` CLI version is pinned by the Step 1a
+            // install, and `rad install kubernetes` installs the matching control plane onto the
             // current kube context. This (and every other `rad`) runs through the Step 1b shim, so its
             // Contour gateway config - which reads the default-path kubeconfig ($HOME/.kube/config) and
             // ignores KUBECONFIG - resolves to our isolated config via the shim's workspace-local HOME,
