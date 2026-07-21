@@ -543,6 +543,8 @@ internal sealed class DotNetAppHostProject : IAppHostProject
             ConfigureSingleFileRunEnvironment(effectiveAppHostFile, env, args: context.UnmatchedTokens);
         }
 
+        env[KnownConfigNames.DcpWorkloadId] = AppHostWorkloadId.Create(effectiveAppHostFile);
+
         var directRun = !isSingleFileAppHost && !watch && !isExtensionHost
             ? await TryCreateDirectRunSpecAsync(effectiveAppHostFile, env, context.UnmatchedTokens, runOptions.NoLaunchProfile, cancellationToken)
             : null;
