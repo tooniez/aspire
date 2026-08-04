@@ -1,4 +1,6 @@
 import * as assert from 'assert';
+import * as fs from 'fs';
+import * as path from 'path';
 import { formatText } from '../utils/strings';
 
 suite('utils/strings tests', () => {
@@ -18,4 +20,26 @@ suite('utils/strings tests', () => {
         const resultWithNoEmojis = formatText(inputWithNoEmojis);
         assert.strictEqual(resultWithNoEmojis, expectedOutputWithNoEmojis);
 	});
+
+
+    test('copy AppHost path loc strings have package nls entries', () => {
+        const extensionRoot = path.resolve(__dirname, '..', '..');
+        const stringsSource = fs.readFileSync(path.join(extensionRoot, 'src', 'loc', 'strings.ts'), 'utf8');
+        const packageNls = JSON.parse(fs.readFileSync(path.join(extensionRoot, 'package.nls.json'), 'utf8')) as Record<string, string>;
+
+        const expectedStrings = {
+            appHostPathCopiedToClipboard: 'AppHost path copied to clipboard.',
+            appHostPathInvalid: 'Could not determine the AppHost path to copy.',
+        };
+
+        for (const [name, value] of Object.entries(expectedStrings)) {
+            // Match the declaration tolerantly so formatting differences do not matter. The literal
+            // value is regex-escaped so the test still fails if the registered string changes.
+            const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const declaration = new RegExp(
+                `export\\s+const\\s+${name}\\s*=\\s*vscode\\.l10n\\.t\\(\\s*(['"\`])${escapedValue}\\1\\s*\\)`);
+            assert.match(stringsSource, declaration, `Expected ${name} to be registered in strings.ts with the value "${value}".`);
+            assert.strictEqual(packageNls[`aspire-vscode.strings.${name}`], value);
+        }
+    });
 });
