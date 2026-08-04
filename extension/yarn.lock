@@ -1801,7 +1801,7 @@ cacheable-lookup@^7.0.0:
   resolved "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public-npm/npm/registry/cacheable-lookup/-/cacheable-lookup-7.0.0.tgz#3476a8215d046e5a3202a9209dd13fec1f933a27"
   integrity sha1-NHaoIV0EbloyAqkgndE/7B+TOic=
 
-cacheable-request@^13.0.12:
+cacheable-request@13.0.19, cacheable-request@^13.0.12:
   version "13.0.19"
   resolved "https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet-public-npm/npm/registry/cacheable-request/-/cacheable-request-13.0.19.tgz#2c8a3b6b4cc37ea6906cc182f5b838e5822b2f97"
   integrity sha1-LIo7a0zDfqaQbMGC9bg45YIrL5c=
