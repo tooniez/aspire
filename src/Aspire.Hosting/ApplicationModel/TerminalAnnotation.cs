@@ -96,15 +96,36 @@ internal sealed class TerminalAnnotation : IResourceAnnotation
 [Experimental("ASPIRETERMINAL001", UrlFormat = "https://aka.ms/aspire/diagnostics/{0}")]
 public sealed class TerminalOptions
 {
-    /// <summary>
-    /// Gets or sets the initial number of columns for the terminal. Defaults to 120.
-    /// </summary>
-    public int Columns { get; set; } = 120;
+    private int _columns = 120;
+    private int _rows = 30;
 
     /// <summary>
-    /// Gets or sets the initial number of rows for the terminal. Defaults to 30.
+    /// Gets or sets the initial number of columns for the terminal. The value must be greater than zero. Defaults to 120.
     /// </summary>
-    public int Rows { get; set; } = 30;
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when set to zero or a negative value.</exception>
+    public int Columns
+    {
+        get => _columns;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _columns = value;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the initial number of rows for the terminal. The value must be greater than zero. Defaults to 30.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when set to zero or a negative value.</exception>
+    public int Rows
+    {
+        get => _rows;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            _rows = value;
+        }
+    }
 
     /// <summary>
     /// Gets or sets a value indicating whether the per-replica terminal host resources
