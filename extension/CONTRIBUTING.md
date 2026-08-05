@@ -6,7 +6,7 @@ Bug fixes, new commands, debugger-language support, walkthrough content, setting
 
 ## Install prerequisites
 
-- Node.js (LTS version) — `npm` must be on the PATH (it ships with Node.js). The
+- Node.js 22 or later (LTS recommended) — `npm` must be on the PATH (it ships with Node.js). The
   build scripts (`build.sh` / `build.ps1`) install a pinned [Corepack](https://github.com/nodejs/corepack)
   via `npm install -g corepack@<version>` from the configured registry and seed
   Corepack's cache with the Yarn release pinned by the `packageManager` field in
