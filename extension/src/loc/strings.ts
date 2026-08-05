@@ -130,6 +130,7 @@ export const appHostPathCopiedToClipboard = vscode.l10n.t('AppHost path copied t
 export const appHostPathInvalid = vscode.l10n.t('Could not determine the AppHost path to copy.');
 export const appHostStartingDescription = vscode.l10n.t('Starting...');
 export const appHostStoppingDescription = vscode.l10n.t('Stopping...');
+export const appHostDiscoveryProgress = vscode.l10n.t('Discovering AppHosts...');
 export const resourceCountDescription = (count: number) => vscode.l10n.t('({0} resources)', count);
 export const appHostCandidateDescription = (language: string, status: string) => vscode.l10n.t('{0} · {1}', language, status);
 export const workspaceViewSelectedSingleAppHost = (language?: string) => language
@@ -149,6 +150,7 @@ export const failedToStartDebugSession = vscode.l10n.t('Failed to start debug se
 export const failedToGetConfigInfo = (exitCode: number) => vscode.l10n.t('Failed to get Aspire config info (exit code: {0}). Try updating the Aspire CLI with: aspire update', exitCode);
 export const failedToParseConfigInfo = (error: any) => vscode.l10n.t('Failed to parse Aspire config info: {0}. Try updating the Aspire CLI with: aspire update', error);
 export const errorGettingConfigInfo = (error: any) => vscode.l10n.t('Error getting Aspire config info: {0}. Try updating the Aspire CLI with: aspire update', error);
+export const configInfoTimedOut = (seconds: number) => vscode.l10n.t('Aspire config info timed out after {0} seconds.', seconds);
 export const invalidLaunchConfiguration = (projectPath: string) => vscode.l10n.t('Invalid launch configuration for {0}.', projectPath);
 export const browserDisplayName = (url: string) => vscode.l10n.t('Browser: {0}', url);
 export const browserLabel = vscode.l10n.t('Browser');
