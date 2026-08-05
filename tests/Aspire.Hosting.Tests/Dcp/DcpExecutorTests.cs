@@ -2864,6 +2864,8 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
     [Fact]
     public async Task ProjectLaunchConfiguration_UsesProjectDebugSupportProducer_InDebugSession()
     {
+        // The producer owns the whole launch configuration: nothing downstream overwrites what it returns,
+        // not even the project path, which differs here from the one on the resource's project metadata.
         var builder = DistributedApplication.CreateBuilder();
         var projectBuilder = builder.AddProject<TestProject>("proj", launchProfileName: null);
         var annotationToRemove = projectBuilder.Resource.Annotations.OfType<SupportsDebuggingAnnotation>().FirstOrDefault();
@@ -2875,6 +2877,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         projectBuilder.WithDebugSupport(_ => new ProjectLaunchConfiguration
         {
             Mode = ExecutableLaunchMode.NoDebug,
+            ProjectPath = "ProducerSuppliedPath",
             DisableLaunchProfile = true
         }, "project");
 
@@ -2897,7 +2900,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         var exe = GetCreatedExecutableForResource(kubernetes, "proj");
         Assert.True(exe.TryGetProjectLaunchConfiguration(out var plc));
         Assert.NotNull(plc);
-        Assert.Equal("TestProject", plc!.ProjectPath);
+        Assert.Equal("ProducerSuppliedPath", plc!.ProjectPath);
         Assert.Equal(ExecutableLaunchMode.NoDebug, plc.Mode);
         Assert.True(plc.DisableLaunchProfile);
     }
@@ -4866,6 +4869,129 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task ProjectExecutable_AsyncLaunchConfigurationProducer_IsAwaitedDuringPrepare()
+    {
+        // Regression guard for the async launch configuration producer. A ProjectResource has its "project"
+        // launch configuration applied while DCP objects are *prepared* (PrepareProjectExecutablesAsync), not
+        // when they are created, so this is the path that previously forced producers to be synchronous.
+        // A producer that genuinely suspends must still be awaited to completion before the Executable is
+        // handed to DCP; otherwise the annotation would be missing or hold an unresolved Task.
+        var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions
+        {
+            AssemblyName = typeof(DistributedApplicationTests).Assembly.FullName
+        });
+
+        var projectBuilder = builder.AddProject<Projects.ServiceA>("ServiceA", launchProfileName: null);
+        projectBuilder.WithDebugSupport(
+            async (mode, ct) =>
+            {
+                // Yield so the producer completes asynchronously rather than returning an already-completed task.
+                await Task.Yield();
+                return new ProjectLaunchConfiguration { ProjectPath = "AsyncProducerPath", Mode = mode, LaunchProfile = "async-profile" };
+            },
+            KnownLaunchConfigurationTypes.Project);
+
+        var configDict = new Dictionary<string, string?>
+        {
+            [DcpExecutor.DebugSessionPortVar] = "12345",
+            [KnownConfigNames.DebugSessionInfo] = JsonSerializer.Serialize(new RunSessionInfo { ProtocolsSupported = ["test"], SupportedLaunchConfigurations = ["project"] }),
+            [KnownConfigNames.ExtensionEndpoint] = "http://localhost:1234",
+            [KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug
+        };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configDict).Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var appExecutor = CreateAppExecutor(distributedAppModel, kubernetesService: kubernetesService, configuration: configuration);
+
+        await appExecutor.RunApplicationAsync();
+
+        var exe = GetCreatedExecutableForResource(kubernetesService, "ServiceA");
+        Assert.Equal(ExecutionType.IDE, exe.Spec.ExecutionType);
+        Assert.True(exe.TryGetProjectLaunchConfiguration(out var plc));
+        Assert.Equal("AsyncProducerPath", plc.ProjectPath);
+        Assert.Equal("async-profile", plc.LaunchProfile);
+        Assert.Equal(ExecutableLaunchMode.Debug, plc.Mode);
+    }
+
+    [Fact]
+    public async Task PlainExecutable_AsyncLaunchConfigurationProducer_IsAwaitedDuringCreate()
+    {
+        // The companion to ProjectExecutable_AsyncLaunchConfigurationProducer_IsAwaitedDuringPrepare: a
+        // non-"project" launch configuration is applied when the Executable is created (after endpoints are
+        // allocated), which is the other producer call site.
+        var builder = DistributedApplication.CreateBuilder();
+
+        var debuggableExecutable = new TestExecutableResource("test-working-directory");
+        builder.AddResource(debuggableExecutable).WithDebugSupport(
+            async (mode, ct) =>
+            {
+                await Task.Yield();
+                return new ExecutableLaunchConfiguration("test") { Mode = mode };
+            },
+            "test");
+
+        var configDict = new Dictionary<string, string?>
+        {
+            [DcpExecutor.DebugSessionPortVar] = "12345",
+            [KnownConfigNames.DebugSessionInfo] = JsonSerializer.Serialize(new RunSessionInfo { ProtocolsSupported = ["test"], SupportedLaunchConfigurations = ["test"] }),
+            [KnownConfigNames.ExtensionEndpoint] = "http://localhost:1234",
+            [KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug
+        };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configDict).Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var appExecutor = CreateAppExecutor(distributedAppModel, kubernetesService: kubernetesService, configuration: configuration);
+
+        await appExecutor.RunApplicationAsync();
+
+        var exe = GetCreatedExecutableForResource(kubernetesService, "TestExecutable");
+        Assert.Equal(ExecutionType.IDE, exe.Spec.ExecutionType);
+        Assert.True(exe.TryGetAnnotationAsObjectList<ExecutableLaunchConfiguration>(Executable.LaunchConfigurationsAnnotation, out var launchConfigs));
+        var launchConfig = Assert.Single(launchConfigs);
+        Assert.Equal("test", launchConfig.Type);
+        Assert.Equal(ExecutableLaunchMode.Debug, launchConfig.Mode);
+    }
+
+    [Fact]
+    public async Task PlainExecutable_AsyncLaunchConfigurationProducerFaults_FallsBackToProcess()
+    {
+        // An async producer that faults after suspending surfaces the exception through the awaited task
+        // rather than synchronously from the delegate invocation. The Process fallback must still kick in.
+        var builder = DistributedApplication.CreateBuilder();
+
+        var debuggableExecutable = new TestExecutableResource("test-working-directory");
+        builder.AddResource(debuggableExecutable).WithDebugSupport<TestExecutableResource, ExecutableLaunchConfiguration>(
+            async (mode, ct) =>
+            {
+                await Task.Yield();
+                throw new InvalidOperationException("Test exception from async launch configuration producer");
+            },
+            "test");
+
+        var configDict = new Dictionary<string, string?>
+        {
+            [DcpExecutor.DebugSessionPortVar] = "12345",
+            [KnownConfigNames.DebugSessionInfo] = JsonSerializer.Serialize(new RunSessionInfo { ProtocolsSupported = ["test"], SupportedLaunchConfigurations = ["test"] }),
+            [KnownConfigNames.ExtensionEndpoint] = "http://localhost:1234"
+        };
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configDict).Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var appExecutor = CreateAppExecutor(distributedAppModel, kubernetesService: kubernetesService, configuration: configuration);
+
+        await appExecutor.RunApplicationAsync();
+
+        var exe = GetCreatedExecutableForResource(kubernetesService, "TestExecutable");
+        Assert.Equal(ExecutionType.Process, exe.Spec.ExecutionType);
+    }
+
+    [Fact]
     public async Task ProjectExecutable_WithLaunchArgsOverride_InDebugSession_RunsInProcessMode()
     {
         var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions
@@ -5148,7 +5274,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         builder.AddResource(resource)
             .WithAnnotation(new TestProjectWithLaunchSettings())
             .WithAnnotation(new LaunchProfileAnnotation("http"))
-            .WithDebugSupport(mode => new ProjectLaunchConfiguration { ProjectPath = "TestProjectWithLaunchSettings", Mode = mode }, "project");
+            .WithDebugSupport(mode => ProjectLaunchConfigurationFactory.Create(resource, mode), KnownLaunchConfigurationTypes.Project);
 
         var configDict = new Dictionary<string, string?>
         {
@@ -5321,7 +5447,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
 
         Assert.Contains(logLines, line => line.Content.Contains("Project launch configuration failed.", StringComparison.Ordinal));
 
-        static ProjectLaunchConfiguration CreateProjectLaunchConfiguration(string mode)
+        static Task<ProjectLaunchConfiguration> CreateProjectLaunchConfiguration(string mode, CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("Project launch configuration failed.");
         }
@@ -5423,7 +5549,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         Assert.Empty(kubernetesService.CreatedResources.OfType<Executable>());
         Assert.Same(resource, Assert.Single(failedResources));
 
-        static ExecutableLaunchConfiguration ThrowingLaunchConfiguration(string mode)
+        static Task<ExecutableLaunchConfiguration> ThrowingLaunchConfiguration(string mode, CancellationToken cancellationToken)
         {
             throw new InvalidOperationException("Launch configuration failed.");
         }
@@ -6321,7 +6447,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         var builder = DistributedApplication.CreateBuilder();
 
         var debuggableExecutable = new TestExecutableResource("test-working-directory");
-        builder.AddResource(debuggableExecutable).WithDebugSupport<TestExecutableResource, ExecutableLaunchConfiguration>(_ => throw new InvalidOperationException("Test exception from launch configuration producer"), "test");
+        builder.AddResource(debuggableExecutable).WithDebugSupport<TestExecutableResource, ExecutableLaunchConfiguration>((_, _) => throw new InvalidOperationException("Test exception from launch configuration producer"), "test");
 
         var runSessionInfo = new RunSessionInfo
         {
@@ -6419,7 +6545,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
             projectBuilder.Resource.Annotations.Remove(annotationToRemove);
         }
         projectBuilder.WithDebugSupport<ProjectResource, ExecutableLaunchConfiguration>(
-            _ => throw new InvalidOperationException("Test exception from launch configuration producer"),
+            (_, _) => throw new InvalidOperationException("Test exception from launch configuration producer"),
             "azure-functions");
 
         var configDict = new Dictionary<string, string?>
