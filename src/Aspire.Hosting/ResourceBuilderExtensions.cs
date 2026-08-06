@@ -3547,8 +3547,9 @@ public static class ResourceBuilderExtensions
     /// </para>
     /// <para>
     /// Specifying <see cref="HttpCommandOptions.HttpClientName"/> will use that named <see cref="HttpClient"/> when sending the request. This allows you to configure the <see cref="HttpClient"/>
-    /// instance with a specific handler or other options using <see cref="HttpClientFactoryServiceCollectionExtensions.AddHttpClient(IServiceCollection, string)"/>.
-    /// If <see cref="HttpCommandOptions.HttpClientName"/> is not specified, the default <see cref="HttpClient"/> will be used.
+    /// instance with a specific handler, timeout, or other options using <see cref="HttpClientFactoryServiceCollectionExtensions.AddHttpClient(IServiceCollection, string)"/>.
+    /// If <see cref="HttpCommandOptions.HttpClientName"/> is not specified, the default <see cref="HttpClient"/> will be used and its
+    /// <see cref="HttpClient.Timeout"/> will be set to <see cref="Timeout.InfiniteTimeSpan"/>. Specify a named client to preserve its configured timeout.
     /// </para>
     /// <para>
     /// The <see cref="HttpCommandOptions.PrepareRequest"/> callback will be invoked to configure the request before it is sent. This can be used to add headers or a request payload
@@ -3640,8 +3641,9 @@ public static class ResourceBuilderExtensions
     /// </para>
     /// <para>
     /// Specifying a <see cref="HttpCommandOptions.HttpClientName"/> will use that named <see cref="HttpClient"/> when sending the request. This allows you to configure the <see cref="HttpClient"/>
-    /// instance with a specific handler or other options using <see cref="HttpClientFactoryServiceCollectionExtensions.AddHttpClient(IServiceCollection, string)"/>.
-    /// If no <see cref="HttpCommandOptions.HttpClientName"/> is specified, the default <see cref="HttpClient"/> will be used.
+    /// instance with a specific handler, timeout, or other options using <see cref="HttpClientFactoryServiceCollectionExtensions.AddHttpClient(IServiceCollection, string)"/>.
+    /// If <see cref="HttpCommandOptions.HttpClientName"/> is not specified, the default <see cref="HttpClient"/> will be used and its
+    /// <see cref="HttpClient.Timeout"/> will be set to <see cref="Timeout.InfiniteTimeSpan"/>. Specify a named client to preserve its configured timeout.
     /// </para>
     /// <para>
     /// The <see cref="HttpCommandOptions.PrepareRequest"/> callback will be invoked to configure the request before it is sent. This can be used to add headers or a request payload
@@ -3712,6 +3714,13 @@ public static class ResourceBuilderExtensions
                 }
                 var uri = new UriBuilder(endpoint.Url) { Path = path }.Uri;
                 var httpClient = context.Services.GetRequiredService<IHttpClientFactory>().CreateClient(commandOptions.HttpClientName ?? Options.DefaultName);
+                if (commandOptions.HttpClientName is null)
+                {
+                    // HTTP commands are user-cancelable and may legitimately run longer than HttpClient's 100-second default.
+                    // The unnamed default client therefore has no timeout. A named client selects custom configuration,
+                    // including its configured timeout.
+                    httpClient.Timeout = Timeout.InfiniteTimeSpan;
+                }
                 var request = new HttpRequestMessage(commandOptions.Method, uri);
                 if (commandOptions.PrepareRequest is not null)
                 {
