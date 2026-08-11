@@ -255,16 +255,14 @@ public static class ResourceExtensions
     }
 
     /// <summary>
-    /// Gather argument values, but do not resolve them. Used to allow multiple callbacks to constructively contribute to
-    /// the argument list before resolving.
+    /// Gathers argument values without resolving them or using cached callback results.
     /// </summary>
     /// <param name="resource">The resource to retrieve argument values for.</param>
     /// <param name="executionContext">The execution context used during the retrieval of argument values.</param>
     /// <param name="logger">The logger used for logging information or errors during the retrieval of argument values.</param>
     /// <param name="cancellationToken">A token for cancelling the operation, if needed.</param>
     /// <returns>A list of unprocessed argument values.</returns>
-    [Obsolete("Use ExecutionConfigurationBuilder instead.")]
-    internal static async ValueTask<List<object>> GatherArgumentValuesAsync(
+    internal static async ValueTask<List<object>> GatherArgumentValuesWithoutCachingAsync(
         this IResource resource,
         DistributedApplicationExecutionContext executionContext,
         ILogger logger,
@@ -285,7 +283,46 @@ public static class ResourceExtensions
             }
         }
 
+        var launchToolArgs = await GatherLaunchToolArgumentValuesAsync(
+            resource,
+            executionContext,
+            logger,
+            cacheAnnotationCallbackResult: false,
+            cancellationToken).ConfigureAwait(false);
+        args.InsertRange(0, launchToolArgs);
+
         return args;
+    }
+
+    private static async ValueTask<IList<object>> GatherLaunchToolArgumentValuesAsync(
+        IResource resource,
+        DistributedApplicationExecutionContext executionContext,
+        ILogger logger,
+        bool cacheAnnotationCallbackResult,
+        CancellationToken cancellationToken)
+    {
+        // Launch tool arguments run against an isolated list and do not apply to containers, matching
+        // ArgumentsExecutionConfigurationGatherer's composition of the effective command line.
+        if (resource.IsContainer() ||
+            !resource.TryGetLastAnnotation<LaunchToolArgsCallbackAnnotation>(out var annotation))
+        {
+            return [];
+        }
+
+        var context = new CommandLineArgsCallbackContext([], resource, cancellationToken)
+        {
+            Logger = logger,
+            ExecutionContext = executionContext
+        };
+
+        if (cacheAnnotationCallbackResult)
+        {
+            return await annotation.AsCallbackAnnotation().EvaluateOnceAsync(context).ConfigureAwait(false);
+        }
+
+        await annotation.Callback(context).ConfigureAwait(false);
+
+        return context.Args;
     }
 
     /// <summary>
@@ -347,7 +384,7 @@ public static class ResourceExtensions
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
-        var args = await GatherArgumentValuesAsync(resource, executionContext, logger, cancellationToken).ConfigureAwait(false);
+        var args = await GatherArgumentValuesWithoutCachingAsync(resource, executionContext, logger, cancellationToken).ConfigureAwait(false);
 
         await ProcessGatheredArgumentValuesAsync(resource, executionContext, args, processValue, logger, cancellationToken).ConfigureAwait(false);
     }
@@ -1641,6 +1678,14 @@ public static class ResourceExtensions
                 rawValues.AddRange(args);
             }
         }
+
+        var launchToolArgs = await GatherLaunchToolArgumentValuesAsync(
+            resource,
+            executionContext,
+            NullLogger.Instance,
+            options.CacheAnnotationCallbackResults,
+            cancellationToken).ConfigureAwait(false);
+        rawValues.AddRange(launchToolArgs);
 
         return rawValues;
     }
