@@ -14,6 +14,7 @@ using Aspire.Cli.Telemetry;
 using Aspire.Cli.Tests.Telemetry;
 using Aspire.Cli.Tests.TestServices;
 using Aspire.Cli.Tests.Utils;
+using Aspire.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -27,6 +28,179 @@ public class ProjectLocatorTests(ITestOutputHelper outputHelper)
     {
         return TestExecutionContextHelper.CreateExecutionContext(
             workingDirectory);
+    }
+
+    [Fact]
+    public async Task UseOrFindAppHostProjectFilePreservesExistingDefaultForLaunchConfiguration()
+    {
+        using var workspace = TemporaryWorkspace.CreateForCli(outputHelper);
+
+        var firstAppHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("FirstAppHost");
+        var firstAppHostProjectFile = new FileInfo(Path.Combine(firstAppHostDirectory.FullName, "FirstAppHost.csproj"));
+        await File.WriteAllTextAsync(firstAppHostProjectFile.FullName, "Not a real apphost");
+
+        var secondAppHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("SecondAppHost");
+        var secondAppHostProjectFile = new FileInfo(Path.Combine(secondAppHostDirectory.FullName, "SecondAppHost.csproj"));
+        await File.WriteAllTextAsync(secondAppHostProjectFile.FullName, "Not a real apphost");
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        const string originalConfig = """{"appHost":{"path":"FirstAppHost/FirstAppHost.csproj"}}""";
+        await File.WriteAllTextAsync(configPath, originalConfig);
+
+        var projectLocator = CreateProjectLocator(
+            CreateExecutionContext(workspace.WorkspaceRoot),
+            configuration: CreateLaunchConfigurationOrigin());
+
+        var result = await projectLocator.UseOrFindAppHostProjectFileAsync(
+            secondAppHostProjectFile,
+            MultipleAppHostProjectsFoundBehavior.Prompt,
+            createSettingsFile: true,
+            CancellationToken.None).DefaultTimeout();
+
+        Assert.Equal(secondAppHostProjectFile.FullName, result.SelectedProjectFile?.FullName);
+        Assert.Equal(originalConfig, await File.ReadAllTextAsync(configPath));
+    }
+
+    [Fact]
+    public async Task UseOrFindAppHostProjectFileEstablishesDefaultForLaunchConfiguration()
+    {
+        using var workspace = TemporaryWorkspace.CreateForCli(outputHelper);
+
+        var appHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("AppHost");
+        var appHostProjectFile = new FileInfo(Path.Combine(appHostDirectory.FullName, "AppHost.csproj"));
+        await File.WriteAllTextAsync(appHostProjectFile.FullName, "Not a real apphost");
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        var projectLocator = CreateProjectLocator(
+            CreateExecutionContext(workspace.WorkspaceRoot),
+            configuration: CreateLaunchConfigurationOrigin());
+
+        var result = await projectLocator.UseOrFindAppHostProjectFileAsync(
+            appHostProjectFile,
+            MultipleAppHostProjectsFoundBehavior.Prompt,
+            createSettingsFile: true,
+            CancellationToken.None).DefaultTimeout();
+
+        Assert.Equal(appHostProjectFile.FullName, result.SelectedProjectFile?.FullName);
+        Assert.Equal("AppHost/AppHost.csproj", ReadConfiguredAppHostPath(configPath));
+    }
+
+    [Fact]
+    public async Task ConcurrentLaunchConfigurationsEstablishWorkspaceDefaultOnce()
+    {
+        using var workspace = TemporaryWorkspace.CreateForCli(outputHelper);
+
+        var appHostProjectFiles = new List<FileInfo>();
+        for (var index = 0; index < 8; index++)
+        {
+            var appHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory($"AppHost{index}");
+            var appHostProjectFile = new FileInfo(Path.Combine(appHostDirectory.FullName, $"AppHost{index}.csproj"));
+            await File.WriteAllTextAsync(appHostProjectFile.FullName, "Not a real apphost");
+            appHostProjectFiles.Add(appHostProjectFile);
+        }
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        await File.WriteAllTextAsync(configPath, """{"sdk":{"version":"9.9.9"}}""");
+
+        var executionContext = CreateExecutionContext(workspace.WorkspaceRoot);
+        var interactionService = new TestInteractionService();
+        var configuration = CreateLaunchConfigurationOrigin();
+        var projectLocators = appHostProjectFiles
+            .Select(_ => CreateProjectLocator(executionContext, interactionService: interactionService, configuration: configuration))
+            .ToList();
+
+        var startGate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var callers = appHostProjectFiles
+            .Select(async (appHostProjectFile, index) =>
+            {
+                await startGate.Task;
+                return await projectLocators[index].UseOrFindAppHostProjectFileAsync(
+                    appHostProjectFile,
+                    MultipleAppHostProjectsFoundBehavior.Prompt,
+                    createSettingsFile: true,
+                    CancellationToken.None);
+            })
+            .ToList();
+
+        startGate.SetResult();
+        var results = await Task.WhenAll(callers).DefaultTimeout();
+
+        Assert.Equal(
+            appHostProjectFiles.Select(appHostProjectFile => appHostProjectFile.FullName),
+            results.Select(result => result.SelectedProjectFile?.FullName));
+
+        var recordedDefault = ReadConfiguredAppHostPath(configPath);
+        Assert.Contains(
+            recordedDefault,
+            appHostProjectFiles.Select(appHostProjectFile => $"{appHostProjectFile.Directory!.Name}/{appHostProjectFile.Name}"));
+
+        using (var document = JsonDocument.Parse(await File.ReadAllTextAsync(configPath)))
+        {
+            Assert.Equal("9.9.9", document.RootElement.GetProperty("sdk").GetProperty("version").GetString());
+        }
+
+        var settingsFileMessages = interactionService.DisplayedMessages
+            .Where(displayedMessage => displayedMessage.Message.Contains(AspireConfigFile.FileName, StringComparison.Ordinal))
+            .ToList();
+        Assert.Single(settingsFileMessages);
+    }
+
+    [Fact]
+    public void PersistedAppHostPathComparisonIsCaseInsensitiveOnlyOnWindows()
+    {
+        const string configuredPath = "/workspace/Foo/AppHost.csproj";
+        const string selectedPath = "/workspace/foo/AppHost.csproj";
+
+        Assert.True(ProjectLocator.IsSamePersistedAppHostPath(configuredPath, selectedPath, TestEnvironment.CreateWindows()));
+        Assert.False(ProjectLocator.IsSamePersistedAppHostPath(configuredPath, selectedPath, TestEnvironment.CreateLinux()));
+        Assert.False(ProjectLocator.IsSamePersistedAppHostPath(configuredPath, selectedPath, TestEnvironment.CreateMacOS()));
+    }
+
+    [Fact]
+    public async Task UseOrFindAppHostProjectFileReplacesDeletedDefaultForLaunchConfiguration()
+    {
+        using var workspace = TemporaryWorkspace.CreateForCli(outputHelper);
+
+        var firstAppHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("FirstAppHost");
+        var firstAppHostProjectFile = new FileInfo(Path.Combine(firstAppHostDirectory.FullName, "FirstAppHost.csproj"));
+        await File.WriteAllTextAsync(firstAppHostProjectFile.FullName, "Not a real apphost");
+
+        var secondAppHostDirectory = workspace.WorkspaceRoot.CreateSubdirectory("SecondAppHost");
+        var secondAppHostProjectFile = new FileInfo(Path.Combine(secondAppHostDirectory.FullName, "SecondAppHost.csproj"));
+        await File.WriteAllTextAsync(secondAppHostProjectFile.FullName, "Not a real apphost");
+
+        var configPath = Path.Combine(workspace.WorkspaceRoot.FullName, AspireConfigFile.FileName);
+        await File.WriteAllTextAsync(configPath, """{"appHost":{"path":"FirstAppHost/FirstAppHost.csproj"}}""");
+        firstAppHostProjectFile.Delete();
+
+        var projectLocator = CreateProjectLocator(
+            CreateExecutionContext(workspace.WorkspaceRoot),
+            configuration: CreateLaunchConfigurationOrigin());
+
+        var result = await projectLocator.UseOrFindAppHostProjectFileAsync(
+            secondAppHostProjectFile,
+            MultipleAppHostProjectsFoundBehavior.Prompt,
+            createSettingsFile: true,
+            CancellationToken.None).DefaultTimeout();
+
+        Assert.Equal(secondAppHostProjectFile.FullName, result.SelectedProjectFile?.FullName);
+        Assert.Equal("SecondAppHost/SecondAppHost.csproj", ReadConfiguredAppHostPath(configPath));
+    }
+
+    private static IConfiguration CreateLaunchConfigurationOrigin()
+    {
+        return new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [KnownConfigNames.CliAppHostSelectionOrigin] = "explicit-launch-configuration"
+            })
+            .Build();
+    }
+
+    private static string? ReadConfiguredAppHostPath(string configPath)
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(configPath));
+        return document.RootElement.GetProperty("appHost").GetProperty("path").GetString();
     }
 
     [Fact]
@@ -3039,7 +3213,8 @@ builder.Build().Run();");
         IGitRepository? gitRepository = null,
         AspireCliTelemetry? telemetry = null,
         ILogger<ProjectLocator>? logger = null,
-        IEnvironment? environment = null)
+        IEnvironment? environment = null,
+        IConfiguration? configuration = null)
     {
         var appHostCandidateFinder = new AppHostCandidateFinder(
             gitRepository ?? new TestGitRepository(),
@@ -3057,6 +3232,7 @@ builder.Build().Run();");
             languageDiscovery ?? new TestLanguageDiscovery(),
             sdkInstaller ?? new TestDotNetSdkInstaller(),
             appHostCandidateFinder,
-            telemetry ?? TestTelemetryHelper.CreateInitializedTelemetry());
+            telemetry ?? TestTelemetryHelper.CreateInitializedTelemetry(),
+            configuration ?? new ConfigurationBuilder().Build());
     }
 }
