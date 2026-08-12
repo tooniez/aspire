@@ -340,16 +340,28 @@ suite('E2E launch profile', () => {
         const extensionRoot = path.resolve(__dirname, '..', '..');
         const runner = fs.readFileSync(path.join(extensionRoot, 'scripts', 'run-e2e.js'), 'utf8');
 
+        assert.ok(runner.includes("const { runWithProcessTreeTimeout } = require('./e2e-process-runner.cjs');"));
         assert.ok(runner.includes('ASPIRE_EXTENSION_E2E_RUN_TESTS_TIMEOUT_MS'));
         assert.ok(runner.includes('await runWithProcessTreeTimeout(process.execPath'));
         assert.ok(runner.includes('getRunTestsTimeoutMs()'));
         assert.ok(runner.includes('2400000'));
-        assert.ok(runner.includes('did not exit after process-tree termination'));
-        assert.ok(runner.includes('child.unref()'));
         assert.ok(runner.includes("spawnSync('taskkill'"));
-        assert.ok(runner.includes("terminateProcessTree(child.pid, 'SIGTERM')"));
-        assert.ok(runner.includes("terminateProcessTree(child.pid, 'SIGKILL')"));
         assert.ok(runner.includes('process.kill(-pid, signal)'));
+    });
+
+    test('wires the ExTester process lifecycle into the extracted runner', () => {
+        const extensionRoot = path.resolve(__dirname, '..', '..');
+        const runner = fs.readFileSync(path.join(extensionRoot, 'scripts', 'run-e2e.js'), 'utf8');
+        const invocationStart = runner.indexOf('await runWithProcessTreeTimeout(process.execPath');
+        const invocationEnd = runner.indexOf('\n      });', invocationStart);
+        const runnerOptions = runner.slice(invocationStart, invocationEnd);
+
+        assert.ok(invocationStart >= 0);
+        assert.ok(invocationEnd > invocationStart);
+        assert.ok(runnerOptions.includes('quoteShellArgument: quoteWindowsShellArgument,'));
+        assert.ok(runnerOptions.includes("stdio: 'inherit',"));
+        assert.ok(runnerOptions.includes("detached: process.platform !== 'win32',"));
+        assert.ok(runnerOptions.includes('terminateProcessTree,'));
     });
 
     test('bounds retryable runner setup steps so setup failures still collect diagnostics', () => {
@@ -481,18 +493,21 @@ suite('E2E launch profile', () => {
         assert.ok(functionsInstallIndex > resourceGroupsInstallIndex);
         assert.ok(runner.includes("path: resolveRequiredVsixPath('ASPIRE_EXTENSION_E2E_AZURE_RESOURCE_GROUPS_VSIX')"));
         assert.ok(runner.includes("path: resolveRequiredVsixPath('ASPIRE_EXTENSION_E2E_AZURE_FUNCTIONS_VSIX')"));
-        assert.ok(runStep.includes('ASPIRE_EXTENSION_E2E_ALLOW_TEST_FAILURE: ${{ matrix.allowFailure }}'));
+        assert.ok(runStep.includes('ASPIRE_EXTENSION_E2E_ADVISORY_ISSUE: ${{ matrix.advisoryIssue }}'));
         assert.strictEqual(runStep.includes('continue-on-error:'), false);
     });
 
-    test('allows completed E2E test failures without hiding setup or cleanup failures', () => {
+    test('wires structured E2E harness failures into advisory handling', () => {
         const extensionRoot = path.resolve(__dirname, '..', '..');
         const runner = fs.readFileSync(path.join(extensionRoot, 'scripts', 'run-e2e.js'), 'utf8');
 
-        assert.ok(runner.includes("const allowTestFailure = process.env.ASPIRE_EXTENSION_E2E_ALLOW_TEST_FAILURE === 'true';"));
+        assert.ok(runner.includes("const { shouldAllowAdvisoryTestFailure } = require('./e2e-process-failure.cjs');"));
+        assert.ok(runner.includes("const advisoryIssue = process.env.ASPIRE_EXTENSION_E2E_ADVISORY_ISSUE || '';"));
         assert.ok(runner.includes('let cleanupFailed = false;'));
         assert.ok(runner.includes('cleanupFailed = true;'));
-        assert.ok(runner.includes('if (allowTestFailure && hasCompletedMochaTestFailures(readMochaResults()) && !cleanupFailed)'));
+        assert.ok(runner.includes('shouldAllowAdvisoryTestFailure(testFailure, readMochaResults(), cleanupFailed)'));
+        assert.ok(runner.includes('completed test failures tracked by ${advisoryIssue}. Diagnostics were uploaded for investigation.'));
+        assert.strictEqual(runner.includes('ASPIRE_EXTENSION_E2E_ALLOW_TEST_FAILURE'), false);
         assert.strictEqual(runner.includes('completedTests'), false);
     });
 
