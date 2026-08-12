@@ -19,6 +19,30 @@ function stripComments(source: string): string {
     return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
+function compareVersionStrings(left: string, right: string): number {
+    const leftParts = left.split('.').map(Number);
+    const rightParts = right.split('.').map(Number);
+
+    for (let i = 0; i < Math.max(leftParts.length, rightParts.length); i++) {
+        const difference = (leftParts[i] ?? 0) - (rightParts[i] ?? 0);
+        if (difference !== 0) {
+            return difference;
+        }
+    }
+
+    return 0;
+}
+
+function runE2eRunnerAsPlatform(extensionRoot: string, platform: 'darwin' | 'linux' | 'win32', environment: NodeJS.ProcessEnv) {
+    const runnerPath = path.join(extensionRoot, 'scripts', 'run-e2e.js');
+    const bootstrap = `Object.defineProperty(process, 'platform', { value: ${JSON.stringify(platform)} }); require(${JSON.stringify(runnerPath)});`;
+    return spawnSync(process.execPath, ['-e', bootstrap], {
+        encoding: 'utf8',
+        timeout: 120000,
+        env: environment,
+    });
+}
+
 function getTestBlock(source: string, testName: string): string {
     const testStart = source.indexOf(`test('${testName}'`);
     assert.ok(testStart >= 0, `Expected to find test '${testName}'.`);
@@ -82,6 +106,56 @@ suite('E2E launch profile', () => {
         }
         finally {
             fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('rejects VS Code overrides whose macOS executable the pinned ExTester cannot launch', () => {
+        const extensionRoot = path.resolve(__dirname, '..', '..');
+        const testArtifactsRoot = path.join(extensionRoot, '.test-artifacts', 'unit');
+        fs.mkdirSync(testArtifactsRoot, { recursive: true });
+        const tempRoot = fs.mkdtempSync(path.join(testArtifactsRoot, 'aev-version-guard-'));
+        try {
+            const result = runE2eRunnerAsPlatform(extensionRoot, 'darwin', {
+                ...process.env,
+                ASPIRE_EXTENSION_E2E_CLI_PATH: path.join(tempRoot, 'missing-aspire'),
+                ASPIRE_EXTENSION_E2E_SPEC: 'out/test/e2eLaunchProfile.test.js',
+                ASPIRE_EXTENSION_E2E_TEMP_ROOT: tempRoot,
+                ASPIRE_EXTENSION_E2E_VSCODE_VERSION: '1.131.0',
+            });
+
+            assert.notStrictEqual(result.status, 0);
+            assert.match(result.stderr, /VS Code 1\.131\.0.*ExTester 8\.23\.0 on macOS.*Contents\/MacOS\/Electron/);
+            assert.deepStrictEqual(fs.readdirSync(tempRoot), []);
+        }
+        finally {
+            fs.rmSync(tempRoot, { recursive: true, force: true });
+        }
+    });
+
+    test('allows VS Code 1.131 overrides where ExTester uses the current executable path', () => {
+        const extensionRoot = path.resolve(__dirname, '..', '..');
+        const testArtifactsRoot = path.join(extensionRoot, '.test-artifacts', 'unit');
+        fs.mkdirSync(testArtifactsRoot, { recursive: true });
+
+        for (const platform of ['linux', 'win32'] as const) {
+            const tempRoot = fs.mkdtempSync(path.join(testArtifactsRoot, `aev-version-${platform}-`));
+            try {
+                const missingCliPath = path.join(tempRoot, 'missing-aspire');
+                const result = runE2eRunnerAsPlatform(extensionRoot, platform, {
+                    ...process.env,
+                    ASPIRE_EXTENSION_E2E_CLI_PATH: missingCliPath,
+                    ASPIRE_EXTENSION_E2E_SPEC: 'out/test/e2eLaunchProfile.test.js',
+                    ASPIRE_EXTENSION_E2E_TEMP_ROOT: tempRoot,
+                    ASPIRE_EXTENSION_E2E_VSCODE_VERSION: '1.131.0',
+                });
+
+                assert.notStrictEqual(result.status, 0);
+                assert.ok(result.stderr.includes(`ASPIRE_EXTENSION_E2E_CLI_PATH points to a missing file: ${missingCliPath}`), result.stderr);
+                assert.deepStrictEqual(fs.readdirSync(tempRoot), []);
+            }
+            finally {
+                fs.rmSync(tempRoot, { recursive: true, force: true });
+            }
         }
     });
 
@@ -204,6 +278,37 @@ suite('E2E launch profile', () => {
         assert.ok(workflow.includes('corepack yarn install --frozen-lockfile --non-interactive'));
         assert.ok(!workflow.includes('ASPIRE_EXTENSION_E2E_EXTESTER_NPM_REGISTRY'));
         assert.ok(!workflow.includes('registry=https://'));
+    });
+
+    test('defaults to the newest VS Code with the legacy macOS executable path while the internal feed lacks newer ExTester', () => {
+        const extensionRoot = path.resolve(__dirname, '..', '..');
+        const runner = fs.readFileSync(path.join(extensionRoot, 'scripts', 'run-e2e.js'), 'utf8');
+        const installedPackageJson = JSON.parse(fs.readFileSync(path.join(extensionRoot, 'node_modules', 'vscode-extension-tester', 'package.json'), 'utf8'));
+        const extester = require(path.join(extensionRoot, 'node_modules', 'vscode-extension-tester', 'out', 'extester.js')) as {
+            loadCodeVersion(version: string): string;
+        };
+        const previousCodeVersion = process.env.CODE_VERSION;
+        const defaultVsCodeVersion = '1.130.0';
+        const macOsLegacyExecutableRemovalVersion = '1.131.0';
+        const extesterMacOsExecutableFallbackVersion = '8.24.0';
+
+        assert.ok(runner.includes(`process.env.ASPIRE_EXTENSION_E2E_VSCODE_VERSION || '${defaultVsCodeVersion}'`));
+        assert.strictEqual(installedPackageJson.version, '8.23.0');
+        assert.ok(compareVersionStrings(defaultVsCodeVersion, macOsLegacyExecutableRemovalVersion) < 0);
+        assert.ok(compareVersionStrings(installedPackageJson.version, extesterMacOsExecutableFallbackVersion) < 0);
+
+        try {
+            delete process.env.CODE_VERSION;
+            assert.strictEqual(extester.loadCodeVersion(defaultVsCodeVersion), defaultVsCodeVersion);
+        }
+        finally {
+            if (previousCodeVersion === undefined) {
+                delete process.env.CODE_VERSION;
+            }
+            else {
+                process.env.CODE_VERSION = previousCodeVersion;
+            }
+        }
     });
 
     test('preflights locked ExTester dependency graph before starting the E2E matrix', () => {
@@ -555,12 +660,17 @@ suite('E2E launch profile', () => {
         assert.ok(releaseLsIndex > releasePsIndex, 'The slow workspace candidate must be released after the running AppHost snapshot.');
     });
 
-    test('patches ExTester launch arguments without replacement-token expansion', () => {
+    test('patches ExTester launch arguments without version-specific assumptions or replacement-token expansion', () => {
         const extensionRoot = path.resolve(__dirname, '..', '..');
         const runner = fs.readFileSync(path.join(extensionRoot, 'scripts', 'run-e2e.js'), 'utf8');
+        const browser = fs.readFileSync(path.join(extensionRoot, 'node_modules', 'vscode-extension-tester', 'out', 'browser.js'), 'utf8');
+        const argsDeclaration = /const args = \[[^\n]*`--user-data-dir=\$\{path\.join\(this\.storagePath, 'settings'\)\}`(?:, [^\n]+?)?\];/.exec(browser);
+        const cleanArgsDeclaration = "const args = ['--no-sandbox', '--disable-dev-shm-usage', `--user-data-dir=${path.join(this.storagePath, 'settings')}`];";
 
-        assert.ok(runner.includes('ExTester 8.23.0 does not expose a supported way to open VS Code with a workspace'));
-        assert.ok(runner.includes('Patching ExTester VS Code launch arguments by exact 8.23.0 argument match.'));
+        assert.ok(argsDeclaration);
+        assert.ok(runner.includes(cleanArgsDeclaration));
+        assert.ok(runner.includes('ExTester does not expose a supported way to open VS Code with a workspace'));
+        assert.ok(runner.includes('Patching ExTester VS Code launch arguments by exact argument match.'));
         assert.ok(runner.includes('source.replace(target, () => replacement)'));
         assert.ok(runner.includes('source.replace(argsDeclarationPattern, () => replacement)'));
     });
@@ -815,10 +925,18 @@ suite('E2E launch profile', () => {
         // reusing the wrong install offline.
         assert.ok(runner.includes('CODE_VERSION: vscodeVersion,'));
         assert.ok(runner.includes('const vscodeVersion = resolveCachedVsCodeVersion('));
+        assert.match(runner, /vscodeVersion,\r?\n\s+extesterVersion,/);
 
         // ExTester's codeStream falls back to CODE_TYPE when --type is absent, and an Insiders
         // build unpacks into directory names this cache does not discover.
         assert.ok(runner.includes("CODE_TYPE: 'stable',"));
+    });
+
+    test('pins unit-test VS Code download to avoid moving latest resolution', () => {
+        const extensionRoot = path.resolve(__dirname, '..', '..');
+        const unitTestConfig = fs.readFileSync(path.join(extensionRoot, '.vscode-test.mjs'), 'utf8');
+
+        assert.ok(unitTestConfig.includes("version: '1.131.0'"));
     });
 
     test('cleans only ExTester download archives between setup retries', () => {
@@ -847,6 +965,7 @@ suite('E2E launch profile', () => {
         assert.ok(resolverStart >= 0);
         assert.ok(resolverBody.includes("normalizedVersion === 'min' || normalizedVersion === 'max'"));
         assert.ok(resolverBody.includes('/^\\d+\\.\\d+(\\.\\d+)?$/.test(normalizedVersion)'));
+        assert.ok(resolverBody.includes("a concrete version such as '1.130.0'"));
         assert.ok(resolverBody.includes('throw new Error('));
     });
 
