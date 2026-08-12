@@ -46,6 +46,7 @@ interface Harness {
     dcpServer: AspireDcpServer;
     queuedSessions: AspireResourceDebugSession[];
     sockets: WebSocket[];
+    beginPendingDebugSessionStart: sinon.SinonStub;
     startDebugSession: sinon.SinonStub;
     trackAlreadyStartedSession: sinon.SinonStub;
 }
@@ -525,6 +526,41 @@ suite('Aspire DCP run session lifecycle', () => {
         assert.strictEqual(stopSession.calledOnce, true);
     });
 
+    test('debugger preparation remains pending shutdown work until the prepared session is handed off', async () => {
+        const preparationCompleted = createDeferred<debuggerExtensions.PreparedDebugSession>();
+        const prepareDebugSession = sinon.stub(debuggerExtensions, 'prepareDebugSession').returns(preparationCompleted.promise);
+        const stopSession = sinon.stub().resolves();
+        const createPromise = createRunResponse(harness, 'node', stopSession);
+
+        await waitFor(() => harness.beginPendingDebugSessionStart.calledOnce);
+        const pendingStart = harness.beginPendingDebugSessionStart.firstCall.returnValue;
+        assert.strictEqual(harness.beginPendingDebugSessionStart.calledBefore(prepareDebugSession), true);
+        assert.strictEqual(pendingStart.dispose.notCalled, true);
+        const runId = getInternals(harness.dcpServer)._runTelemetryById.keys().next().value;
+        assert.ok(runId);
+
+        preparationCompleted.resolve({
+            debugConfiguration: {
+                debugSessionId: harness.dcpId,
+                name: 'prepared node session',
+                request: 'launch',
+                runId,
+                type: 'node',
+            },
+            alreadyStartedSession: {
+                ...createResourceSession('prepared-node-session', stopSession),
+                processId: 1234,
+                termination: new Promise<number>(() => { }),
+            },
+        });
+        const createResponse = await createPromise;
+
+        assert.strictEqual(createResponse.statusCode, 201);
+        sinon.assert.calledOnce(pendingStart.dispose);
+        sinon.assert.calledOnce(harness.trackAlreadyStartedSession);
+        assert.strictEqual(harness.trackAlreadyStartedSession.calledBefore(pendingStart.dispose), true);
+    });
+
     test('DELETE during pending preparation treats a later rejection as cancellation', async () => {
         await stopHarness(harness);
         harness = await startHarness({ runRetentionMs: 1 });
@@ -748,11 +784,13 @@ async function startHarness(options?: DcpServerOptions): Promise<Harness> {
     const dcpSessionId = 'aspire-extension-run-test';
     const dcpId = `${dcpSessionId}-resource`;
     const queuedSessions: AspireResourceDebugSession[] = [];
+    const beginPendingDebugSessionStart = sinon.stub().callsFake(() => ({ dispose: sinon.stub() }));
     const startDebugSession = sinon.stub().callsFake(async () => queuedSessions.shift());
     const trackAlreadyStartedSession = sinon.stub().callsFake(
         (_configuration: unknown, session: AspireResourceDebugSession) => session);
     const debugSession = {
         configuration: {},
+        beginPendingDebugSessionStart,
         startAndGetDebugSession: startDebugSession,
         trackAlreadyStartedResourceSession: trackAlreadyStartedSession,
     } as unknown as AspireDebugSession;
@@ -767,6 +805,7 @@ async function startHarness(options?: DcpServerOptions): Promise<Harness> {
         dcpServer,
         queuedSessions,
         sockets: [],
+        beginPendingDebugSessionStart,
         startDebugSession,
         trackAlreadyStartedSession,
     };

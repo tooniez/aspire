@@ -193,6 +193,7 @@ export interface AspireResourceDebugSession {
     id: string;
     session: vscode.DebugSession;
     stopSession(): Thenable<void>;
+    resetStopSessionAttempt?(): void;
 }
 
 export interface AspireResourceExtendedDebugConfiguration extends vscode.DebugConfiguration {

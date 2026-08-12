@@ -518,6 +518,7 @@ export default class AspireDcpServer {
                     debugSessionId,
                 });
 
+                const pendingDebugSessionStart = aspireDebugSession.beginPendingDebugSessionStart(launchConfig.type);
                 try {
                     const preparedSession = await prepareDebugSession(
                         aspireDebugSession.configuration,
@@ -636,6 +637,8 @@ export default class AspireDcpServer {
 
                     const response: ErrorResponse = { error };
                     respondWithError(res, 500, response);
+                } finally {
+                    pendingDebugSessionStart.dispose();
                 }
             });
 
