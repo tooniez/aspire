@@ -647,19 +647,33 @@ export class AspireDebugSession implements vscode.DebugAdapter {
             return;
           }
 
-          let stopSessionPromise: Thenable<void> | undefined;
+          let stopSessionPromise: Promise<void> | undefined;
+          let cleanupStarted = false;
           const disposalFunction = () => {
             if (stopSessionPromise) {
               return stopSessionPromise;
             }
 
             extensionLogOutputChannel.info(`Stopping debug session: ${session.name} (run id: ${session.configuration.runId})`);
-            stopSessionPromise = vscode.debug.stopDebugging(session);
-
-            // Run any cleanup registered by resource-type extensions (e.g. func host for Azure Functions)
-            cleanupRun(debugConfig.runId);
-
-            return stopSessionPromise;
+            try {
+              const stop = Promise.resolve(vscode.debug.stopDebugging(session));
+              const trackedStop = stop.catch(error => {
+                if (stopSessionPromise === trackedStop) {
+                  stopSessionPromise = undefined;
+                }
+                throw error;
+              });
+              stopSessionPromise = trackedStop;
+              return trackedStop;
+            }
+            finally {
+              if (!cleanupStarted) {
+                cleanupStarted = true;
+                // Resource-specific cleanup belongs to the first stop attempt even when
+                // VS Code rejects it; retrying stopSession must not run teardown twice.
+                cleanupRun(debugConfig.runId);
+              }
+            }
           };
 
           const vsCodeDebugSession: AspireResourceDebugSession = {

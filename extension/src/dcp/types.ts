@@ -157,7 +157,9 @@ export interface ProcessRestartedNotification extends RunSessionNotification {
 
 export interface SessionTerminatedNotification extends RunSessionNotification {
     notification_type: 'sessionTerminated';
-    exit_code: number;
+    // The DCP contract permits omission when termination is not caused by a process exit.
+    // See docs/specs/IDE-execution.md#session-change-notifications.
+    exit_code?: number;
 }
 
 export interface ServiceLogsNotification extends RunSessionNotification {
