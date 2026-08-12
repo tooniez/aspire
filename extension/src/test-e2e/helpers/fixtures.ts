@@ -695,6 +695,19 @@ function getRunningAppHostFromState(appHostPath: string) {
         : state.appHosts.find(candidate => isSamePath(candidate.appHostPath, appHostPath));
 }
 
+export function isProcessAlive(pid: number): boolean {
+    return isProcessRunning(pid);
+}
+
+export async function waitForKnownProcessExit(pid: number, description: string, timeoutMs: number): Promise<void> {
+    try {
+        await waitForProcessExit(pid, timeoutMs);
+    }
+    catch (error) {
+        throw new Error(`Timed out after ${timeoutMs}ms waiting for ${description} ${pid} to exit. Last error: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
 async function waitForProcessExit(pid: number, timeoutMs: number): Promise<void> {
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
