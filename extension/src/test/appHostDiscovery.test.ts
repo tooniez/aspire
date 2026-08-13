@@ -349,6 +349,84 @@ suite('AppHost discovery', () => {
             }
         });
 
+        test('forgetting a workspace folder retires its watchers and cache without cancelling subscribers', async () => {
+            const watcherDisposals: sinon.SinonSpy[] = [];
+            sandbox.stub(vscode.workspace, 'createFileSystemWatcher').callsFake(() => {
+                const dispose = sinon.spy();
+                watcherDisposals.push(dispose);
+                return {
+                    onDidCreate: () => ({ dispose: () => { } }),
+                    onDidChange: () => ({ dispose: () => { } }),
+                    onDidDelete: () => ({ dispose: () => { } }),
+                    dispose,
+                } as unknown as vscode.FileSystemWatcher;
+            });
+            const processKills: sinon.SinonSpy[] = [];
+            const spawnOptions: Array<Parameters<typeof emitLsOutput>[0]> = [];
+            const spawnStub = sandbox.stub(cliModule, 'spawnCliProcess').callsFake((_terminalProvider, _command, _args, options) => {
+                spawnOptions.push(options);
+                const kill = sinon.spy();
+                processKills.push(kill);
+                return { kill } as any;
+            });
+            const service = new AppHostDiscoveryService(makeTerminalProvider());
+            const workspaceFolder = makeWorkspaceFolder(buildPath('workspace'));
+
+            try {
+                const firstDiscovery = service.discover(workspaceFolder);
+                await waitForMicrotasks();
+                assert.strictEqual(spawnStub.callCount, 1);
+                const initialWatcherCount = watcherDisposals.length;
+                assert.ok(initialWatcherCount > 0);
+
+                service.forgetWorkspaceFolder(workspaceFolder);
+                assert.ok(watcherDisposals.every(dispose => dispose.calledOnce));
+                assert.strictEqual(processKills[0].called, false);
+
+                emitLsOutput(spawnOptions[0], []);
+                await firstDiscovery;
+
+                const secondDiscovery = service.discover(workspaceFolder);
+                await waitForMicrotasks();
+                assert.strictEqual(spawnStub.callCount, 2);
+                assert.strictEqual(watcherDisposals.length, initialWatcherCount * 2);
+                emitLsOutput(spawnOptions[1], []);
+                await secondDiscovery;
+            }
+            finally {
+                service.dispose();
+            }
+        });
+
+        test('forgetting one workspace folder preserves other folder caches', async () => {
+            stubFileSystemWatchers(sandbox);
+            const spawnStub = sandbox.stub(cliModule, 'spawnCliProcess').callsFake((_terminalProvider, _command, _args, options) => {
+                emitLsOutput(options, []);
+                return { kill: () => { } } as any;
+            });
+            const service = new AppHostDiscoveryService(makeTerminalProvider());
+            const rootA = makeWorkspaceFolder(buildPath('workspace', 'root-a'));
+            const rootB = makeWorkspaceFolder(buildPath('workspace', 'root-b'));
+
+            try {
+                await service.discover(rootA);
+                await service.discover(rootB);
+                assert.strictEqual(spawnStub.callCount, 2);
+
+                service.forgetWorkspaceFolder(rootB);
+
+                await service.discover(rootA);
+                assert.strictEqual(spawnStub.callCount, 2);
+
+                await service.discover(rootB);
+                assert.strictEqual(spawnStub.callCount, 3);
+                assert.strictEqual(spawnStub.thirdCall.args[3]?.workingDirectory, rootB.uri.fsPath);
+            }
+            finally {
+                service.dispose();
+            }
+        });
+
         test('watches Node module AppHost filenames', async () => {
             const watchedPatterns: string[] = [];
             sandbox.stub(vscode.workspace, 'createFileSystemWatcher').callsFake((pattern) => {
@@ -1711,7 +1789,6 @@ suite('AppHost discovery', () => {
                     path: appHostPath,
                     language: 'csharp',
                     status: 'buildable',
-                    selected: true,
                 }]);
             }
             finally {
@@ -1910,7 +1987,6 @@ suite('AppHost discovery', () => {
                     path: appHostPath,
                     language: 'csharp',
                     status: 'buildable',
-                    selected: true,
                 }]);
             }
             finally {

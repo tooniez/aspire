@@ -248,6 +248,21 @@ export class AppHostDiscoveryService implements vscode.Disposable {
         return findCandidateForEditorFile(filePath, result);
     }
 
+    forgetWorkspaceFolder(workspaceFolder: vscode.WorkspaceFolder): void {
+        const key = path.resolve(workspaceFolder.uri.fsPath);
+        this._cache.delete(key);
+        const watchers = this._watchers.get(key);
+        if (watchers) {
+            watchers.forEach(watcher => watcher.dispose());
+            this._watchers.delete(key);
+        }
+        const pendingInvalidationTimer = this._pendingInvalidationTimers.get(key);
+        if (pendingInvalidationTimer) {
+            clearTimeout(pendingInvalidationTimer);
+            this._pendingInvalidationTimers.delete(key);
+        }
+    }
+
     dispose(): void {
         if (this._disposed) {
             return;
@@ -1141,7 +1156,6 @@ function toCandidatesFromLegacySearchResult(parsed: LegacyAppHostProjectSearchRe
         path: candidatePath,
         language: 'csharp',
         status: 'buildable',
-        selected: typeof parsed.selected_project_file === 'string' && isSamePath(parsed.selected_project_file, candidatePath),
     }));
 }
 
@@ -1192,6 +1206,35 @@ function isCSharpSourceFileForProjectCandidate(filePath: string, projectPath: st
 type FileSystemEntryIdentity = Pick<fs.BigIntStats, 'dev' | 'ino'>;
 type FileSystemEntryIdentityProvider = (filePath: string) => FileSystemEntryIdentity | undefined;
 
+export interface FileSystemEntryDescriptor {
+    resolvedPath: string;
+    identity: FileSystemEntryIdentity | undefined;
+}
+
+export function getFileSystemEntryDescriptor(
+    filePath: string,
+    getIdentity: FileSystemEntryIdentityProvider = tryGetFileSystemEntryIdentity): FileSystemEntryDescriptor {
+    const resolvedPath = path.resolve(filePath);
+    return {
+        resolvedPath,
+        identity: getIdentity(resolvedPath),
+    };
+}
+
+export function isSameFileSystemEntryDescriptor(
+    left: FileSystemEntryDescriptor,
+    right: FileSystemEntryDescriptor): boolean {
+    if (left.resolvedPath === right.resolvedPath) {
+        return true;
+    }
+
+    if (hasStableFileSystemEntryIdentity(left.identity) && hasStableFileSystemEntryIdentity(right.identity)) {
+        return left.identity.dev === right.identity.dev && left.identity.ino === right.identity.ino;
+    }
+
+    return isSamePath(left.resolvedPath, right.resolvedPath);
+}
+
 export function isSameFileSystemEntry(
     left: string,
     right: string,
@@ -1202,16 +1245,14 @@ export function isSameFileSystemEntry(
         return true;
     }
 
-    const leftIdentity = getIdentity(resolvedLeft);
-    const rightIdentity = getIdentity(resolvedRight);
-    if (leftIdentity && rightIdentity && leftIdentity.ino !== 0n && rightIdentity.ino !== 0n) {
-        // Stable native identities are authoritative: case-sensitive Windows directories can
-        // contain distinct entries such as Foo and foo even though textual comparison ignores case.
-        return leftIdentity.dev === rightIdentity.dev && leftIdentity.ino === rightIdentity.ino;
-    }
+    return isSameFileSystemEntryDescriptor(
+        { resolvedPath: resolvedLeft, identity: getIdentity(resolvedLeft) },
+        { resolvedPath: resolvedRight, identity: getIdentity(resolvedRight) });
+}
 
-    // Missing or unstable identities cannot distinguish entries, so retain the platform fallback.
-    return isSamePath(resolvedLeft, resolvedRight);
+function hasStableFileSystemEntryIdentity(
+    identity: FileSystemEntryIdentity | undefined): identity is FileSystemEntryIdentity {
+    return identity !== undefined && identity.ino !== 0n;
 }
 
 function tryGetFileSystemEntryIdentity(filePath: string): FileSystemEntryIdentity | undefined {

@@ -10,7 +10,7 @@ import { AspireDebugConfigurationProvider } from '../debugger/AspireDebugConfigu
 import type { AspireExtendedDebugConfiguration } from '../dcp/types';
 import * as cliPathModule from '../utils/cliPath';
 import { AppHostDiscoveryService } from '../utils/appHostDiscovery';
-import { appHostSelectionOriginConfigKey } from '../debugger/AspireDebugConfigurationMetadata';
+import { appHostLaunchTokenConfigKey, appHostSelectionOriginConfigKey } from '../debugger/AspireDebugConfigurationMetadata';
 
 suite('AspireDebugConfigurationProvider', () => {
     let tempDir: string;
@@ -75,6 +75,22 @@ suite('AspireDebugConfigurationProvider', () => {
         });
 
         assert.strictEqual(config?.program, appHostPath);
+    });
+
+    test('preserves AppHost launch token through substituted variable resolution', async () => {
+        const appHostPath = path.join(tempDir, 'apphost.ts');
+        fs.writeFileSync(appHostPath, 'import { createBuilder } from "./.aspire/modules/aspire";');
+
+        const provider = new AspireDebugConfigurationProvider(createAppHostDiscoveryService(appHostPath, appHostPath, 'typescript/nodejs'));
+        const config = await provider.resolveDebugConfigurationWithSubstitutedVariables(undefined, {
+            name: 'Debug AppHost',
+            type: 'aspire',
+            request: 'launch',
+            program: appHostPath,
+            [appHostLaunchTokenConfigKey]: 42,
+        });
+
+        assert.strictEqual(config?.[appHostLaunchTokenConfigKey], 42);
     });
 
     test('leaves launch config non-AppHost C# source file unchanged', async () => {

@@ -26,7 +26,7 @@ import { classifyAppHostPath, classifyAppHostDirectory } from "../utils/appHostL
 import { bucketAspireCommand } from "../utils/telemetryBuckets";
 import { getAppHostTargetVersion } from "../utils/appHostTargetVersion";
 import type { AspireDebugConsoleOutputEvent } from "../types/extensionApi";
-import { appHostSelectionOriginConfigKey, appHostTelemetryTargetPathConfigKey } from "./AspireDebugConfigurationMetadata";
+import { appHostRestartSourceSessionIdConfigKey, appHostSelectionOriginConfigKey, appHostTelemetryTargetPathConfigKey } from "./AspireDebugConfigurationMetadata";
 
 export type DashboardLaunchBehavior = 'none' | 'notification' | DashboardBrowserType;
 export type DashboardBrowserType = 'openExternalBrowser' | 'integratedBrowser' | 'debugChrome' | 'debugEdge' | 'debugFirefox';
@@ -1077,6 +1077,7 @@ export class AspireDebugSession implements vscode.DebugAdapter {
   private static readonly _csharpAppHostExtensions = ['.cs', '.csproj'];
 
   private _appHostRestartRequested = false;
+  private _preserveAppHostRestartSourceSessionId = false;
 
   async startAppHost(projectFile: string, args: string[], environment: EnvVar[], debug: boolean, options: StartAppHostOptions): Promise<void> {
     try {
@@ -1104,6 +1105,7 @@ export class AspireDebugSession implements vscode.DebugAdapter {
         (debugSessionId) => {
           if (debugSessionId === this.debugSessionId) {
             this._appHostRestartRequested = true;
+            this.configuration[appHostRestartSourceSessionIdConfigKey] = this._session.id;
             return true; // suppress VS Code's child restart
           }
           return false;
@@ -1172,6 +1174,10 @@ export class AspireDebugSession implements vscode.DebugAdapter {
           // they are stopped before the AppHost entry and the Aspire parent, and so a resource that
           // refuses to stop is reported rather than silently dropped by dispose().
           if (shouldRestart) {
+            // The ordered shutdown finalizes this session before VS Code reuses its configuration
+            // for the replacement. Keep the source ID long enough for the terminating parent to
+            // suppress optimistic stopping without affecting the replacement session.
+            this._preserveAppHostRestartSourceSessionId = true;
             // Awaited only on the restart path, so the replacement session is not started while the
             // outgoing one is still tearing its resources down. The wait is bounded by
             // _stopSessionsTimeoutMs.
@@ -1179,6 +1185,8 @@ export class AspireDebugSession implements vscode.DebugAdapter {
               await this.stopDebugging();
             }
             catch (err) {
+              this._preserveAppHostRestartSourceSessionId = false;
+              delete config[appHostRestartSourceSessionIdConfigKey];
               extensionLogOutputChannel.error(`Ordered shutdown before AppHost restart failed: ${describeStopFailure(err)}`);
               void this.requestCliStopForExtensionShutdown().catch(cliStopError => {
                 extensionLogOutputChannel.warn(`Failed to stop Aspire CLI after AppHost restart cleanup failed: ${cliStopError}`);
@@ -1535,6 +1543,10 @@ export class AspireDebugSession implements vscode.DebugAdapter {
   }
 
   dispose(): void {
+    if (!this._preserveAppHostRestartSourceSessionId) {
+      delete this.configuration[appHostRestartSourceSessionIdConfigKey];
+    }
+
     if (this._disposed || this._stopping) {
       return;
     }
@@ -1556,6 +1568,9 @@ export class AspireDebugSession implements vscode.DebugAdapter {
       return;
     }
     this._disposed = true;
+    if (!this._preserveAppHostRestartSourceSessionId) {
+      delete this.configuration[appHostRestartSourceSessionIdConfigKey];
+    }
     extensionLogOutputChannel.info('Stopping the Aspire debug session');
     this._onDidChangeState.fire();
 

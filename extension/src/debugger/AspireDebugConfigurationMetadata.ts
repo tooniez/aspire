@@ -1,4 +1,6 @@
 export const appHostTelemetryTargetPathConfigKey = '__aspireAppHostTelemetryTargetPath';
+export const appHostLaunchTokenConfigKey = '__aspireAppHostLaunchToken';
+export const appHostRestartSourceSessionIdConfigKey = '__aspireAppHostRestartSourceSessionId';
 
 // This internal field survives VS Code's two debug-configuration resolver stages so the
 // eventual CLI process can distinguish a launch.json-owned target from a persisted default.

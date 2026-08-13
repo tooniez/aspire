@@ -190,7 +190,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
   const debugSessionRefreshRegistration = appHostLaunchService.onDidTerminateAppHostDebugSession(event => {
     if (event.shouldRequestStopRefresh) {
-      appHostTreeProvider.notifyAppHostStopping(event.appHostPath);
+      appHostTreeProvider.notifyAppHostStopping(event.appHostPath, event.shouldMarkAppHostStopping);
     }
   });
 
