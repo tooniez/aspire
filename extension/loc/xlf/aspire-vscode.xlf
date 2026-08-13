@@ -100,6 +100,9 @@
     <trans-unit id="aspire-vscode.strings.azureFunctionsCmdPercentArgument">
       <source xml:lang="en">Azure Functions launch arguments containing &quot;%&quot; are not supported by cmd.exe. Configure terminal.integrated.automationProfile.windows to use PowerShell and try again.</source>
     </trans-unit>
+    <trans-unit id="aspire-vscode.strings.azureFunctionsTaskExitedBeforeStartup">
+      <source xml:lang="en">Azure Functions task exited with code {0} before startup completed.</source>
+    </trans-unit>
     <trans-unit id="aspire-vscode.strings.unsupportedBrowserDebugTarget">
       <source xml:lang="en">Browser &apos;{0}&apos; cannot be debugged for &apos;{1}&apos;. Supported browsers are: {2}.</source>
     </trans-unit>
@@ -750,6 +753,12 @@
     </trans-unit>
     <trans-unit id="configuration.aspire.globalAppHostsPollingInterval.deprecated">
       <source xml:lang="en">This setting has been renamed to aspire.appHostsPollingInterval.</source>
+    </trans-unit>
+    <trans-unit id="aspire-vscode.strings.azureFunctionsHostStartupTimedOut">
+      <source xml:lang="en">Timed out after {0} seconds waiting for the Azure Functions host to start on port {1}.</source>
+    </trans-unit>
+    <trans-unit id="aspire-vscode.strings.azureFunctionsWorkerStartupTimedOut">
+      <source xml:lang="en">Timed out after {0} seconds waiting for the Azure Functions worker process to start.</source>
     </trans-unit>
     <trans-unit id="aspire-vscode.strings.debugSessionStartTimedOut">
       <source xml:lang="en">Timed out after {1} seconds waiting for debug session &apos;{0}&apos; to start.</source>
