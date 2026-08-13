@@ -257,7 +257,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         var exe = Assert.Single(executables);
 
         string[] dotnetToolExecArgs = ["tool", "exec", "package", "--yes", "--"];
-        string[] callArgs = [..dotnetToolExecArgs, ..toolArgs];
+        string[] callArgs = [.. dotnetToolExecArgs, .. toolArgs];
 
         Assert.Equal(callArgs, exe.Spec.Args);
 
@@ -4500,6 +4500,73 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    public async Task PlainExecutable_LaunchConfigurationProducerReceivesResolvedEnvironmentVariables()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        LaunchConfigurationCallbackContext? launchContext = null;
+        var environmentCallbackInvocationCount = 0;
+        var debugSessionInfo = JsonSerializer.Serialize(new RunSessionInfo
+        {
+            ProtocolsSupported = ["test"],
+            SupportedLaunchConfigurations = ["test"]
+        });
+        builder.Configuration[DcpExecutor.DebugSessionPortVar] = "12345";
+        builder.Configuration[KnownConfigNames.DebugSessionInfo] = debugSessionInfo;
+        builder.Configuration[KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug;
+
+        var resource = new TestExecutableResource("test-working-directory");
+        builder.AddResource(resource)
+            .WithArgs("app-arg")
+            .WithEnvironment(context =>
+            {
+                var currentInvocation = Interlocked.Increment(ref environmentCallbackInvocationCount);
+                context.EnvironmentVariables["DEBUG_VALUE"] = $"resolved-{currentInvocation}";
+            })
+            .WithDebugSupport(
+                context =>
+                {
+                    launchContext = context;
+                    return Task.FromResult(new ExecutableLaunchConfiguration("test")
+                    {
+                        Mode = context.Mode
+                    });
+                },
+                "test");
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DcpExecutor.DebugSessionPortVar] = "12345",
+                [KnownConfigNames.DebugSessionInfo] = debugSessionInfo,
+                [KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug
+            })
+            .Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var appExecutor = CreateAppExecutor(
+            distributedAppModel,
+            kubernetesService: kubernetesService,
+            configuration: configuration);
+        using var cts = new CancellationTokenSource();
+
+        await appExecutor.RunApplicationAsync(cts.Token);
+
+        Assert.NotNull(launchContext);
+        Assert.Equal(ExecutableLaunchMode.Debug, launchContext.Mode);
+        Assert.Same(resource, launchContext.Resource);
+        Assert.Equal(cts.Token, launchContext.CancellationToken);
+
+        var executable = GetCreatedExecutableForResource(kubernetesService, resource.Name);
+        var debugValue = Assert.Single(executable.Spec.Env!, variable => variable.Name == "DEBUG_VALUE").Value;
+        Assert.Equal(1, Volatile.Read(ref environmentCallbackInvocationCount));
+        Assert.Equal("resolved-1", debugValue);
+        Assert.Equal(debugValue, launchContext.EnvironmentVariables["DEBUG_VALUE"]);
+        Assert.Equal(["app-arg"], executable.Spec.Args);
+    }
+
+    [Fact]
     public async Task PlainExecutable_ExtensionMode_SupportedDebugMode_RunsInIde()
     {
         // Arrange
@@ -6152,6 +6219,223 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         Assert.Equal("-e", launchConfig.MsBuildProperties!["AdbTarget"]);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MauiProjectWithLaunchArgsOverrideAndSupportedLaunchConfiguration_StillAppliesMauiLaunchConfiguration(bool useContextOverload)
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        var projectBuilder = builder.AddProject<TestProject>("proj", launchProfileName: null);
+        var projectResource = projectBuilder.Resource;
+        var defaultDebugSupport = projectBuilder.Resource.Annotations.OfType<SupportsDebuggingAnnotation>().FirstOrDefault();
+        if (defaultDebugSupport is not null)
+        {
+            projectBuilder.Resource.Annotations.Remove(defaultDebugSupport);
+        }
+
+#pragma warning disable ASPIREPROJECTS001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        projectBuilder.Resource.Annotations.Add(
+            new ProjectLaunchArgsOverrideAnnotation(
+                ["build", "--no-restore", "/t:Run", "-p:NoBuild=true"],
+                leadingResourceArgumentToRemove: "run"));
+#pragma warning restore ASPIREPROJECTS001
+
+        var producerInvocationCount = 0;
+        LaunchConfigurationCallbackContext? launchContext = null;
+
+        if (useContextOverload)
+        {
+            projectBuilder.WithDebugSupport(
+                context =>
+                {
+                    Interlocked.Increment(ref producerInvocationCount);
+                    launchContext = context;
+                    return Task.FromResult(CreateMauiLaunchConfiguration(context.Mode));
+                },
+                "maui");
+        }
+        else
+        {
+            projectBuilder.WithDebugSupport(
+                mode =>
+                {
+                    Interlocked.Increment(ref producerInvocationCount);
+                    return CreateMauiLaunchConfiguration(mode);
+                },
+                "maui");
+        }
+
+        projectBuilder.WithArgs("run", "-f", "net10.0-android");
+
+        var debugSessionInfo = JsonSerializer.Serialize(new RunSessionInfo
+        {
+            ProtocolsSupported = ["coreclr"],
+            SupportedLaunchConfigurations = ["maui"]
+        });
+        builder.Configuration[DcpExecutor.DebugSessionPortVar] = "12345";
+        builder.Configuration[KnownConfigNames.DebugSessionInfo] = debugSessionInfo;
+        builder.Configuration[KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug;
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DcpExecutor.DebugSessionPortVar] = "12345",
+                [KnownConfigNames.DebugSessionInfo] = debugSessionInfo,
+                [KnownConfigNames.ExtensionEndpoint] = "http://localhost:1234",
+                [KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug
+            })
+            .Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedApplicationOptions = new DistributedApplicationOptions { AssemblyName = typeof(DcpExecutorTests).Assembly.FullName };
+        var expectedConfiguration = System.Reflection.CustomAttributeExtensions.GetCustomAttribute<System.Reflection.AssemblyConfigurationAttribute>(typeof(DcpExecutorTests).Assembly)?.Configuration;
+        var appExecutor = CreateAppExecutor(
+            app.Services.GetRequiredService<DistributedApplicationModel>(),
+            kubernetesService: kubernetesService,
+            configuration: configuration,
+            distributedApplicationOptions: distributedApplicationOptions);
+
+        await appExecutor.RunApplicationAsync();
+
+        var executable = GetCreatedExecutableForResource(kubernetesService, "proj");
+        Assert.Equal(ExecutionType.Process, executable.Spec.ExecutionType);
+        Assert.Equal(1, Volatile.Read(ref producerInvocationCount));
+        var expectedArgs = new List<string>
+        {
+            "build",
+            "--no-restore",
+            "/t:Run",
+            "-p:NoBuild=true",
+            "TestProject"
+        };
+        if (!string.IsNullOrEmpty(expectedConfiguration))
+        {
+            expectedArgs.AddRange(["--configuration", expectedConfiguration]);
+        }
+        expectedArgs.AddRange(["-f", "net10.0-android"]);
+        Assert.Equal(expectedArgs, executable.Spec.Args);
+        Assert.True(executable.TryGetAnnotationAsObjectList<TestMauiLaunchConfiguration>(
+            Executable.LaunchConfigurationsAnnotation,
+            out var launchConfigurations));
+        var launchConfiguration = Assert.Single(launchConfigurations);
+        Assert.Equal(ExecutableLaunchMode.Debug, launchConfiguration.Mode);
+        Assert.Equal("/mauiapp/MauiApp.csproj", launchConfiguration.ProjectPath);
+
+        if (useContextOverload)
+        {
+            Assert.NotNull(launchContext);
+            Assert.Equal(ExecutableLaunchMode.Debug, launchContext.Mode);
+            Assert.Same(projectResource, launchContext.Resource);
+        }
+
+        static TestMauiLaunchConfiguration CreateMauiLaunchConfiguration(string mode) => new()
+        {
+            Mode = mode,
+            ProjectPath = "/mauiapp/MauiApp.csproj",
+            TargetFramework = "net10.0-android",
+            Platform = "android",
+            TargetKind = "emulator"
+        };
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task MauiProjectWithLaunchArgsOverride_LaunchConfigurationProducerThrows_RemainsInProcessExecution(bool useContextOverload)
+    {
+        // The launch override already provides a runnable Process command. A custom launch producer can add
+        // metadata in that mode, but a producer fault must not discard the process invocation.
+        var builder = DistributedApplication.CreateBuilder();
+        var projectBuilder = builder.AddProject<TestProject>("proj", launchProfileName: null);
+        var defaultDebugSupport = projectBuilder.Resource.Annotations.OfType<SupportsDebuggingAnnotation>().FirstOrDefault();
+        if (defaultDebugSupport is not null)
+        {
+            projectBuilder.Resource.Annotations.Remove(defaultDebugSupport);
+        }
+
+#pragma warning disable ASPIREPROJECTS001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+        projectBuilder.Resource.Annotations.Add(
+            new ProjectLaunchArgsOverrideAnnotation(
+                ["build", "--no-restore", "/t:Run", "-p:NoBuild=true"],
+                leadingResourceArgumentToRemove: "run"));
+#pragma warning restore ASPIREPROJECTS001
+
+        var producerInvocationCount = 0;
+        if (useContextOverload)
+        {
+            projectBuilder.WithDebugSupport(
+                async Task<TestMauiLaunchConfiguration> (context) =>
+                {
+                    Interlocked.Increment(ref producerInvocationCount);
+                    await Task.Yield();
+                    throw new InvalidOperationException("Test exception from async launch configuration producer");
+                },
+                "maui");
+        }
+        else
+        {
+            projectBuilder.WithDebugSupport(
+                TestMauiLaunchConfiguration (mode) =>
+                {
+                    Interlocked.Increment(ref producerInvocationCount);
+                    throw new InvalidOperationException("Test exception from launch configuration producer");
+                },
+                "maui");
+        }
+
+        projectBuilder.WithArgs("run", "-f", "net10.0-android");
+
+        var debugSessionInfo = JsonSerializer.Serialize(new RunSessionInfo
+        {
+            ProtocolsSupported = ["coreclr"],
+            SupportedLaunchConfigurations = ["maui"]
+        });
+        builder.Configuration[DcpExecutor.DebugSessionPortVar] = "12345";
+        builder.Configuration[KnownConfigNames.DebugSessionInfo] = debugSessionInfo;
+        builder.Configuration[KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug;
+
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [DcpExecutor.DebugSessionPortVar] = "12345",
+                [KnownConfigNames.DebugSessionInfo] = debugSessionInfo,
+                [KnownConfigNames.ExtensionEndpoint] = "http://localhost:1234",
+                [KnownConfigNames.DebugSessionRunMode] = ExecutableLaunchMode.Debug
+            })
+            .Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedApplicationOptions = new DistributedApplicationOptions { AssemblyName = typeof(DcpExecutorTests).Assembly.FullName };
+        var appExecutor = CreateAppExecutor(
+            app.Services.GetRequiredService<DistributedApplicationModel>(),
+            kubernetesService: kubernetesService,
+            configuration: configuration,
+            distributedApplicationOptions: distributedApplicationOptions);
+
+        await appExecutor.RunApplicationAsync();
+
+        var executable = GetCreatedExecutableForResource(kubernetesService, "proj");
+        Assert.Equal(ExecutionType.Process, executable.Spec.ExecutionType);
+        Assert.Equal(1, Volatile.Read(ref producerInvocationCount));
+
+        var expectedArgs = new List<string>
+        {
+            "build",
+            "--no-restore",
+            "/t:Run",
+            "-p:NoBuild=true",
+            "TestProject"
+        };
+        if (GetTestAssemblyConfiguration() is { } configurationName)
+        {
+            expectedArgs.AddRange(["--configuration", configurationName]);
+        }
+        expectedArgs.AddRange(["-f", "net10.0-android"]);
+        Assert.Equal(expectedArgs, executable.Spec.Args);
+    }
+
     [Fact]
     public async Task ProjectResource_CustomIdeLaunch_OwnedDotnetToolRunArgsPreserveLaunchProfileArgs()
     {
@@ -6741,13 +7025,10 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
-    public async Task ProjectExecutable_AsyncLaunchConfigurationProducer_IsAwaitedDuringPrepare()
+    public async Task ProjectExecutable_AsyncLaunchConfigurationProducer_IsAwaitedDuringCreate()
     {
-        // Regression guard for the async launch configuration producer. A ProjectResource has its "project"
-        // launch configuration applied while DCP objects are *prepared* (PrepareProjectExecutablesAsync), not
-        // when they are created, so this is the path that previously forced producers to be synchronous.
-        // A producer that genuinely suspends must still be awaited to completion before the Executable is
-        // handed to DCP; otherwise the annotation would be missing or hold an unresolved Task.
+        // Project launch configuration producers run after the execution configuration has been resolved.
+        // A producer that genuinely suspends must still complete before the executable is handed to DCP.
         var builder = DistributedApplication.CreateBuilder(new DistributedApplicationOptions
         {
             AssemblyName = typeof(DistributedApplicationTests).Assembly.FullName
@@ -6755,7 +7036,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
 
         var projectBuilder = builder.AddProject<Projects.ServiceA>("ServiceA", launchProfileName: null);
         projectBuilder.WithDebugSupport(
-            async (mode, ct) =>
+            async (mode, _) =>
             {
                 // Yield so the producer completes asynchronously rather than returning an already-completed task.
                 await Task.Yield();
@@ -6797,7 +7078,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
 
         var debuggableExecutable = new TestExecutableResource("test-working-directory");
         builder.AddResource(debuggableExecutable).WithDebugSupport(
-            async (mode, ct) =>
+            async (mode, _) =>
             {
                 await Task.Yield();
                 return new ExecutableLaunchConfiguration("test") { Mode = mode };
@@ -6837,7 +7118,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
 
         var debuggableExecutable = new TestExecutableResource("test-working-directory");
         builder.AddResource(debuggableExecutable).WithDebugSupport<TestExecutableResource, ExecutableLaunchConfiguration>(
-            async (mode, ct) =>
+            async (_, _) =>
             {
                 await Task.Yield();
                 throw new InvalidOperationException("Test exception from async launch configuration producer");
@@ -8934,7 +9215,9 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
         var builder = DistributedApplication.CreateBuilder();
 
         var debuggableExecutable = new TestExecutableResource("test-working-directory");
-        builder.AddResource(debuggableExecutable).WithDebugSupport<TestExecutableResource, ExecutableLaunchConfiguration>((_, _) => throw new InvalidOperationException("Test exception from launch configuration producer"), "test");
+        builder.AddResource(debuggableExecutable).WithDebugSupport<TestExecutableResource, ExecutableLaunchConfiguration>(
+            _ => throw new InvalidOperationException("Test exception from launch configuration producer"),
+            "test");
 
         var runSessionInfo = new RunSessionInfo
         {
@@ -9029,7 +9312,7 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
             projectBuilder.Resource.Annotations.Remove(annotationToRemove);
         }
         projectBuilder.WithDebugSupport<ProjectResource, ExecutableLaunchConfiguration>(
-            (_, _) => throw new InvalidOperationException("Test exception from launch configuration producer"),
+            _ => throw new InvalidOperationException("Test exception from launch configuration producer"),
             "azure-functions");
 
         var configDict = new Dictionary<string, string?>
@@ -9377,13 +9660,13 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
 
         var nameGenerator = new DcpNameGenerator(configuration, Options.Create(dcpOptions));
         var executionContext = new DistributedApplicationExecutionContext(new DistributedApplicationExecutionContextOptions(DistributedApplicationOperation.Run)
-            {
-                Services = new TestServiceProvider(configuration)
-                    .AddService<IDeveloperCertificateService>(developerCertificateService)
-                    .AddService(distributedAppModel)
-                    .AddService(Options.Create(dcpOptions))
-                    .AddService(resourceLoggerService)
-            });
+        {
+            Services = new TestServiceProvider(configuration)
+                .AddService<IDeveloperCertificateService>(developerCertificateService)
+                .AddService(distributedAppModel)
+                .AddService(Options.Create(dcpOptions))
+                .AddService(resourceLoggerService)
+        });
         var ks = kubernetesService ?? new TestKubernetesService();
         var dcpEvts = events ?? new DcpExecutorEvents();
         var fileSystemService = new FileSystemService(configuration);
