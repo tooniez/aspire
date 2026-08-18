@@ -5250,6 +5250,64 @@ public class DcpExecutorTests(ITestOutputHelper outputHelper)
     }
 
     [Fact]
+    [SkipOnPlatform(TestPlatforms.Windows, "Unix file modes do not apply on Windows, where the directory inherits its ACL from the parent.")]
+    public async Task PersistentPlainExecutable_WritesCustomBundleDirectoryOwnerOnly()
+    {
+        var builder = DistributedApplication.CreateBuilder();
+        using var fileSystemService = new FileSystemService(new ConfigurationBuilder().Build());
+        using var aspireStoreDirectory = fileSystemService.TempDirectory.CreateTempSubdirectory("aspire-store");
+
+        using var certificate = CreateTestCertificate();
+        var certificateAuthorities = builder.AddCertificateAuthorityCollection("certificates")
+            .WithCertificate(certificate);
+
+        var executable = new TestExecutableResource("test-working-directory");
+        builder.AddResource(executable)
+            .WithCertificateAuthorityCollection(certificateAuthorities)
+            .WithCertificateTrustScope(CertificateTrustScope.Override)
+            // A custom bundle is what Aspire.Hosting.Java writes for JAVAX_NET_SSL_TRUSTSTORE, and it is
+            // the only thing that causes the bundles/ directory to be created.
+            .WithCertificateTrustConfiguration(static ctx =>
+            {
+                ctx.EnvironmentVariables["TEST_BUNDLE"] = ctx.CreateCustomBundle(static (_, _) => Task.FromResult(new byte[] { 1, 2, 3 }));
+                return Task.CompletedTask;
+            })
+            // Persistent lifetime is the case that matters: the bundle lands in the stable Aspire store
+            // path rather than inside the session-scoped temp directory, which is already owner-only.
+            .WithPersistentLifetime();
+
+        var configDict = new Dictionary<string, string?>
+        {
+            [AspireStore.AspireStorePathKeyName] = aspireStoreDirectory.Path,
+            ["AppHost:Sha256"] = "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+        };
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(configDict).Build();
+
+        var kubernetesService = new TestKubernetesService();
+        using var app = builder.Build();
+        var distributedAppModel = app.Services.GetRequiredService<DistributedApplicationModel>();
+        var appExecutor = CreateAppExecutor(distributedAppModel, kubernetesService: kubernetesService, configuration: configuration);
+
+        await appExecutor.RunApplicationAsync();
+
+        var certificatesRoot = Path.Join(aspireStoreDirectory.Path, ".aspire", "dcp", "executables", "TestExecutable-12345678", "certificates");
+        var bundlesDirectory = Path.Join(certificatesRoot, "bundles");
+        Assert.True(Directory.Exists(bundlesDirectory), $"Expected the custom bundle directory to exist at {bundlesDirectory}.");
+
+        var mode = GetUnixFileModeForTest(bundlesDirectory);
+        Assert.Equal(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute, mode);
+    }
+
+    private static UnixFileMode GetUnixFileModeForTest(string path)
+    {
+        // The caller guards on platform, but the analyzer cannot see through [SkipOnPlatform].
+#pragma warning disable CA1416
+        return File.GetUnixFileMode(path);
+#pragma warning restore CA1416
+    }
+
+    [Fact]
     public void PlainExecutableCertificateDirectoriesPath_IncludesExistingWellKnownDirectoriesForAppendWhenSslCertDirIsUnsetOnLinux()
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "OpenSSL default certificate directories are only inferred on Linux.");

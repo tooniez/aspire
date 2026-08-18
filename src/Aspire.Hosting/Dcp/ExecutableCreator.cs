@@ -733,7 +733,19 @@ internal sealed class ExecutableCreator : IObjectCreator<Executable, EmptyCreati
 
             if (certificateTrustConfiguration.CustomBundlesFactories.Count > 0)
             {
-                Directory.CreateDirectory(customBundleOutputPath);
+                if (OperatingSystem.IsWindows())
+                {
+                    Directory.CreateDirectory(customBundleOutputPath);
+                }
+                else
+                {
+                    // Owner-only, matching the server-auth directory below. A custom bundle is a trust
+                    // store: anything that can write to it chooses which roots the process trusts. The
+                    // enclosing temp directory is already owner-only, but that only holds for the
+                    // session-scoped path - a Lifetime.Persistent executable writes outside it, where
+                    // the default umask would leave this directory group- and world-readable.
+                    Directory.CreateDirectory(customBundleOutputPath, UnixFileMode.UserExecute | UnixFileMode.UserWrite | UnixFileMode.UserRead);
+                }
             }
 
             foreach (var bundleFactory in certificateTrustConfiguration.CustomBundlesFactories)
