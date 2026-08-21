@@ -63,7 +63,7 @@ suite('registerCliCommands', () => {
             tryExecuteDoAppHost: tryExecuteDoAppHostStub,
         } as unknown as AspireEditorCommandProvider;
 
-        registerCliCommands(terminalProvider, editorCommandProvider);
+        registerCliCommands(terminalProvider, editorCommandProvider, new ConfigInfoProvider(terminalProvider));
     });
 
     teardown(() => {
@@ -252,7 +252,12 @@ suite('registerCliCommands', () => {
 
         assert.strictEqual(getAppHostPathStub.calledOnce, true);
         assert.ok(resolveCliPathStub.calledOnceWith(target));
-        assert.ok(hasCapabilityStub.calledOnceWith('pipelines', { target, cliPath: '/resolved/aspire' }));
+        assert.ok(hasCapabilityStub.calledOnceWith('pipelines', {
+            target,
+            cliPath: '/resolved/aspire',
+            suppressErrors: true,
+            forceRefresh: true,
+        }));
         assert.ok(tryExecuteDoAppHostStub.calledOnceWith(false, undefined, appHostPath, target, '/resolved/aspire'));
     });
 
