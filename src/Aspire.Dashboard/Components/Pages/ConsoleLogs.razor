@@ -176,5 +176,11 @@
                     ShowResourcePrefix="@_isSubscribedToAll"/>
             }
         </MainSection>
+        <FooterSection>
+            @if (PauseText is not null)
+            {
+                <PauseWarning PauseText="@PauseText" />
+            }
+        </FooterSection>
     </AspirePageContentLayout>
 </div>
