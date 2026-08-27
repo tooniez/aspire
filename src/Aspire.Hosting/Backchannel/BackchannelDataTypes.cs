@@ -61,6 +61,11 @@ internal static class AuxiliaryBackchannelCapabilities
     /// Older clients ignore the new fields/RPC; new clients gate CLI/UI affordances on this capability.
     /// </summary>
     public const string Terminals_V1 = "terminals.v1";
+
+    /// <summary>
+    /// Resource snapshot version capability: snapshots include monotonic versions that can be used for ordering.
+    /// </summary>
+    public const string ResourceSnapshotVersions_V1 = "resource-snapshot-versions.v1";
 }
 
 /// <summary>
@@ -1078,6 +1083,11 @@ internal sealed class ResourceSnapshot
     /// Gets the unique name of the resource.
     /// </summary>
     public required string Name { get; init; }
+
+    /// <summary>
+    /// Gets the monotonically increasing version of this resource snapshot, or <c>0</c> when unavailable.
+    /// </summary>
+    public long Version { get; init; }
 
     /// <summary>
     /// Gets the display name of the resource.
