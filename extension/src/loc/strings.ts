@@ -185,6 +185,8 @@ export const failedToGetConfigInfo = (exitCode: number) => vscode.l10n.t('Failed
 export const failedToParseConfigInfo = (error: any) => vscode.l10n.t('Failed to parse Aspire config info: {0}. Try updating the Aspire CLI with: aspire update', error);
 export const errorGettingConfigInfo = (error: any) => vscode.l10n.t('Error getting Aspire config info: {0}. Try updating the Aspire CLI with: aspire update', error);
 export const configInfoTimedOut = (seconds: number) => vscode.l10n.t('Aspire config info timed out after {0} seconds.', seconds);
+export const outdatedAspireCliWarning = (version: string, cliPath: string, recommendedVersion: string) => vscode.l10n.t('Aspire CLI {0} at {1} has a newer version available for its current channel: {2}.', version, cliPath, recommendedVersion);
+export const updateAspireCliAction = vscode.l10n.t({ message: 'Update Aspire CLI', comment: 'Button label that updates the installed Aspire CLI.' });
 export const invalidLaunchConfiguration = (projectPath: string) => vscode.l10n.t('Invalid launch configuration for {0}.', projectPath);
 export const browserDisplayName = (url: string) => vscode.l10n.t('Browser: {0}', url);
 export const browserLabel = vscode.l10n.t('Browser');
