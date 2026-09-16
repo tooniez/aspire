@@ -60,7 +60,7 @@ public interface IDashboardRunStore
     void PublishRun();
 
     /// <summary>
-    /// Deletes dashboard runs beyond the retention limit.
+    /// Deletes dashboard runs beyond the retention limit and abandoned run lock files.
     /// </summary>
     void PruneExpiredRuns();
 }
@@ -236,6 +236,26 @@ internal sealed class DashboardRunStore : IDashboardRunStore, IDisposable
                     directory);
             }
         }
+
+        DeleteUnheldLocks(
+            temporaryRoot,
+            $"{TemporaryDirectoryPrefix}*.lock",
+            GetRunLockPath(CurrentWorkingDirectory));
+    }
+
+    private static void DeleteUnheldLocks(string directory, string searchPattern, string currentLockPath)
+    {
+        foreach (var lockPath in Directory.EnumerateFiles(directory, searchPattern, SearchOption.TopDirectoryOnly))
+        {
+            if (string.Equals(lockPath, currentLockPath, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // Acquiring the lock proves no dashboard process currently owns it. FileLock uses DeleteOnClose,
+            // so disposing a successfully acquired stale lock removes the file while active locks remain untouched.
+            using var runLock = FileLock.TryAcquire(lockPath);
+        }
     }
 
     public string CurrentWorkingDirectory { get; }
@@ -310,7 +330,7 @@ internal sealed class DashboardRunStore : IDashboardRunStore, IDisposable
     }
 
     /// <summary>
-    /// Deletes run directories beyond the retention limit.
+    /// Deletes run directories beyond the retention limit and abandoned run lock files.
     /// </summary>
     /// <remarks>
     /// Kept separate from <see cref="PublishRun"/> because pruning walks every run directory, takes a cross-process
@@ -325,6 +345,7 @@ internal sealed class DashboardRunStore : IDashboardRunStore, IDisposable
         }
 
         PruneRuns(_deleteRunDirectory);
+        DeleteUnheldLocks(_runsDirectory, "*.lock", GetRunLockPath(CurrentWorkingDirectory));
     }
 
     public IDisposable? TryAcquireRunLease(DashboardRunDescriptor run)

@@ -341,6 +341,36 @@ public sealed class DashboardDataSourceTests(ITestOutputHelper testOutputHelper)
     }
 
     [Fact]
+    public void NoneMode_DeletesOnlyUnheldTemporaryLocks()
+    {
+        using var workspace = TemporaryWorkspace.Create(testOutputHelper);
+        var temporaryRoot = Path.GetTempPath();
+        var abandonedLockPath = Path.Combine(temporaryRoot, $"aspire-dashboard-{Guid.NewGuid():N}.lock");
+        var activeLockPath = Path.Combine(temporaryRoot, $"aspire-dashboard-{Guid.NewGuid():N}.lock");
+        var unrelatedLockPath = Path.Combine(temporaryRoot, $"unrelated-{Guid.NewGuid():N}.lock");
+        File.WriteAllText(abandonedLockPath, string.Empty);
+        File.WriteAllText(activeLockPath, string.Empty);
+        File.WriteAllText(unrelatedLockPath, string.Empty);
+
+        try
+        {
+            using var activeLock = new FileStream(activeLockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            using var runStore = CreateRunStore(CreateOptions(workspace, persistenceMode: DashboardPersistenceMode.None));
+
+            Assert.False(File.Exists(abandonedLockPath));
+            Assert.True(File.Exists(activeLockPath));
+            Assert.True(File.Exists(unrelatedLockPath));
+            Assert.True(File.Exists(DashboardRunStore.GetRunLockPath(runStore.CurrentWorkingDirectory)));
+        }
+        finally
+        {
+            File.Delete(abandonedLockPath);
+            File.Delete(activeLockPath);
+            File.Delete(unrelatedLockPath);
+        }
+    }
+
+    [Fact]
     public async Task NoneMode_DoesNotDeleteActiveTemporaryDirectories()
     {
         using var workspace = TemporaryWorkspace.Create(testOutputHelper);
@@ -673,6 +703,27 @@ public sealed class DashboardDataSourceTests(ITestOutputHelper testOutputHelper)
         Assert.False(Directory.Exists(historicalRunDirectories[^1]));
         Assert.All(historicalRunDirectories[..^1], directory => Assert.True(Directory.Exists(directory)));
         Assert.True(Directory.Exists(currentRunStore.CurrentWorkingDirectory));
+    }
+
+    [Fact]
+    public async Task RunMode_PruningDeletesOnlyUnheldRunLocks()
+    {
+        using var workspace = TemporaryWorkspace.Create(testOutputHelper);
+        var options = CreateOptions(workspace);
+        var runsDirectory = DashboardRunStore.GetRunsDirectory(workspace.Path);
+        Directory.CreateDirectory(runsDirectory);
+        var abandonedLockPath = Path.Combine(runsDirectory, "abandoned.lock");
+        var activeLockPath = Path.Combine(runsDirectory, "active.lock");
+        File.WriteAllText(abandonedLockPath, string.Empty);
+        File.WriteAllText(activeLockPath, string.Empty);
+
+        using var activeLock = new FileStream(activeLockPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        using var runStore = CreateRunStore(options);
+        await InitializeAndPublishRunAsync(runStore);
+
+        Assert.False(File.Exists(abandonedLockPath));
+        Assert.True(File.Exists(activeLockPath));
+        Assert.True(File.Exists(DashboardRunStore.GetRunLockPath(runStore.CurrentWorkingDirectory)));
     }
 
     [Fact]
