@@ -48,9 +48,10 @@ public static partial class SqlServerBuilderExtensions
         var sqlServer = new SqlServerServerResource(name, passwordParameter);
 
         string? connectionString = null;
+        string? healthCheckConnectionString = null;
 
         var healthCheckKey = $"{name}_check";
-        builder.Services.AddHealthChecks().AddSqlServer(sp => connectionString ?? throw new InvalidOperationException("Connection string is unavailable"), name: healthCheckKey);
+        builder.Services.AddHealthChecks().AddSqlServer(sp => healthCheckConnectionString ?? throw new InvalidOperationException("Connection string is unavailable"), name: healthCheckKey);
 
         return builder.AddResource(sqlServer)
                       .WithEndpoint(port: port, targetPort: 1433, name: SqlServerServerResource.PrimaryEndpointName)
@@ -71,6 +72,8 @@ public static partial class SqlServerBuilderExtensions
                           {
                               throw new DistributedApplicationException($"ConnectionStringAvailableEvent was published for the '{sqlServer.Name}' resource but the connection string was null.");
                           }
+
+                          healthCheckConnectionString = CreateHealthCheckConnectionString(connectionString);
                       })
                       .OnResourceReady(async (sqlServer, @event, ct) =>
                       {
@@ -93,6 +96,18 @@ public static partial class SqlServerBuilderExtensions
                           }
                       });
     }
+
+    /// <summary>
+    /// Creates the connection string used by the SQL Server health checks.
+    /// </summary>
+    /// <remarks>
+    /// The default <see cref="PoolBlockingPeriod.Auto"/> caches a failed open for up to a minute and replays it to every
+    /// caller on the same pool without contacting the server. A health check should report the server's current state,
+    /// so it disables the blocking period. The distinct connection string also gives the health check its own pool, so its
+    /// transient failures cannot affect other connections in the process that use the resource's connection string.
+    /// </remarks>
+    internal static string CreateHealthCheckConnectionString(string connectionString)
+        => new SqlConnectionStringBuilder(connectionString) { PoolBlockingPeriod = PoolBlockingPeriod.NeverBlock }.ConnectionString;
 
     /// <summary>
     /// Adds a REPL command that opens an authenticated SQL Server shell in the dashboard terminal dock.
@@ -194,10 +209,10 @@ public static partial class SqlServerBuilderExtensions
 
         builder.Resource.AddDatabase(sqlServerDatabase);
 
-        string? connectionString = null;
+        string? healthCheckConnectionString = null;
 
         var healthCheckKey = $"{name}_check";
-        builder.ApplicationBuilder.Services.AddHealthChecks().AddSqlServer(sp => connectionString ?? throw new InvalidOperationException("Connection string is unavailable"), name: healthCheckKey);
+        builder.ApplicationBuilder.Services.AddHealthChecks().AddSqlServer(sp => healthCheckConnectionString ?? throw new InvalidOperationException("Connection string is unavailable"), name: healthCheckKey);
 
         return builder.ApplicationBuilder
             .AddResource(sqlServerDatabase)
@@ -205,12 +220,14 @@ public static partial class SqlServerBuilderExtensions
             .WithHealthCheck(healthCheckKey)
             .OnConnectionStringAvailable(async (sqlServerDatabase, @event, ct) =>
             {
-                connectionString = await sqlServerDatabase.ConnectionStringExpression.GetValueAsync(ct).ConfigureAwait(false);
+                var connectionString = await sqlServerDatabase.ConnectionStringExpression.GetValueAsync(ct).ConfigureAwait(false);
 
                 if (connectionString == null)
                 {
                     throw new DistributedApplicationException($"ConnectionStringAvailableEvent was published for the '{name}' resource but the connection string was null.");
                 }
+
+                healthCheckConnectionString = CreateHealthCheckConnectionString(connectionString);
             });
     }
 
