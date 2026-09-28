@@ -25,8 +25,13 @@ span.aspire-menu-secondary-action-container {
     background-color: var(--colorNeutralBackground2Hover);
 }
 
+/* Keep the pin tabbable while its menu item has focus without showing it until the pin itself is focused. */
+fluent-menu-item:focus-within > span[slot="end"] ::deep .aspire-menu-secondary-action {
+    visibility: visible;
+}
+
 fluent-menu-item:hover > span[slot="end"] ::deep .aspire-menu-secondary-action,
-fluent-menu-item:focus-within > span[slot="end"] ::deep .aspire-menu-secondary-action,
+::deep .aspire-menu-secondary-action:focus-within,
 ::deep .aspire-menu-secondary-action.selected {
     opacity: 1;
     visibility: visible;
