@@ -461,10 +461,9 @@ The shortcut is suppressed while a terminal or text input has focus so it
 does not consume typed input. Press <kbd>F6</kbd> first to move from terminal input
 to its footer controls before toggling the dock.
 
-The desktop header also has a terminal toggle button. On mobile, open the
-navigation menu and select **Terminal** to open, collapse, or reopen the
-dock without a keyboard. Both controls are available only for writable live runs
-with the resource service enabled, and are hidden while switching runs.
+On both desktop and mobile layouts, use the backtick shortcut to open or reopen
+the dock. There is no terminal entry point in the desktop header or mobile
+navigation menu.
 
 When the dock is empty, it lists links to terminal-enabled resources on their
 resource pages. Resource terminals remain separate from AppHost-owned dock tabs.
