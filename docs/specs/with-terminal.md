@@ -518,15 +518,14 @@ backchannel response has required `resourceTerminals` and `appHostTerminals`
 arrays, each empty when there are no terminals of that kind. Resource entries
 group their replicas; AppHost entries carry a terminal ID, title, and placement.
 The CLI's `--format json` output combines both into one array with an `owner`
-discriminator. Terminal commands are gated by `features.terminalCommandsEnabled`;
+discriminator. Terminal commands are available without a feature flag;
 their experimental backchannel contract can change between builds.
 
 ### Tape playback
 
 `aspire terminal tape play <resource> --tape-file <path>` uses Hex1b's
 `TapeParser` and `TapePlayer` to execute a VHS `.tape` script against an
-existing resource terminal. It requires the same `features.terminalCommandsEnabled` feature
-flag as `terminal attach` and `terminal ps`.
+existing resource terminal.
 
 ```sh
 aspire terminal tape play shell --tape-file ./probe.tape

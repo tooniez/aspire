@@ -35,7 +35,6 @@ internal static class KnownFeatures
     public static string ExperimentalPolyglotPython => "experimentalPolyglot:python";
     public static string NuGetSignatureVerificationEnabled => "nugetSignatureVerificationEnabled";
     public static string AspireSkillsRemoteFetchEnabled => "aspireSkillsRemoteFetchEnabled";
-    public static string TerminalCommandsEnabled => "terminalCommandsEnabled";
     public static string PolyglotIntegrationFilterEnabled => "polyglotIntegrationFilterEnabled";
 
     private static readonly Dictionary<string, FeatureMetadata> s_featureMetadata = new()
@@ -98,11 +97,6 @@ internal static class KnownFeatures
             // trusted SHA-512 embedded snapshot, and the remote path stays off by default. The flag is
             // still honored if set directly in config.
             Hidden: true),
-
-        [TerminalCommandsEnabled] = new(
-            TerminalCommandsEnabled,
-            "(Experimental) Enable the 'aspire terminal' command group ('aspire terminal ps', 'aspire terminal attach', 'aspire terminal tape play'). Used in conjunction with the experimental WithTerminal() API (ASPIRETERMINAL001). Hidden by default while the API surface is in preview.",
-            DefaultValue: false),
 
         [PolyglotIntegrationFilterEnabled] = new(
             PolyglotIntegrationFilterEnabled,
